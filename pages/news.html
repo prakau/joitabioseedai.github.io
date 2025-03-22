@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Read the latest news from JOITA BIOSEED AI. Learn how we're helping Indian farmers grow better crops and protect our environment.">
+    <title>News & Blog - JOITA BIOSEED AI</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/animations.css">
+    <style>
+        .news-hero {
+            background: linear-gradient(135deg, #E8F5E9, #E3F2FD);
+            padding: 80px 0;
+            text-align: center;
+            border-radius: 15px;
+            margin-bottom: 40px;
+        }
+
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin: 60px 0;
+        }
+
+        .news-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .news-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .news-image {
+            height: 200px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .news-image svg {
+            width: 60px;
+            height: 60px;
+            fill: white;
+        }
+
+        .news-content {
+            padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .news-date {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .news-title {
+            color: var(--primary-color);
+            margin: 10px 0;
+            font-size: 1.5em;
+        }
+
+        .news-excerpt {
+            margin-bottom: 20px;
+            flex-grow: 1;
+        }
+
+        .featured-article {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin: 40px 0;
+        }
+
+        .article-meta {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            color: #666;
+        }
+
+        .article-meta svg {
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+            fill: currentColor;
+        }
+
+        .categories {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .category-tag {
+            background: var(--secondary-color);
+            color: var(--primary-color);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .newsletter-section {
+            background: linear-gradient(135deg, #E8F5E9, #E3F2FD);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .newsletter-form {
+            display: flex;
+            gap: 10px;
+            max-width: 500px;
+            margin: 20px auto;
+        }
+
+        .newsletter-form input {
+            flex-grow: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="nano-particles"></div>
+
+    <header class="animated-header">
+        <nav>
+            <ul>
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="about-us.html">About Us</a></li>
+                <li><a href="products.html">Products</a></li>
+                <li><a href="technology.html">Technology</a></li>
+                <li><a href="sustainability.html">Sustainability</a></li>
+                <li><a href="farmers.html">Farmers</a></li>
+                <li><a href="investors.html">Investors</a></li>
+                <li><a href="news.html" class="active">News & Blog</a></li>
+                <li><a href="contact-us.html">Contact Us</a></li>
+                <li><a href="what-makes-us-different.html">What Makes Us Different</a></li>
+                <li><a href="north-star.html">Our North Star</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="fade-in">
+        <section class="news-hero reveal">
+            <h1>What's New at JOITA BIOSEED AI</h1>
+            <p>Stay updated with our latest news, success stories, and innovations</p>
+        </section>
+
+        <section class="featured-article reveal">
+            <div class="categories">
+                <span class="category-tag">Featured</span>
+                <span class="category-tag">Success Story</span>
+            </div>
+            <h2>Helping Farmers in Maharashtra</h2>
+            <div class="article-meta">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C6.47,22 2,17.5 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z"/>
+                </svg>
+                <span>February 8, 2025</span>
+            </div>
+            <p>We're working with farmers in Maharashtra to show them how our products can help them grow better crops.</p>
+            <a href="#" class="button animated-button">Read More</a>
+        </section>
+
+        <section class="news-grid reveal">
+            <article class="news-card nano-tech">
+                <div class="news-image">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C6.47,22 2,17.5 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z"/>
+                    </svg>
+                </div>
+                <div class="news-content">
+                    <span class="news-date">February 6, 2025</span>
+                    <h2 class="news-title">Nanotechnology: A New Way to Farm</h2>
+                    <p class="news-excerpt">Learn how nanotechnology is changing the way we grow food and making farming more sustainable.</p>
+                    <a href="#" class="button animated-button">Read More</a>
+                </div>
+            </article>
+
+            <article class="news-card nano-tech">
+                <div class="news-image">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C6.47,22 2,17.5 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z"/>
+                    </svg>
+                </div>
+                <div class="news-content">
+                    <span class="news-date">February 4, 2025</span>
+                    <h2 class="news-title">Getting Support from the Government</h2>
+                    <p class="news-excerpt">We're excited to have the support of the government to help us bring our products to more farmers in India.</p>
+                    <a href="#" class="button animated-button">Read More</a>
+                </div>
+            </article>
+
+            <article class="news-card nano-tech">
+                <div class="news-image">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C6.47,22 2,17.5 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z"/>
+                    </svg>
+                </div>
+                <div class="news-content">
+                    <span class="news-date">February 2, 2025</span>
+                    <h2 class="news-title">Sustainable Farming Success</h2>
+                    <p class="news-excerpt">See how our products are helping farmers reduce their environmental impact while increasing yields.</p>
+                    <a href="#" class="button animated-button">Read More</a>
+                </div>
+            </article>
+        </section>
+
+        <section class="newsletter-section reveal">
+            <h2>Stay Updated</h2>
+            <p>Subscribe to our newsletter to receive the latest news and updates</p>
+            <form class="newsletter-form">
+                <input type="email" placeholder="Enter your email" required>
+                <button type="submit" class="button animated-button primary">Subscribe</button>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 JOITA BIOSEED AI. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

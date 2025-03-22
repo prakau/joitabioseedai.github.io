@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Explore JOITA BIOSEED AI's range of nano-enabled agricultural solutions. Learn how our products can help you grow more crops, save money, and protect our environment.">
+    <title>Our Products - JOITA BIOSEED AI</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/animations.css">
+    <style>
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .product-content {
+            padding: 20px;
+        }
+
+        .product-title {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .product-description {
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .benefits-list {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+        }
+
+        .benefits-list li {
+            padding: 10px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .benefits-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--primary-color);
+        }
+
+        .coming-soon {
+            background: linear-gradient(135deg, #E8F5E9, #E3F2FD);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .product-hero {
+            background: linear-gradient(135deg, #E8F5E9, #E3F2FD);
+            padding: 60px 0;
+            text-align: center;
+            border-radius: 15px;
+            margin-bottom: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="nano-particles"></div>
+
+    <header class="animated-header">
+        <nav>
+            <ul>
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="about-us.html">About Us</a></li>
+                <li><a href="products.html" class="active">Products</a></li>
+                <li><a href="technology.html">Technology</a></li>
+                <li><a href="sustainability.html">Sustainability</a></li>
+                <li><a href="farmers.html">Farmers</a></li>
+                <li><a href="investors.html">Investors</a></li>
+                <li><a href="news.html">News & Blog</a></li>
+                <li><a href="contact-us.html">Contact Us</a></li>
+                <li><a href="what-makes-us-different.html">What Makes Us Different</a></li>
+                <li><a href="north-star.html">Our North Star</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="fade-in">
+        <section class="product-hero reveal">
+            <h1>Our Nano-Enabled Solutions: Farming Made Easier</h1>
+            <p>Discover our range of innovative agricultural products designed to revolutionize farming</p>
+        </section>
+
+        <div class="products-grid">
+            <div class="product-card nano-tech reveal">
+                <div class="product-content">
+                    <h2 class="product-title">Nano-Pesticides</h2>
+                    <p class="product-description">Our nano-pesticides use natural ingredients to protect your crops from pests. They're designed to target only the bad bugs, so they won't harm your plants, your family, or the environment.</p>
+                    <div class="benefits-list">
+                        <h3>Benefits:</h3>
+                        <ul>
+                            <li>Safe for You and Your Family</li>
+                            <li>Effective Pest Control</li>
+                            <li>Good for the Environment</li>
+                        </ul>
+                    </div>
+                    <a href="products/nano-pesticides.html" class="button animated-button">Learn More</a>
+                </div>
+            </div>
+
+            <div class="product-card nano-tech reveal">
+                <div class="product-content">
+                    <h2 class="product-title">Nano-Fertilizers</h2>
+                    <p class="product-description">Our nano-fertilizers give your crops the food they need to grow strong and healthy. They deliver nutrients right to the roots, so your plants get the most benefit.</p>
+                    <div class="benefits-list">
+                        <h3>Benefits:</h3>
+                        <ul>
+                            <li>More Crops</li>
+                            <li>Less Fertilizer Needed</li>
+                            <li>Healthier Soil</li>
+                        </ul>
+                    </div>
+                    <a href="products/nano-fertilizers.html" class="button animated-button">Learn More</a>
+                </div>
+            </div>
+
+            <div class="product-card nano-tech reveal">
+                <div class="product-content">
+                    <h2 class="product-title">Nano-Insecticides</h2>
+                    <p class="product-description">Our nano-insecticides target only the bad insects that harm your crops, leaving the good bugs alone. They're a safe and effective way to protect your plants.</p>
+                    <div class="benefits-list">
+                        <h3>Benefits:</h3>
+                        <ul>
+                            <li>Targets Only Bad Insects</li>
+                            <li>Safe for Your Crops</li>
+                            <li>Effective Protection</li>
+                        </ul>
+                    </div>
+                    <a href="products/nano-insecticides.html" class="button animated-button">Learn More</a>
+                </div>
+            </div>
+        </div>
+
+        <section class="coming-soon reveal">
+            <h2>More Ways to Help Your Farm (Coming Soon)</h2>
+            <p>We're working on even more ways to help you grow better crops, save money, and protect our environment. Stay tuned for new products coming soon!</p>
+        </section>
+
+        <section class="cta reveal">
+            <h2>Ready to Transform Your Farming?</h2>
+            <a href="contact-us.html" class="button animated-button primary">Contact Us for Help</a>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 JOITA BIOSEED AI. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

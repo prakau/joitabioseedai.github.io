@@ -1,0 +1,21 @@
+# System files
+.DS_Store
+.env
+.env.local
+.env.*.local
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Development files
+*.py
+postcss.config.js
+tailwind.config.js
+vite.config.js
+/documents/

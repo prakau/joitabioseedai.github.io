@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="JOITA BIOSEED AI cares about our Earth. Learn how we're making farming better for the environment and for future generations.">
+    <title>Sustainability - JOITA BIOSEED AI</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/animations.css">
+    <style>
+        .eco-hero {
+            background: linear-gradient(135deg, #E8F5E9, #E3F2FD);
+            padding: 80px 0;
+            text-align: center;
+            border-radius: 15px;
+            margin-bottom: 40px;
+        }
+
+        .eco-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin: 60px 0;
+        }
+
+        .eco-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .eco-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .eco-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .eco-icon svg {
+            width: 40px;
+            height: 40px;
+            fill: white;
+        }
+
+        .impact-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .metric-number {
+            font-size: 2.5em;
+            color: var(--primary-color);
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .eco-promise {
+            background: linear-gradient(135deg, #E8F5E9, #E3F2FD);
+            padding: 60px 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .eco-animation {
+            position: relative;
+            height: 200px;
+            margin: 40px 0;
+        }
+
+        .leaf {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: var(--primary-color);
+            border-radius: 0 50% 50% 50%;
+            transform: rotate(45deg);
+            animation: float 3s infinite ease-in-out;
+        }
+
+        .leaf:nth-child(2) {
+            left: 30%;
+            animation-delay: 0.5s;
+        }
+
+        .leaf:nth-child(3) {
+            left: 60%;
+            animation-delay: 1s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: rotate(45deg) translateY(0); }
+            50% { transform: rotate(45deg) translateY(-20px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="nano-particles"></div>
+
+    <header class="animated-header">
+        <nav>
+            <ul>
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="about-us.html">About Us</a></li>
+                <li><a href="products.html">Products</a></li>
+                <li><a href="technology.html">Technology</a></li>
+                <li><a href="sustainability.html" class="active">Sustainability</a></li>
+                <li><a href="farmers.html">Farmers</a></li>
+                <li><a href="investors.html">Investors</a></li>
+                <li><a href="news.html">News & Blog</a></li>
+                <li><a href="contact-us.html">Contact Us</a></li>
+                <li><a href="what-makes-us-different.html">What Makes Us Different</a></li>
+                <li><a href="north-star.html">Our North Star</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="fade-in">
+        <section class="eco-hero reveal">
+            <h1>Good Farming, Good Earth</h1>
+            <p>Creating a sustainable future for Indian agriculture</p>
+            <div class="eco-animation">
+                <div class="leaf"></div>
+                <div class="leaf"></div>
+                <div class="leaf"></div>
+            </div>
+        </section>
+
+        <section class="eco-grid reveal">
+            <div class="eco-card nano-tech">
+                <div class="eco-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12,3C16.97,3 21,7.03 21,12C21,16.97 16.97,21 12,21C7.03,21 3,16.97 3,12C3,7.03 7.03,3 12,3M12,5C8.14,5 5,8.14 5,12C5,15.86 8.14,19 12,19C15.86,19 19,15.86 19,12C19,8.14 15.86,5 12,5M13,8H11V14H13V8M13,16H11V18H13V16Z"/>
+                    </svg>
+                </div>
+                <h2>Use Natural Ingredients</h2>
+                <p>We use plants and other natural things to make our products, so they're safe for you and the environment.</p>
+            </div>
+
+            <div class="eco-card nano-tech">
+                <div class="eco-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/>
+                    </svg>
+                </div>
+                <h2>Protect Our Soil and Water</h2>
+                <p>Our products are designed to reduce pollution and protect our soil and water, so we can all have a healthy future.</p>
+            </div>
+
+            <div class="eco-card nano-tech">
+                <div class="eco-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5M12,2A7,7 0 0,1 19,9C19,14.25 12,22 12,22C12,22 5,14.25 5,9A7,7 0 0,1 12,2Z"/>
+                    </svg>
+                </div>
+                <h2>Help You Save Money</h2>
+                <p>Because our products work so well, you don't need to use as much, saving you money and reducing waste.</p>
+            </div>
+        </section>
+
+        <section class="impact-metrics reveal">
+            <div class="metric-card nano-tech">
+                <div class="metric-number">40%</div>
+                <p>Less Water Usage</p>
+            </div>
+            <div class="metric-card nano-tech">
+                <div class="metric-number">50%</div>
+                <p>Reduced Chemical Use</p>
+            </div>
+            <div class="metric-card nano-tech">
+                <div class="metric-number">60%</div>
+                <p>Better Soil Health</p>
+            </div>
+            <div class="metric-card nano-tech">
+                <div class="metric-number">30%</div>
+                <p>Less Environmental Impact</p>
+            </div>
+        </section>
+
+        <section class="eco-promise reveal">
+            <h2>Our Goal</h2>
+            <p>We want to help you grow healthy crops while taking care of our Earth. We believe that farming can be both productive and environmentally responsible.</p>
+            <div class="cta">
+                <a href="products.html" class="button animated-button">Explore Our Eco-Friendly Products</a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 JOITA BIOSEED AI. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>
