@@ -12,13 +12,15 @@
 /* Common Animation Classes */
 .fade-in {
     opacity: 0;
-    animation: fadeIn 1s ease-out forwards;
+    animation: fadeIn 0.3s ease-out forwards;
+    will-change: opacity;
 }
 
 .reveal {
     opacity: 0;
-    transform: translateY(30px);
-    transition: all 0.8s ease;
+    transform: translateY(20px);
+    transition: all 0.4s ease;
+    will-change: transform, opacity;
 }
 
 .reveal.active {
@@ -36,12 +38,13 @@
     border-radius: 25px;
     cursor: pointer;
     overflow: hidden;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    will-change: transform;
 }
 
 .animated-button:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
 }
 
 /* Nano Tech Cards */
@@ -61,7 +64,8 @@
         transparent 70%
     );
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.2s ease;
+    will-change: opacity;
 }
 
 .nano-tech:hover::before {
@@ -73,11 +77,11 @@
     background: rgba(255, 255, 255, 0.95);
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
-    will-change: transform;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    will-change: transform, box-shadow;
 }
 
 .animated-header.scrolled {
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
     padding: 10px 0;
 }
