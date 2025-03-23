@@ -52,24 +52,69 @@ git push origin main
    - Visit https://joitabioseedai.github.io
    - Wait a few minutes for changes to propagate
 
-## Step 5: Custom Domain Setup (Optional)
-1. Buy domain (e.g., joitabioseedai.com)
+## Step 5: Custom Domain Setup
 
-2. Add custom domain in GitHub:
-   - Settings > Pages
-   - Custom domain: www.joitabioseedai.com
-   - Save
-   - Wait for DNS check
+### Purchasing a Domain (Affordable Options)
 
-3. Configure DNS with your provider:
+1. **Namecheap** (Recommended)
+   - Visit namecheap.com
+   - Often has domains for $0.99-$8.88 first year
+   - Excellent DNS management interface
+   - 24/7 customer support
+
+2. **Google Domains**
+   - Visit domains.google
+   - Transparent pricing ($12-15/year)
+   - Simple interface
+   - Includes privacy protection
+
+3. **Cloudflare Registrar**
+   - Visit cloudflare.com/products/registrar
+   - At-cost pricing (no markup)
+   - Additional security features
+   - Free privacy protection
+
+### Setting Up Your Custom Domain
+
+1. After purchasing your domain (e.g., joitabioseedai.com), go to GitHub:
+   - Repository Settings > Pages
+   - Under "Custom domain", enter: www.joitabioseedai.com
+   - Click Save
+   - Check "Enforce HTTPS" (after DNS is configured)
+
+2. Configure DNS with your provider:
    Add these records:
    ```
+   # Point apex domain to GitHub Pages
    A     185.199.108.153
    A     185.199.109.153
    A     185.199.110.153
    A     185.199.111.153
-   CNAME www  joitabioseedai.github.io
+
+   # Set up www subdomain
+   CNAME www  prakau.github.io
    ```
+
+3. Wait for DNS propagation (can take up to 48 hours)
+   - GitHub will show a green checkmark when verified
+   - You can check propagation at whatsmydns.net
+
+### Domain Management Best Practices
+
+1. **Auto-renewal**: Enable it to prevent domain expiration
+
+2. **Privacy Protection**:
+   - Most registrars offer free WHOIS privacy
+   - Prevents personal information exposure
+
+3. **Security Features**:
+   - Enable 2FA on your registrar account
+   - Use a strong password
+   - Lock your domain to prevent unauthorized transfers
+
+4. **SSL/HTTPS**:
+   - GitHub Pages provides free SSL certificates
+   - Wait for DNS propagation before enabling HTTPS
 
 ## Step 6: HTTPS Setup
 1. Enable HTTPS in GitHub Pages settings
@@ -92,12 +137,40 @@ git push origin main
 2. **CSS/JS Not Loading**: Ensure paths are relative to root
 3. **Custom Domain Not Working**: DNS propagation can take 24-48 hours
 
+### Troubleshooting Custom Domains
+
+1. **DNS Not Resolving**
+   - Verify A records are correct
+   - Check CNAME record points to your GitHub Pages URL
+   - Use `dig` command to check DNS propagation:
+     ```bash
+     dig WWW.YOURDOMAIN.COM +nostats +nocomments +nocmd
+     ```
+
+2. **HTTPS Not Working**
+   - Ensure DNS is fully propagated
+   - Remove and re-add custom domain in GitHub Pages settings
+   - Wait up to 24 hours for SSL certificate provisioning
+
+3. **404 Errors**
+   - Verify repository name matches GitHub Pages requirements
+   - Check if site is being built from correct branch
+   - Ensure index.html is in root directory
+
+4. **Custom Domain Disappearing**
+   - Add CNAME file to repository root with your domain
+   - Ensure CNAME file is in the correct branch
+   - Check if GitHub Actions workflow preserves CNAME file
+
 ## Best Practices
 1. Always test locally before pushing changes
 2. Use descriptive commit messages
 3. Regularly backup your repository
 4. Keep dependencies minimal for faster loading
 5. Monitor site performance using GitHub's insights
+6. Keep domain registration details current
+7. Document DNS settings for future reference
+8. Set calendar reminders for domain renewal
 
 ## Support Resources
 - GitHub Pages Documentation: https://docs.github.com/pages
