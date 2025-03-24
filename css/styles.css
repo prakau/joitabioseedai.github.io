@@ -275,4 +275,20 @@ footer {
     h1 { font-size: 2em; }
     h2 { font-size: 1.7em; }
     h3 { font-size: 1.3em; }
+
+    .nano-tech {
+        grid-template-columns: 1fr; /* Stack cards on smaller screens */
+    }
+}
+
+@media (max-width: 768px) {
+    .nano-tech {
+        grid-template-columns: 1fr; /* Stack cards on smaller screens */
+    }
+}
+
+@media (max-width: 768px) {
+    .nano-tech {
+        /* Add responsive styles for nano-tech here */
+    }
 }
