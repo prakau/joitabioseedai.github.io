@@ -1,47 +1,80 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize page prefetching
-    const links = document.querySelectorAll('a');
-    links.forEach(link => {
-        if (link.href && link.href.startsWith(window.location.origin)) {
-            const prefetchLink = document.createElement('link');
-            prefetchLink.rel = 'prefetch';
-            prefetchLink.href = link.href;
-            document.head.appendChild(prefetchLink);
-        }
-    });
+    // Initialize page elements and animations
+    initializePageElements();
 
-    // Instant page transitions
+    // Handle navigation with improved transitions
     document.body.addEventListener('click', e => {
-        if (e.target.tagName === 'A' && e.target.href && e.target.href.startsWith(window.location.origin)) {
+        const link = e.target.closest('a');
+        if (link && link.href && link.href.startsWith(window.location.origin)) {
             e.preventDefault();
+            
+            // Start transition
             document.body.style.opacity = '0.5';
-            fetch(e.target.href)
+            
+            // Fetch and load new page content
+            fetch(link.href)
                 .then(response => response.text())
                 .then(html => {
                     const parser = new DOMParser();
                     const newDoc = parser.parseFromString(html, 'text/html');
+                    
+                    // Update page content
                     document.title = newDoc.title;
                     document.body.innerHTML = newDoc.body.innerHTML;
-                    window.history.pushState({}, '', e.target.href);
+                    
+                    // Update URL without reload
+                    window.history.pushState({}, '', link.href);
+                    
+                    // Complete transition
                     document.body.style.opacity = '1';
+                    
+                    // Reinitialize page elements
                     initializePageElements();
+
+                    // Scroll to top
+                    window.scrollTo(0, 0);
+                })
+                .catch(error => {
+                    console.error('Navigation error:', error);
+                    window.location.href = link.href; // Fallback to normal navigation
                 });
         }
     });
 
-    initializePageElements();
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', () => {
+        fetch(window.location.href)
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const newDoc = parser.parseFromString(html, 'text/html');
+                document.title = newDoc.title;
+                document.body.innerHTML = newDoc.body.innerHTML;
+                initializePageElements();
+            });
+    });
 });
 
 // Initialize page elements and animations
 function initializePageElements() {
-    // Add scroll-based animation triggers
+    // Initialize animations immediately for elements in viewport
     const animatedSections = document.querySelectorAll('.reveal');
     const header = document.querySelector('.animated-header');
     const progressBars = document.querySelectorAll('.progress-bar');
     const techFeatures = document.querySelectorAll('.tech-feature');
     const floatingElements = document.querySelectorAll('.float');
 
-    // Initialize animations immediately for elements in viewport
+    // Add active class to current nav link
+    const currentPath = window.location.pathname;
+    document.querySelectorAll('nav a').forEach(link => {
+        if (link.getAttribute('href') === currentPath) {
+            link.classList.add('active');
+        } else {
+            link.classList.remove('active');
+        }
+    });
+
+    // Initialize elements in viewport
     animatedSections.forEach(section => {
         if (isElementInViewport(section)) {
             section.classList.add('active');

@@ -34,19 +34,19 @@
 
         <section class="tech-overview">
             <div class="container">
-                <div class="tech-feature scale-up">
+                <div class="tech-feature scale-up" style="opacity: 0; transform: translateY(20px);">
                     <h2>AI-Powered Agriculture</h2>
                     <div class="progress-bar" style="--progress-width: 90%"></div>
                     <p>Our AI systems analyze vast amounts of agricultural data to optimize crop yields and resource utilization.</p>
                 </div>
 
-                <div class="tech-feature scale-up" style="animation-delay: 0.2s;">
+                <div class="tech-feature scale-up" style="opacity: 0; transform: translateY(20px); animation-delay: 0.2s;">
                     <h2>Nanotechnology Solutions</h2>
                     <div class="progress-bar" style="--progress-width: 85%"></div>
                     <p>Advanced nanotech applications for precise nutrient delivery and crop protection.</p>
                 </div>
 
-                <div class="tech-feature scale-up" style="animation-delay: 0.4s;">
+                <div class="tech-feature scale-up" style="opacity: 0; transform: translateY(20px); animation-delay: 0.4s;">
                     <h2>Smart Monitoring Systems</h2>
                     <div class="progress-bar" style="--progress-width: 95%"></div>
                     <p>Real-time monitoring and analysis of soil conditions, weather patterns, and crop health.</p>
@@ -82,7 +82,7 @@
             <div class="container">
                 <h2 class="fade-in">Ready to Transform Your Agriculture?</h2>
                 <p class="fade-in">Join us in revolutionizing farming with cutting-edge technology</p>
-                <button class="animated-button">Get Started Today</button>
+                <a href="contact-us.html" class="animated-button">Get Started Today</a>
             </div>
         </section>
     </main>
@@ -92,40 +92,5 @@
     </footer>
 
     <script src="../js/main.js"></script>
-    <script>
-        // Animation triggers
-        document.addEventListener('DOMContentLoaded', function() {
-            // Trigger progress bars
-            const progressBars = document.querySelectorAll('.progress-bar');
-            progressBars.forEach(bar => {
-                setTimeout(() => bar.classList.add('animate'), 500);
-            });
-
-            // Reveal elements on scroll
-            const reveals = document.querySelectorAll('.reveal');
-            function revealOnScroll() {
-                reveals.forEach(element => {
-                    const elementTop = element.getBoundingClientRect().top;
-                    const windowHeight = window.innerHeight;
-                    if (elementTop < windowHeight - 50) {
-                        element.classList.add('active');
-                    }
-                });
-            }
-
-            window.addEventListener('scroll', revealOnScroll);
-            revealOnScroll(); // Initial check
-
-            // Header scroll effect
-            const header = document.querySelector('.animated-header');
-            window.addEventListener('scroll', () => {
-                if (window.scrollY > 50) {
-                    header.classList.add('scrolled');
-                } else {
-                    header.classList.remove('scrolled');
-                }
-            });
-        });
-    </script>
 </body>
 </html>
