@@ -1,5 +1,43 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Make sure content is visible immediately
+    // Add mobile menu toggle button to header
+    const headerElement = document.querySelector('header');
+    const nav = document.querySelector('nav');
+    
+    // Add mobile menu toggle if it doesn't exist
+    if (!document.querySelector('.menu-toggle')) {
+        const menuToggle = document.createElement('button');
+        menuToggle.className = 'menu-toggle';
+        menuToggle.innerHTML = '<span></span><span></span><span></span>';
+        headerElement.insertBefore(menuToggle, nav);
+
+        // Handle mobile menu toggle
+        menuToggle.addEventListener('click', function() {
+            this.classList.toggle('active');
+            nav.querySelector('ul').classList.toggle('show');
+            // Prevent body scroll when menu is open
+            document.body.style.overflow = this.classList.contains('active') ? 'hidden' : '';
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!nav.contains(e.target) && !menuToggle.contains(e.target)) {
+                menuToggle.classList.remove('active');
+                nav.querySelector('ul').classList.remove('show');
+                document.body.style.overflow = '';
+            }
+        });
+
+        // Close menu when clicking a link
+        nav.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                menuToggle.classList.remove('active');
+                nav.querySelector('ul').classList.remove('show');
+                document.body.style.overflow = '';
+            });
+        });
+    }
+
+    // Initialize animations
     document.body.style.opacity = '1';
     
     // Initialize all elements that should be visible
@@ -25,13 +63,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Simple scroll handler for header shadow
-    const header = document.querySelector('.animated-header');
-    if (header) {
+    const animatedHeader = document.querySelector('.animated-header');
+    if (animatedHeader) {
         window.addEventListener('scroll', () => {
             if (window.scrollY > 50) {
-                header.classList.add('scrolled');
+                animatedHeader.classList.add('scrolled');
             } else {
-                header.classList.remove('scrolled');
+                animatedHeader.classList.remove('scrolled');
             }
         });
     }

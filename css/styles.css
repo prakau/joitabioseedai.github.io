@@ -37,6 +37,10 @@ header {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
+nav {
+    position: relative;
+}
+
 nav ul {
     list-style: none;
     display: flex;
@@ -57,27 +61,6 @@ nav ul li a {
     display: inline-block;
     background: transparent;
     z-index: 1;
-}
-
-nav ul li a::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(46, 125, 50, 0.1),
-        rgba(46, 125, 50, 0.2)
-    );
-    transition: transform 0.5s ease;
-    z-index: -1;
-}
-
-nav ul li a:hover::before {
-    transform: translateX(100%);
 }
 
 nav ul li a:hover,
@@ -111,115 +94,26 @@ h2 { font-size: 2em; margin-bottom: 25px; }
 h3 { font-size: 1.5em; margin-bottom: 20px; }
 p { margin-bottom: 20px; }
 
-/* Hero Section */
-.hero-section {
-    background: linear-gradient(135deg, #E8F5E9, #E3F2FD);
-    padding: 100px 0 80px;
-    text-align: center;
-    margin-bottom: 60px;
+/* Mobile Navigation */
+.menu-toggle {
+    display: none;
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    z-index: 1001;
+    background: none;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
 }
 
-.hero-section h1 {
-    font-size: 3em;
-    margin-bottom: 20px;
-    color: var(--primary-color);
-}
-
-.hero-section p {
-    font-size: 1.2em;
-    color: var(--text-color);
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-/* Tech Overview Section */
-.tech-overview {
-    padding: 60px 0;
-}
-
-.tech-overview .container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 30px;
-    margin-bottom: 40px;
-}
-
-.tech-feature {
-    background: white;
-    padding: 30px;
-    border-radius: 15px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-}
-
-.tech-feature h2 {
-    color: var(--primary-color);
-    margin-bottom: 15px;
-}
-
-.progress-bar {
-    height: 6px;
-    background: #e0e0e0;
-    border-radius: 3px;
-    margin: 15px 0;
-    position: relative;
-    overflow: hidden;
-}
-
-/* Innovation Showcase */
-.innovation-showcase {
-    background: #f8f9fa;
-    padding: 80px 0;
-}
-
-.innovation-showcase .container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 30px;
-}
-
-.nano-tech {
-    background: white;
-    padding: 30px;
-    border-radius: 15px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-}
-
-.nano-tech h3 {
-    color: var(--accent-color);
-    margin-bottom: 20px;
-}
-
-.nano-tech ul {
-    list-style: none;
-}
-
-.nano-tech ul li {
-    padding: 10px 0;
-    border-bottom: 1px solid #eee;
-}
-
-.nano-tech ul li:last-child {
-    border-bottom: none;
-}
-
-/* CTA Section */
-.cta-section {
-    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-    color: white;
-    padding: 80px 0;
-    text-align: center;
-    margin-top: 60px;
-}
-
-.cta-section h2 {
-    color: white;
-    font-size: 2.5em;
-    margin-bottom: 20px;
-}
-
-.cta-section p {
-    font-size: 1.2em;
-    margin-bottom: 30px;
+.menu-toggle span {
+    display: block;
+    width: 25px;
+    height: 3px;
+    background: var(--primary-color);
+    margin: 5px 0;
+    transition: all 0.3s ease;
 }
 
 /* Footer */
@@ -233,32 +127,54 @@ footer {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    .menu-toggle {
+        display: block;
+    }
+
     nav ul {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: auto;
+        max-height: 80vh;
+        overflow-y: auto;
+        background: white;
         flex-direction: column;
-        align-items: center;
+        padding: 60px 20px 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    nav ul.show {
+        display: flex;
+    }
+
+    nav ul li {
+        width: 100%;
     }
 
     nav ul li a {
-        width: 200px;
+        width: 100%;
         text-align: center;
+        padding: 12px;
+        border-radius: 8px;
     }
 
-    .hero-section {
-        padding: 60px 20px 40px;
+    .menu-toggle.active span:nth-child(1) {
+        transform: rotate(45deg) translate(6px, 6px);
     }
 
-    .hero-section h1 {
-        font-size: 2.2em;
+    .menu-toggle.active span:nth-child(2) {
+        opacity: 0;
     }
 
-    .tech-overview .container,
-    .innovation-showcase .container {
-        grid-template-columns: 1fr;
+    .menu-toggle.active span:nth-child(3) {
+        transform: rotate(-45deg) translate(6px, -6px);
     }
 
-    .tech-feature,
-    .nano-tech {
-        margin: 0 20px;
+    main {
+        margin-top: 60px;
     }
 
     h1 { font-size: 2em; }
@@ -266,17 +182,42 @@ footer {
     h3 { font-size: 1.3em; }
 }
 
-@media (max-width: 480px) {
-    .hero-section h1 {
-        font-size: 1.8em;
-    }
+/* Hero Section */
+.hero-section {
+    background: linear-gradient(135deg, #E8F5E9, #E3F2FD);
+    padding: 100px 0;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
 
-    .hero-section p {
-        font-size: 1em;
-    }
+.hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 800px;
+    margin: 0 auto;
+}
 
-    .tech-feature,
-    .nano-tech {
-        padding: 20px;
-    }
+.hero-content h1 {
+    font-size: 2.8em;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+}
+
+.hero-content .subtitle {
+    font-size: 1.3em;
+    color: var(--text-color);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Ensure all sections have proper spacing */
+section {
+    padding: 40px 0;
+    position: relative;
+}
+
+/* Add smooth scrolling */
+html {
+    scroll-behavior: smooth;
 }
