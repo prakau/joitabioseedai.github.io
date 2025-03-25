@@ -3,41 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Technology - Joita</title>
-    <link rel="stylesheet" href="/css/styles.css">
-    <link rel="stylesheet" href="/css/animations.css">
+    <title>Our Technology - JOITA AI</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/animations.css">
 </head>
 <body>
     <header class="animated-header">
-        <!-- Navigation or Header Content Here -->
+        <nav>
+            <!-- Navigation content will be loaded by JavaScript -->
+        </nav>
     </header>
 
     <main>
-        <section class="hero">
-            <h1>Our Technology</h1>
-            <p>Discover the innovative technologies driving Joita's mission.</p>
+        <section class="hero-section">
+            <div class="container">
+                <h1 class="slide-in-left">Revolutionary Agricultural Technology</h1>
+                <p class="slide-in-right">Transforming farming through advanced AI and nanotechnology solutions</p>
+            </div>
         </section>
 
-        <section class="technology-details reveal">
-            <h2>Core Technologies</h2>
-            <p>Details about our core technologies go here.</p>
+        <section class="tech-overview">
+            <div class="container">
+                <div class="tech-feature scale-up">
+                    <h2>AI-Powered Agriculture</h2>
+                    <div class="progress-bar" style="--progress-width: 90%"></div>
+                    <p>Our AI systems analyze vast amounts of agricultural data to optimize crop yields and resource utilization.</p>
+                </div>
+
+                <div class="tech-feature scale-up" style="animation-delay: 0.2s;">
+                    <h2>Nanotechnology Solutions</h2>
+                    <div class="progress-bar" style="--progress-width: 85%"></div>
+                    <p>Advanced nanotech applications for precise nutrient delivery and crop protection.</p>
+                </div>
+
+                <div class="tech-feature scale-up" style="animation-delay: 0.4s;">
+                    <h2>Smart Monitoring Systems</h2>
+                    <div class="progress-bar" style="--progress-width: 95%"></div>
+                    <p>Real-time monitoring and analysis of soil conditions, weather patterns, and crop health.</p>
+                </div>
+            </div>
         </section>
 
-        <section class="future-developments reveal">
-            <h2>Future Developments</h2>
-            <p>Information about future developments goes here.</p>
+        <section class="innovation-showcase">
+            <div class="container">
+                <div class="nano-tech float">
+                    <h3>Precision Agriculture</h3>
+                    <ul>
+                        <li class="reveal">Smart soil sensors for real-time monitoring</li>
+                        <li class="reveal">Automated irrigation systems</li>
+                        <li class="reveal">Crop health analysis using AI</li>
+                        <li class="reveal">Weather prediction integration</li>
+                    </ul>
+                </div>
+
+                <div class="nano-tech float" style="animation-delay: 0.2s;">
+                    <h3>Nano-Engineering</h3>
+                    <ul>
+                        <li class="reveal">Targeted nutrient delivery</li>
+                        <li class="reveal">Enhanced seed coating technology</li>
+                        <li class="reveal">Sustainable pest control solutions</li>
+                        <li class="reveal">Soil enhancement formulas</li>
+                    </ul>
+                </div>
+            </div>
         </section>
 
-        <section class="nano-tech">
-            <h2>Nano Tech Cards</h2>
-            <p>Example nano tech card content</p>
+        <section class="cta-section">
+            <div class="container">
+                <h2 class="fade-in">Ready to Transform Your Agriculture?</h2>
+                <p class="fade-in">Join us in revolutionizing farming with cutting-edge technology</p>
+                <button class="animated-button">Get Started Today</button>
+            </div>
         </section>
     </main>
 
     <footer>
-        <!-- Footer Content Here -->
+        <!-- Footer content will be loaded by JavaScript -->
     </footer>
 
-    <script src="/js/main.js"></script>
+    <script src="../js/main.js"></script>
+    <script>
+        // Animation triggers
+        document.addEventListener('DOMContentLoaded', function() {
+            // Trigger progress bars
+            const progressBars = document.querySelectorAll('.progress-bar');
+            progressBars.forEach(bar => {
+                setTimeout(() => bar.classList.add('animate'), 500);
+            });
+
+            // Reveal elements on scroll
+            const reveals = document.querySelectorAll('.reveal');
+            function revealOnScroll() {
+                reveals.forEach(element => {
+                    const elementTop = element.getBoundingClientRect().top;
+                    const windowHeight = window.innerHeight;
+                    if (elementTop < windowHeight - 50) {
+                        element.classList.add('active');
+                    }
+                });
+            }
+
+            window.addEventListener('scroll', revealOnScroll);
+            revealOnScroll(); // Initial check
+
+            // Header scroll effect
+            const header = document.querySelector('.animated-header');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    header.classList.add('scrolled');
+                } else {
+                    header.classList.remove('scrolled');
+                }
+            });
+        });
+    </script>
 </body>
 </html>

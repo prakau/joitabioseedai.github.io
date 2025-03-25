@@ -111,128 +111,115 @@ h2 { font-size: 2em; margin-bottom: 25px; }
 h3 { font-size: 1.5em; margin-bottom: 20px; }
 p { margin-bottom: 20px; }
 
-/* Technology Page Specific Styles */
-.tech-hero {
+/* Hero Section */
+.hero-section {
     background: linear-gradient(135deg, #E8F5E9, #E3F2FD);
-    padding: 80px 20px;
+    padding: 100px 0 80px;
     text-align: center;
-    border-radius: 20px;
-    margin: 20px auto 40px;
-    max-width: 1200px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 60px;
 }
 
-.tech-content {
-    max-width: 900px;
+.hero-section h1 {
+    font-size: 3em;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+}
+
+.hero-section p {
+    font-size: 1.2em;
+    color: var(--text-color);
+    max-width: 800px;
     margin: 0 auto;
 }
 
-.info-card {
+/* Tech Overview Section */
+.tech-overview {
+    padding: 60px 0;
+}
+
+.tech-overview .container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin-bottom: 40px;
+}
+
+.tech-feature {
     background: white;
     padding: 30px;
     border-radius: 15px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    margin-bottom: 30px;
-    transition: transform 0.3s ease;
 }
 
-.info-card:hover {
-    transform: translateY(-5px);
+.tech-feature h2 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
 }
 
-.tech-list {
-    list-style: none;
-    padding: 0;
-    margin: 20px 0;
+.progress-bar {
+    height: 6px;
+    background: #e0e0e0;
+    border-radius: 3px;
+    margin: 15px 0;
+    position: relative;
+    overflow: hidden;
 }
 
-.tech-list li {
-    padding: 15px;
-    border-bottom: 1px solid #eee;
+/* Innovation Showcase */
+.innovation-showcase {
     background: #f8f9fa;
-    border-radius: 8px;
-    margin-bottom: 10px;
+    padding: 80px 0;
 }
 
-.tech-list li:last-child {
-    border-bottom: none;
-}
-
-.highlight-box {
-    background: linear-gradient(135deg, #E8F5E9, #E3F2FD);
-    padding: 25px;
-    border-radius: 15px;
-    margin: 25px 0;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-}
-
-.benefit-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 25px;
-    margin: 40px 0;
-}
-
-.benefit-card {
-    background: white;
-    padding: 25px;
-    border-radius: 15px;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease;
-}
-
-.benefit-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-}
-
-.tech-diagram {
+.innovation-showcase .container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 30px;
-    margin: 40px 0;
 }
 
-.diagram-card {
-    background: #f8f9fa;
-    padding: 25px;
-    border-radius: 15px;
-    text-align: center;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease;
-}
-
-.diagram-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-}
-
-.tech-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 25px;
-    margin: 30px 0;
-    text-align: center;
-}
-
-.stat-card {
+.nano-tech {
     background: white;
-    padding: 25px;
+    padding: 30px;
     border-radius: 15px;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
-.stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-}
-
-.stat-number {
-    font-size: 2.5em;
-    font-weight: bold;
+.nano-tech h3 {
     color: var(--accent-color);
-    margin: 15px 0;
+    margin-bottom: 20px;
+}
+
+.nano-tech ul {
+    list-style: none;
+}
+
+.nano-tech ul li {
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.nano-tech ul li:last-child {
+    border-bottom: none;
+}
+
+/* CTA Section */
+.cta-section {
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    color: white;
+    padding: 80px 0;
+    text-align: center;
+    margin-top: 60px;
+}
+
+.cta-section h2 {
+    color: white;
+    font-size: 2.5em;
+    margin-bottom: 20px;
+}
+
+.cta-section p {
+    font-size: 1.2em;
+    margin-bottom: 30px;
 }
 
 /* Footer */
@@ -256,39 +243,40 @@ footer {
         text-align: center;
     }
 
-    .tech-hero {
-        padding: 40px 20px;
+    .hero-section {
+        padding: 60px 20px 40px;
     }
 
-    .tech-diagram {
+    .hero-section h1 {
+        font-size: 2.2em;
+    }
+
+    .tech-overview .container,
+    .innovation-showcase .container {
         grid-template-columns: 1fr;
     }
 
-    .tech-stats {
-        grid-template-columns: 1fr;
-    }
-
-    .benefit-grid {
-        grid-template-columns: 1fr;
+    .tech-feature,
+    .nano-tech {
+        margin: 0 20px;
     }
 
     h1 { font-size: 2em; }
     h2 { font-size: 1.7em; }
     h3 { font-size: 1.3em; }
-
-    .nano-tech {
-        grid-template-columns: 1fr; /* Stack cards on smaller screens */
-    }
 }
 
-@media (max-width: 768px) {
-    .nano-tech {
-        grid-template-columns: 1fr; /* Stack cards on smaller screens */
+@media (max-width: 480px) {
+    .hero-section h1 {
+        font-size: 1.8em;
     }
-}
 
-@media (max-width: 768px) {
+    .hero-section p {
+        font-size: 1em;
+    }
+
+    .tech-feature,
     .nano-tech {
-        /* Add responsive styles for nano-tech here */
+        padding: 20px;
     }
 }
