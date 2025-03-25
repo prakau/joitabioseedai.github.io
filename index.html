@@ -7,6 +7,96 @@
     <meta name="description" content="JOITA BIOSEED AI: Leading AI agriculture solutions & smart farming technology in India. Advanced bio pesticides, precision agriculture AI, and sustainable agricultural tech for modern farming innovations.">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/animations.css">
+    <style>
+        /* Homepage specific styles */
+        .value-props {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            padding: 40px 0;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .value-prop-card,
+        .product-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .value-prop-card:hover,
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .brief-about {
+            text-align: center;
+            padding: 60px 0;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .testimonial-section {
+            padding: 40px 0;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .testimonial-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            margin: 20px;
+        }
+
+        .cta {
+            text-align: center;
+            padding: 60px 0;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: white;
+        }
+
+        .cta h2 {
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            padding: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .value-props,
+            .product-grid {
+                grid-template-columns: 1fr;
+                padding: 20px;
+            }
+
+            .brief-about,
+            .testimonial-section {
+                padding: 40px 20px;
+            }
+        }
+    </style>
 </head>
 <body>
     <header class="animated-header">
@@ -27,14 +117,7 @@
 
     <main class="fade-in">
         <section class="hero-section reveal">
-            <div class="nano-animation">
-                <div class="nano-particle" style="left: 20%; top: 30%"></div>
-                <div class="nano-particle" style="left: 60%; top: 40%"></div>
-                <div class="nano-particle" style="left: 80%; top: 20%"></div>
-                <div class="nano-particle" style="left: 30%; top: 60%"></div>
-                <div class="nano-particle" style="left: 70%; top: 70%"></div>
-            </div>
-            <div class="hero-content">
+            <div class="container">
                 <h1 class="slide-in-left">Revolutionizing Indian Agriculture with Nano-Technology & AI</h1>
                 <p class="slide-in-right subtitle">Sustainable, AI-Powered Agricultural Solutions with Nano-Enabled Inputs</p>
             </div>
@@ -47,63 +130,59 @@
         </section>
 
         <section class="value-props">
-            <div class="value-prop-card nano-tech reveal">
+            <div class="value-prop-card reveal">
                 <h2>Smart Farming Technology</h2>
                 <p>Our agricultural AI software powers precision agriculture through computer vision farming and AI yield optimization. Our smart pest detection systems and predictive farming analytics provide real-time insights for optimal crop management.</p>
             </div>
 
-            <div class="value-prop-card nano-tech reveal" style="animation-delay: 0.2s;">
+            <div class="value-prop-card reveal" style="animation-delay: 0.2s;">
                 <h2>Advanced Bio-Protection</h2>
                 <p>Utilizing nano bio pesticides and advanced seed coating technology, our integrated pest management solutions deliver sustainable pest control with organic crop protection principles, ensuring agricultural safety standards.</p>
             </div>
 
-            <div class="value-prop-card nano-tech reveal" style="animation-delay: 0.4s;">
+            <div class="value-prop-card reveal" style="animation-delay: 0.4s;">
                 <h2>Digital Farming Solutions</h2>
                 <p>Our comprehensive digital agriculture platform combines agricultural IoT devices with smart irrigation technology. Our farm automation systems enable modern farming innovations while maintaining sustainable farming standards.</p>
             </div>
         </section>
 
         <section class="featured-products">
-            <h2 class="text-center reveal">Our Solutions</h2>
+            <h2 class="text-center">Our Solutions</h2>
             <div class="product-grid">
-                <div class="product-card nano-tech reveal">
-                    <div class="product-content">
-                        <h3>DaturaGuard Nano</h3>
-                        <p>Our revolutionary bio-pesticide derived from Datura extracts, using nano-technology to provide effective pest control while being eco-friendly and safe.</p>
-                        <a href="pages/products/nano-pesticides.html" class="animated-button">Learn More</a>
-                    </div>
+                <div class="product-card reveal">
+                    <h3>DaturaGuard Nano</h3>
+                    <p>Our revolutionary bio-pesticide derived from Datura extracts, using nano-technology to provide effective pest control while being eco-friendly and safe.</p>
+                    <a href="pages/products/nano-pesticides.html" class="animated-button">Learn More</a>
                 </div>
 
-                <div class="product-card nano-tech reveal" style="animation-delay: 0.2s;">
-                    <div class="product-content">
-                        <h3>RootBoost Nano</h3>
-                        <p>Advanced nano seed coating technology that enhances root development and plant growth, leading to stronger, healthier crops.</p>
-                        <a href="pages/products.html" class="animated-button">Learn More</a>
-                    </div>
+                <div class="product-card reveal" style="animation-delay: 0.2s;">
+                    <h3>RootBoost Nano</h3>
+                    <p>Advanced nano seed coating technology that enhances root development and plant growth, leading to stronger, healthier crops.</p>
+                    <a href="pages/products.html" class="animated-button">Learn More</a>
                 </div>
 
-                <div class="product-card nano-tech reveal" style="animation-delay: 0.4s;">
-                    <div class="product-content">
-                        <h3>PestShield AI</h3>
-                        <p>AI-powered app providing real-time pest alerts, crop health analysis, and personalized agronomic recommendations for optimal farming results.</p>
-                        <a href="pages/products.html" class="animated-button">Learn More</a>
-                    </div>
+                <div class="product-card reveal" style="animation-delay: 0.4s;">
+                    <h3>PestShield AI</h3>
+                    <p>AI-powered app providing real-time pest alerts, crop health analysis, and personalized agronomic recommendations for optimal farming results.</p>
+                    <a href="pages/products.html" class="animated-button">Learn More</a>
                 </div>
             </div>
         </section>
 
         <section class="testimonial-section">
-            <div class="testimonial-card nano-tech reveal">
+            <div class="testimonial-card reveal">
                 <p>"I used to spend so much money on fertilizers, but JOITA BIOSEED AI's nano-fertilizers have helped me grow more crops with less money. My land is healthier too!"</p>
                 <p><em>- Rajesh Kumar, Maharashtra</em></p>
             </div>
         </section>
 
         <section class="cta reveal">
-            <h2>Ready to Transform Your Farming?</h2>
-            <div class="cta-buttons">
-                <a href="pages/products.html" class="animated-button">Learn More About Our Products</a>
-                <a href="pages/contact-us.html" class="animated-button primary">Contact Us for Help</a>
+            <div class="container">
+                <h2>Ready to Transform Your Farming?</h2>
+                <div class="cta-buttons">
+                    <a href="pages/products.html" class="animated-button">Learn More About Our Products</a>
+                    <a href="pages/contact-us.html" class="animated-button">Contact Us for Help</a>
+                </div>
             </div>
         </section>
     </main>
