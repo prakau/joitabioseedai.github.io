@@ -5,6 +5,7 @@
     --text-color: #212121;
     --background-color: #FFFFFF;
     --header-height: 60px;
+    --container-padding: 20px;
 }
 
 * {
@@ -19,12 +20,17 @@ body {
     color: var(--text-color);
     background: var(--background-color);
     overflow-x: hidden;
+    width: 100%;
+    padding-right: 0 !important; /* Prevent layout shift when menu opens */
 }
 
 .container {
+    width: 100%;
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 20px;
+    padding-left: var(--container-padding);
+    padding-right: var(--container-padding);
+    position: relative;
 }
 
 /* Enhanced Navigation Styles */
@@ -53,6 +59,7 @@ nav ul {
     flex-wrap: wrap;
     gap: 10px;
     padding: 0 15px;
+    margin: 0;
 }
 
 nav ul li a {
@@ -84,7 +91,8 @@ nav ul li a.active {
 main {
     margin-top: var(--header-height);
     min-height: calc(100vh - var(--header-height));
-    padding: 20px 0;
+    width: 100%;
+    overflow: hidden;
 }
 
 /* Typography */
@@ -92,6 +100,7 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--primary-color);
     margin: 20px 0;
     line-height: 1.2;
+    text-align: center;
 }
 
 h1 { font-size: 2.5em; margin-bottom: 30px; }
@@ -103,7 +112,7 @@ p { margin-bottom: 20px; }
 .menu-toggle {
     display: none;
     position: fixed;
-    top: 15px;
+    top: 10px;
     right: 15px;
     z-index: 1001;
     background: none;
@@ -128,12 +137,65 @@ footer {
     background: var(--primary-color);
     color: white;
     text-align: center;
-    padding: 20px;
+    padding: var(--container-padding);
     margin-top: 60px;
+}
+
+/* Sections */
+section {
+    padding: 40px 0;
+    position: relative;
+    width: 100%;
+}
+
+section > .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Hero Section */
+.hero-section {
+    background: linear-gradient(135deg, #E8F5E9, #E3F2FD);
+    padding: 100px 0 60px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 var(--container-padding);
+}
+
+.hero-content h1 {
+    font-size: 2.8em;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+}
+
+.hero-content .subtitle {
+    font-size: 1.3em;
+    color: var(--text-color);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Add smooth scrolling */
+html {
+    scroll-behavior: smooth;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    :root {
+        --container-padding: 15px;
+    }
+
     .menu-toggle {
         display: block;
     }
@@ -185,65 +247,34 @@ footer {
     h2 { font-size: 1.7em; }
     h3 { font-size: 1.3em; }
 
+    .hero-section {
+        padding: 80px 0 40px;
+    }
+
     body.menu-open {
         overflow: hidden;
     }
 }
 
-/* Hero Section */
-.hero-section {
-    background: linear-gradient(135deg, #E8F5E9, #E3F2FD);
-    padding: 100px 0;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-}
-
-.hero-content {
-    position: relative;
-    z-index: 2;
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-.hero-content h1 {
-    font-size: 2.8em;
-    margin-bottom: 20px;
-    color: var(--primary-color);
-}
-
-.hero-content .subtitle {
-    font-size: 1.3em;
-    color: var(--text-color);
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-/* Ensure all sections have proper spacing */
-section {
-    padding: 40px 0;
-    position: relative;
-}
-
-/* Add smooth scrolling */
-html {
-    scroll-behavior: smooth;
-}
-
 @media (max-width: 480px) {
     .container {
-        padding: 0 15px;
+        padding-left: var(--container-padding);
+        padding-right: var(--container-padding);
     }
 
     .hero-section {
-        padding: 60px 0;
+        padding: 60px 0 30px;
     }
 
     .hero-content h1 {
-        font-size: 2em;
+        font-size: 1.8em;
     }
 
     .hero-content .subtitle {
         font-size: 1.1em;
+    }
+
+    section {
+        padding: 30px 0;
     }
 }
