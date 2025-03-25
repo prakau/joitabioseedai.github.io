@@ -8,23 +8,139 @@
     <meta name="keywords" content="agricultural technology consultation, farm technology Punjab, smart farming Haryana, AgriTech India contact, agricultural IoT solutions, modern farming Delhi NCR, agricultural automation experts, precision farming consultants">
     <link rel="stylesheet" href="../css/styles.css">
     <link rel="stylesheet" href="../css/animations.css">
+    <style>
+        .contact-grid {
+            display: grid;
+            grid-template-columns: 3fr 2fr;
+            gap: 40px;
+            padding: 40px 0;
+        }
+
+        .contact-form {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .form-group textarea {
+            height: 150px;
+            resize: vertical;
+        }
+
+        .contact-info {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .contact-method {
+            margin-bottom: 30px;
+        }
+
+        .contact-method h3 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .contact-method p {
+            line-height: 1.6;
+            color: var(--text-color);
+        }
+
+        .hours-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .hours-list li {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .hours-list li:last-child {
+            border-bottom: none;
+        }
+
+        .contact-hero {
+            background: linear-gradient(135deg, #E8F5E9, #E3F2FD);
+            padding: 60px 0;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .contact-hero h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+        }
+
+        .contact-hero p {
+            font-size: 1.2em;
+            max-width: 600px;
+            margin: 0 auto;
+            color: var(--text-color);
+        }
+
+        @media (max-width: 768px) {
+            .contact-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .contact-form,
+            .contact-info {
+                padding: 20px;
+            }
+
+            .contact-hero {
+                padding: 40px 20px;
+            }
+
+            .contact-hero h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="nano-particles"></div>
-
     <header class="animated-header">
         <nav>
             <ul>
                 <li><a href="../index.html">Home</a></li>
                 <li><a href="about-us.html">About Us</a></li>
                 <li><a href="products.html">Products</a></li>
+                <li><a href="technology.html">Technology</a></li>
                 <li><a href="sustainability.html">Sustainability</a></li>
                 <li><a href="farmers.html">Farmers</a></li>
                 <li><a href="investors.html">Investors</a></li>
                 <li><a href="news.html">News & Blog</a></li>
                 <li><a href="contact-us.html" class="active">Contact Us</a></li>
-                <li><a href="what-makes-us-different.html">What Makes Us Different</a></li>
-                <li><a href="north-star.html">Our North Star</a></li>
             </ul>
         </nav>
     </header>
@@ -72,11 +188,11 @@
                             <label for="message">Message</label>
                             <textarea id="message" required></textarea>
                         </div>
-                        <button type="submit" class="button animated-button primary">Send Message</button>
+                        <button type="submit" class="animated-button">Send Message</button>
                     </form>
                 </section>
 
-                <section class="contact-info">
+                <section class="contact-info nano-tech">
                     <h2>Contact Information</h2>
                     <div class="contact-method">
                         <h3>Address</h3>
@@ -89,12 +205,12 @@
 
                     <div class="contact-method">
                         <h3>Email</h3>
-                        <p>joitabioseedai@gmail.com</p>
+                        <p><a href="mailto:joitabioseedai@gmail.com">joitabioseedai@gmail.com</a></p>
                     </div>
 
                     <div class="contact-method">
                         <h3>Phone</h3>
-                        <p>+91-930-608-5106</p>
+                        <p><a href="tel:+918901069501">+91 89010 69501</a></p>
                     </div>
 
                     <div class="contact-method">
