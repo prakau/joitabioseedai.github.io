@@ -25,7 +25,14 @@
     </header>
 
     <main>
-        <section class="hero-section">
+        <div class="dark-mode-toggle">
+            <button id="darkModeToggle" class="pulse-glow">
+                <span class="sun">☀️</span>
+                <span class="moon">🌙</span>
+            </button>
+        </div>
+        
+        <section class="hero-section parallax-section">
             <div class="container">
                 <h1 class="slide-in-left">Revolutionary Agricultural Technology</h1>
                 <p class="slide-in-right">Transforming farming through advanced AI and nanotechnology solutions</p>
@@ -34,7 +41,7 @@
 
         <section class="tech-overview">
             <div class="container">
-                <div class="tech-feature scale-up" style="opacity: 0; transform: translateY(20px);">
+                <div class="tech-feature rotate-in" style="opacity: 0;">
                     <h2>AI-Powered Agriculture</h2>
                     <div class="progress-bar" style="--progress-width: 90%"></div>
                     <p>Our AI systems analyze vast amounts of agricultural data to optimize crop yields and resource utilization.</p>
@@ -50,6 +57,100 @@
                     <h2>Smart Monitoring Systems</h2>
                     <div class="progress-bar" style="--progress-width: 95%"></div>
                     <p>Real-time monitoring and analysis of soil conditions, weather patterns, and crop health.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="research-development">
+            <div class="container">
+                <h2 class="section-title rotate-in">Research & Development</h2>
+                <div class="rd-grid">
+                    <div class="rd-item slide-rotate">
+                        <h3>Machine Learning</h3>
+                        <p>Advanced algorithms for crop prediction and optimization</p>
+                        <div class="tech-stat">
+                            <span>Accuracy Rate</span>
+                            <div class="progress-bar" style="--progress-width: 95%"></div>
+                            <span>95%</span>
+                        </div>
+                    </div>
+                    <div class="rd-item slide-rotate" style="animation-delay: 0.2s;">
+                        <h3>Biotech Research</h3>
+                        <p>Revolutionary approaches to sustainable farming</p>
+                        <div class="tech-stat">
+                            <span>Development Stage</span>
+                            <div class="progress-bar" style="--progress-width: 80%"></div>
+                            <span>Phase 3</span>
+                        </div>
+                    </div>
+                    <div class="rd-item slide-rotate" style="animation-delay: 0.4s;">
+                        <h3>Drone Technology</h3>
+                        <p>Autonomous monitoring and precision agriculture</p>
+                        <div class="tech-stat">
+                            <span>Coverage Area</span>
+                            <div class="progress-bar" style="--progress-width: 88%"></div>
+                            <span>1000+ acres</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="timeline-section">
+            <div class="container">
+                <h2 class="section-title rotate-in">Technology Timeline</h2>
+                <div class="timeline">
+                    <div class="timeline-item slide-rotate">
+                        <div class="year">2020</div>
+                        <div class="content">
+                            <h3>AI Platform Launch</h3>
+                            <p>Initial release of our agricultural AI platform</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item slide-rotate">
+                        <div class="year">2022</div>
+                        <div class="content">
+                            <h3>Nano-Tech Integration</h3>
+                            <p>Successfully integrated nanotechnology with AI systems</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item slide-rotate">
+                        <div class="year">2024</div>
+                        <div class="content">
+                            <h3>Global Expansion</h3>
+                            <p>Technology deployed across multiple continents</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item slide-rotate">
+                        <div class="year">2025</div>
+                        <div class="content">
+                            <h3>Smart Farming 2.0</h3>
+                            <p>Next-generation farming solutions launched</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="future-tech">
+            <div class="container">
+                <h2 class="section-title rotate-in">Future Technology Roadmap</h2>
+                <div class="roadmap-grid">
+                    <div class="roadmap-item slide-rotate">
+                        <h3>2026</h3>
+                        <h4>Quantum Computing Integration</h4>
+                        <p>Enhanced processing capabilities for complex agricultural simulations</p>
+                    </div>
+                    <div class="roadmap-item slide-rotate" style="animation-delay: 0.2s;">
+                        <h3>2027</h3>
+                        <h4>Advanced Bioengineering</h4>
+                        <p>Revolutionary crop enhancement technologies</p>
+                    </div>
+                    <div class="roadmap-item slide-rotate" style="animation-delay: 0.4s;">
+                        <h3>2028</h3>
+                        <h4>Global Climate Adaptation</h4>
+                        <p>Smart farming solutions for changing climate conditions</p>
+                    </div>
                 </div>
             </div>
         </section>
@@ -92,5 +193,43 @@
     </footer>
 
     <script src="../js/main.js"></script>
+    <script>
+        // Dark mode toggle
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const body = document.body;
+        
+        darkModeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', body.classList.contains('dark-mode'));
+        });
+
+        // Check for saved dark mode preference
+        if (localStorage.getItem('darkMode') === 'true') {
+            body.classList.add('dark-mode');
+        }
+
+        // Parallax effect
+        window.addEventListener('scroll', () => {
+            const parallaxSections = document.querySelectorAll('.parallax-section');
+            parallaxSections.forEach(section => {
+                const scrolled = window.pageYOffset;
+                const rate = scrolled * -0.3;
+                section.style.transform = `translate3d(0, ${rate}px, 0)`;
+            });
+        });
+
+        // Animate progress bars on scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate');
+                }
+            });
+        }, { threshold: 0.5 });
+
+        document.querySelectorAll('.progress-bar').forEach(bar => {
+            observer.observe(bar);
+        });
+    </script>
 </body>
 </html>
