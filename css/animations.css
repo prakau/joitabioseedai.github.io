@@ -1,44 +1,39 @@
 /* Animation Keyframes */
 @keyframes fadeIn {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
-@keyframes shimmer {
-    0% { background-position: -200% center; }
-    100% { background-position: 200% center; }
-}
-
-@keyframes slideInFromLeft {
-    0% {
-        transform: translateX(-100%);
+@keyframes slideInLeft {
+    from {
         opacity: 0;
+        transform: translateX(-50px);
     }
-    100% {
-        transform: translateX(0);
+    to {
         opacity: 1;
+        transform: translateX(0);
     }
 }
 
-@keyframes slideInFromRight {
-    0% {
-        transform: translateX(100%);
+@keyframes slideInRight {
+    from {
         opacity: 0;
+        transform: translateX(50px);
     }
-    100% {
-        transform: translateX(0);
+    to {
         opacity: 1;
+        transform: translateX(0);
     }
 }
 
 @keyframes scaleUp {
-    0% {
-        transform: scale(0.8);
+    from {
         opacity: 0;
+        transform: scale(0.8);
     }
-    100% {
-        transform: scale(1);
+    to {
         opacity: 1;
+        transform: scale(1);
     }
 }
 
@@ -53,39 +48,29 @@
 
 /* Common Animation Classes */
 .fade-in {
-    opacity: 0;
-    animation: fadeIn 0.5s ease-out forwards;
-    will-change: opacity;
+    animation: fadeIn 0.8s ease-out forwards;
 }
 
 .slide-in-left {
-    opacity: 0;
-    animation: slideInFromLeft 0.8s ease-out forwards;
-    will-change: transform, opacity;
+    animation: slideInLeft 0.8s ease-out forwards;
 }
 
 .slide-in-right {
-    opacity: 0;
-    animation: slideInFromRight 0.8s ease-out forwards;
-    will-change: transform, opacity;
+    animation: slideInRight 0.8s ease-out forwards;
 }
 
 .scale-up {
-    opacity: 0;
-    animation: scaleUp 0.6s ease-out forwards;
-    will-change: transform, opacity;
+    animation: scaleUp 0.8s ease-out forwards;
 }
 
 .float {
     animation: float 3s ease-in-out infinite;
-    will-change: transform;
 }
 
 .reveal {
     opacity: 0;
     transform: translateY(20px);
     transition: all 0.6s ease;
-    will-change: transform, opacity;
 }
 
 .reveal.active {
@@ -102,9 +87,9 @@
     border: none;
     border-radius: 25px;
     cursor: pointer;
-    overflow: hidden;
     transition: all 0.3s ease;
-    will-change: transform;
+    text-decoration: none;
+    display: inline-block;
 }
 
 .animated-button:hover {
@@ -117,35 +102,33 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* Nano Tech Cards */
-.nano-tech {
-    position: relative;
-    overflow: hidden;
+/* Tech Features */
+.tech-feature {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.nano-tech::before {
-    content: '';
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(
-        circle at center,
-        var(--primary-color) 0%,
-        transparent 70%
-    );
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    will-change: opacity;
-}
-
-.nano-tech:hover {
+.tech-feature:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
-.nano-tech:hover::before {
-    opacity: 0.15;
+/* Progress Bars */
+.progress-bar {
+    width: 0;
+    height: 6px;
+    background: #e0e0e0;
+    border-radius: 3px;
+    margin: 15px 0;
+    transition: width 1s ease;
+}
+
+.progress-bar.animate {
+    width: var(--progress-width, 100%);
+    background: var(--primary-color);
 }
 
 /* Header Animation */
@@ -154,7 +137,6 @@
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     transition: all 0.3s ease;
-    will-change: transform, box-shadow;
 }
 
 .animated-header.scrolled {
@@ -162,32 +144,14 @@
     padding: 10px 0;
 }
 
-/* Tech Features Animation */
-.tech-feature {
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.tech-feature:hover {
-    transform: scale(1.05);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-}
-
-/* Progress Bars */
-.progress-bar {
-    width: 0;
-    transition: width 1s ease;
-}
-
-.progress-bar.animate {
-    width: var(--progress-width, 100%);
-}
-
-/* Rotating Icons */
-.rotate-on-hover {
-    transition: transform 0.3s ease;
-}
-
-.rotate-on-hover:hover {
-    transform: rotate(360deg);
+/* Ensure animations play immediately on mobile */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }
