@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /css/
+Disallow: /js/
+Disallow: /pages/snake-game.html
+
+# Game files not relevant for search
+Disallow: /css/snake-game.css
+
+# Point to sitemap
+Sitemap: https://joitabioseedai.com/sitemap.xml
+
+# Crawl delay to prevent overwhelming the server
+Crawl-delay: 10
