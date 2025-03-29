@@ -1,14 +1,71 @@
+# JOITA BIOSEED AI Robots.txt
+# Last updated: 2025-03-29
+
 User-agent: *
 Allow: /
+
+# Main Pages
+Allow: /index.html
+Allow: /pages/technology.html
+Allow: /pages/farmers.html
+Allow: /pages/sustainability.html
+Allow: /pages/contact-us.html
+Allow: /pages/about-us.html
+Allow: /pages/products.html
+Allow: /pages/news.html
+
+# Product Pages
+Allow: /pages/products/nano-pesticides.html
+Allow: /pages/products/nano-fertilizers.html
+
+# Resources
+Allow: /css/
+Allow: /js/
+Allow: /images/
+
+# Block administrative and development files
+Disallow: /admin/
+Disallow: /dev/
+Disallow: /temp/
+Disallow: /.git/
+Disallow: /node_modules/
+
+# Allow crawling of sitemap
+Sitemap: https://joitabioseedai.com/sitemap.xml
+
+# Crawl Delay for Better Server Performance
+Crawl-delay: 1
+
+# Explicitly allow important content
+Allow: /pages/products/
+Allow: /pages/technology.html
+Allow: /pages/farmers.html
+Allow: /pages/sustainability.html
+Allow: /pages/about-us.html
+Allow: /pages/news.html
+
+# Primary product pages - high priority for crawling
+Allow: /pages/products/nano-pesticides.html
+Allow: /pages/products/nano-fertilizers.html
+Allow: /pages/products/nano-insecticides.html
+
+# Technical information and success stories
+Allow: /pages/technology.html
+Allow: /pages/what-makes-us-different.html
+
+# Resource files to exclude
 Disallow: /css/
 Disallow: /js/
 Disallow: /pages/snake-game.html
-
-# Game files not relevant for search
 Disallow: /css/snake-game.css
 
-# Point to sitemap
+# Point to sitemap for efficient crawling
 Sitemap: https://joitabioseedai.com/sitemap.xml
 
-# Crawl delay to prevent overwhelming the server
-Crawl-delay: 10
+# Crawl optimizations
+Crawl-delay: 10  # Reasonable delay for server stability
+
+# Notes for search engines:
+# - Product pages are updated weekly
+# - News section updated regularly
+# - Technical specs and success stories updated monthly
