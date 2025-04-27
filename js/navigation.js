@@ -6,6 +6,53 @@ document.addEventListener('DOMContentLoaded', function() {
     // Extract the page name from the URL
     let pageName = currentPage.split('/').pop();
 
+    // Clear any existing text content issues
+    const navLinks = document.querySelectorAll('.navbar a');
+    navLinks.forEach(link => {
+        // Get the ID of the link
+        const id = link.getAttribute('id');
+
+        // Set the text content based on the ID
+        switch(id) {
+            case 'nav-home':
+                link.textContent = 'Home';
+                break;
+            case 'nav-about':
+                link.textContent = 'About';
+                break;
+            case 'nav-products':
+                link.textContent = 'Products';
+                break;
+            case 'nav-technology':
+                link.textContent = 'Technology';
+                break;
+            case 'nav-sustainability':
+                link.textContent = 'Sustainability';
+                break;
+            case 'nav-farmers':
+                link.textContent = 'Farmers';
+                break;
+            case 'nav-investors':
+                link.textContent = 'Investors';
+                break;
+            case 'nav-news':
+                link.textContent = 'News';
+                break;
+            case 'nav-contact':
+                link.textContent = 'Contact';
+                break;
+            case 'nav-different':
+                link.textContent = 'What Makes Us Different';
+                break;
+            case 'nav-north-star':
+                link.textContent = 'Our North Star';
+                break;
+            case 'nav-assistant':
+                link.textContent = 'Agri-Smart Assistant';
+                break;
+        }
+    });
+
     // If it's the home page
     if (pageName === '' || pageName === 'index.html') {
         document.getElementById('nav-home').classList.add('active');

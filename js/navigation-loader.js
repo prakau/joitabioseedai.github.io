@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check if we're in the root directory or a subdirectory
     const isRoot = !window.location.pathname.includes('/pages/');
 
-    // Create the navigation HTML
+    // Create the navigation HTML with explicit text content
     let navHTML = `
         <div class="navbar">
             <a href="${isRoot ? '' : '../'}index.html" id="nav-home">Home</a>
