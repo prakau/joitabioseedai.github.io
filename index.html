@@ -1,227 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nano Bio-Pesticides & AI Farming Solutions | JOITA BIOSEED AI</title>
-    <meta name="description" content="Transform your farming with JOITA BIOSEED AI's nano-powered bio-pesticides and AI farming solutions. Sustainable agriculture technology for higher yields in Haryana, India. Contact us today!">
-    <meta property="og:title" content="Nano Bio-Pesticides & AI Farming Solutions | JOITA BIOSEED AI">
-    <meta property="og:description" content="Transform your farming with JOITA BIOSEED AI's nano-powered bio-pesticides and AI farming solutions. Sustainable agriculture technology for higher yields in Haryana, India.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://joitabioseedai.com/">
-    <meta property="og:image" content="https://joitabioseedai.com/images/favicon.png">
-    <link rel="icon" type="image/png" href="images/favicon.png">
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "JOITA BIOSEED AI",
-      "url": "https://joitabioseedai.com",
-      "logo": "https://joitabioseedai.com/images/favicon.png",
-      "description": "JOITA BIOSEED AI specializes in nano-powered bio-pesticides and AI-driven farming solutions, helping farmers achieve higher yields sustainably.",
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": "Kurukshetra",
-        "addressRegion": "Haryana",
-        "addressCountry": "IN"
-      },
-      "contactPoint": {
-        "@type": "ContactPoint",
-        "telephone": "+91-XXX-XXX-XXXX",
-        "contactType": "customer service"
-      },
-      "sameAs": [
-        "https://www.linkedin.com/company/joita-bioseed-ai",
-        "https://twitter.com/joitabioseedai"
-      ]
-    }
-    </script>
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/animations.css">
+    <title>Navigation</title>
     <style>
-        /* Homepage specific styles */
-        .value-props {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            padding: 40px 0;
-            max-width: 1200px;
-            margin: 0 auto;
+        /* Navigation Bar */
+        .navbar {
+            background-color: #2c3e50;
+            overflow: hidden;
+            padding: 10px 0;
+            font-family: Arial, sans-serif;
         }
-
-        .product-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            padding: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .value-prop-card,
-        .product-card {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .value-prop-card:hover,
-        .product-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-        }
-
-        .brief-about {
-            text-align: center;
-            padding: 60px 0;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .testimonial-section {
-            padding: 40px 0;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .testimonial-card {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            margin: 20px;
-        }
-
-        .cta {
-            text-align: center;
-            padding: 60px 0;
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+        .navbar a {
             color: white;
+            text-align: center;
+            padding: 12px 16px;
+            text-decoration: none;
+            font-size: 16px;
+            transition: background-color 0.3s;
         }
-
-        .cta h2 {
-            color: white;
-            margin-bottom: 30px;
+        .navbar a:hover {
+            background-color: #1a252f;
         }
-
-        .cta-buttons {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            flex-wrap: wrap;
-            padding: 20px;
+        .navbar a.active {
+            background-color: #1a252f;
         }
-
-        @media (max-width: 768px) {
-            .value-props,
-            .product-grid {
-                grid-template-columns: 1fr;
-                padding: 20px;
-            }
-
-            .brief-about,
-            .testimonial-section {
-                padding: 40px 20px;
+        /* Responsive */
+        @media screen and (max-width: 600px) {
+            .navbar a {
+                float: none;
+                display: block;
+                text-align: left;
             }
         }
     </style>
 </head>
 <body>
-    <header class="animated-header">
-        <nav>
-            <ul>
-                <li><a href="index.html" class="active">Home</a></li>
-                <li><a href="pages/about-us.html">About Us</a></li>
-                <li><a href="pages/products.html">Products</a></li>
-                <li><a href="pages/technology.html">Technology</a></li>
-                <li><a href="pages/sustainability.html">Sustainability</a></li>
-                <li><a href="pages/farmers.html">Farmers</a></li>
-                <li><a href="pages/investors.html">Investors</a></li>
-                <li><a href="pages/news.html">News & Blog</a></li>
-                <li><a href="pages/contact-us.html">Contact Us</a></li>
-            </ul>
-        </nav>
-    </header>
-
-    <main class="fade-in">
-        <section class="hero-section reveal">
-            <div class="container">
-                <h1 class="slide-in-left">JOITA BIOSEED AI - Smart Farming Solutions</h1>
-                <p class="slide-in-right subtitle">Sustainable, AI-Powered Agricultural Solutions with Nano-Enabled Inputs</p>
-            </div>
-        </section>
-
-        <section class="brief-about reveal">
-            <div class="container">
-                <p>JOITA BIOSEED AI integrates AI agriculture solutions with smart farming technology to revolutionize Indian agriculture. Our comprehensive platform combines agricultural AI software, advanced bio pesticides, and precision agriculture AI. Through digital farming solutions and agricultural automation, we deliver sustainable agricultural tech that transforms modern farming.</p>
-            </div>
-        </section>
-
-        <section class="value-props">
-            <div class="value-prop-card reveal">
-                <h2>Smart Farming Technology</h2>
-                <p>Our agricultural AI software powers precision agriculture through computer vision farming and AI yield optimization. Our smart pest detection systems and predictive farming analytics provide real-time insights for optimal crop management.</p>
-            </div>
-
-            <div class="value-prop-card reveal" style="animation-delay: 0.2s;">
-                <h2>Advanced Bio-Protection</h2>
-                <p>Utilizing nano bio pesticides and advanced seed coating technology, our integrated pest management solutions deliver sustainable pest control with organic crop protection principles, ensuring agricultural safety standards.</p>
-            </div>
-
-            <div class="value-prop-card reveal" style="animation-delay: 0.4s;">
-                <h2>Digital Farming Solutions</h2>
-                <p>Our comprehensive digital agriculture platform combines agricultural IoT devices with smart irrigation technology. Our farm automation systems enable modern farming innovations while maintaining sustainable farming standards.</p>
-            </div>
-        </section>
-
-        <section class="featured-products">
-            <h2 class="text-center">Our Solutions</h2>
-            <div class="product-grid">
-                <div class="product-card reveal">
-                    <h3>DaturaGuard Nano</h3>
-                    <p>Our revolutionary bio-pesticide derived from Datura extracts, using nano-technology to provide effective pest control while being eco-friendly and safe.</p>
-                    <a href="pages/products/nano-pesticides.html" class="animated-button">Learn More</a>
-                </div>
-
-                <div class="product-card reveal" style="animation-delay: 0.2s;">
-                    <h3>RootBoost Nano</h3>
-                    <p>Advanced nano seed coating technology that enhances root development and plant growth, leading to stronger, healthier crops.</p>
-                    <a href="pages/products.html" class="animated-button">Learn More</a>
-                </div>
-
-                <div class="product-card reveal" style="animation-delay: 0.4s;">
-                    <h3>PestShield AI</h3>
-                    <p>AI-powered app providing real-time pest alerts, crop health analysis, and personalized agronomic recommendations for optimal farming results.</p>
-                    <a href="pages/products.html" class="animated-button">Learn More</a>
-                </div>
-            </div>
-        </section>
-
-        <section class="testimonial-section">
-            <div class="testimonial-card reveal">
-                <p>"I used to spend so much money on fertilizers, but JOITA BIOSEED AI's nano-fertilizers have helped me grow more crops with less money. My land is healthier too!"</p>
-                <p><em>- Rajesh Kumar, Maharashtra</em></p>
-            </div>
-        </section>
-
-        <section class="cta reveal">
-            <div class="container">
-                <h2>Ready to Transform Your Farming?</h2>
-                <div class="cta-buttons">
-                    <a href="pages/products.html" class="animated-button">Learn More About Our Products</a>
-                    <a href="pages/contact-us.html" class="animated-button">Contact Us for Help</a>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer>
-        <p>&copy; 2025 JOITA BIOSEED AI. All rights reserved.</p>
-    </footer>
-
-    <script src="js/main.js"></script>
+    <div class="navbar">
+        <a href="index.html" class="active">Home</a>
+        <a href="about.html">About</a>
+        <a href="products.html">Products</a>
+        <a href="technology.html">Technology</a>
+        <a href="sustainability.html">Sustainability</a>
+        <a href="farmers.html">Farmers</a>
+        <a href="investors.html">Investors</a>
+        <a href="news.html">News</a>
+        <a href="contact.html">Contact</a>
+        <a href="agri-assistant.html">Agri-Smart Assistant</a>
+    </div>
 </body>
 </html>
