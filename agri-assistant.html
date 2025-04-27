@@ -1,29 +1,38 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agri-Smart Query Assistant | JOITA BIOSEED AI</title>
+    <title>Agri-Smart Assistant | JOITA BIOSEED AI</title>
     <meta name="description" content="AI-powered agricultural assistant for farmers and agri-professionals">
-    <meta name="keywords" content="agriculture, AI assistant, farming technology, crop management">
-    <link rel="stylesheet" href="../css/styles.css">
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "Agri-Smart Query Assistant",
-      "description": "AI-powered agricultural assistant",
-      "applicationCategory": "Productivity",
-      "operatingSystem": "Web"
-    }
-    </script>
+    <style>
+        nav {
+            background: #333;
+            padding: 10px;
+        }
+        nav a {
+            color: white;
+            margin: 0 10px;
+            text-decoration: none;
+        }
+    </style>
 </head>
 <body>
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="about.html">About</a>
+        <a href="products.html">Products</a>
+        <a href="technology.html">Technology</a>
+        <a href="sustainability.html">Sustainability</a>
+        <a href="farmers.html">Farmers</a>
+        <a href="investors.html">Investors</a>
+        <a href="news.html">News</a>
+        <a href="contact.html">Contact</a>
+    </nav>
     <div id="app-container">
-        <!-- App will be embedded here -->
         <iframe src="https://preview--agri-smart-query-assistant.lovable.app" 
                 frameborder="0" 
-                style="width:100%; height:100vh;"></iframe>
+                style="width:100%; height:calc(100vh - 50px); margin-top:10px;"></iframe>
     </div>
 </body>
 </html>
