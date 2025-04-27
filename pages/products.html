@@ -13,8 +13,52 @@
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "ItemList",
+        "@type": "ItemList",
       "itemListElement": [
+        {
+          "@type": "Review",
+          "itemReviewed": {
+            "@type": "Product",
+            "name": "JOITA BIOSEED AI Nano-Fertilizers",
+            "brand": {
+              "@type": "Brand",
+              "name": "JOITA BIOSEED AI"
+            }
+          },
+          "author": {
+            "@type": "Person",
+            "name": "Sukhwinder Singh"
+          },
+          "reviewRating": {
+            "@type": "Rating",
+            "ratingValue": "5",
+            "bestRating": "5"
+          },
+          "reviewBody": "Using JOITA BIOSEED AI's nano-fertilizers and PestShield AI app transformed my rice farming. The nano-technology ensures better nutrient absorption, while the AI alerts help me prevent pest outbreaks before they happen.",
+          "datePublished": "2025-03-29"
+        },
+        {
+          "@type": "Review",
+          "itemReviewed": {
+            "@type": "Product",
+            "name": "JOITA BIOSEED AI Nano Bio-Pesticides",
+            "brand": {
+              "@type": "Brand",
+              "name": "JOITA BIOSEED AI"
+            }
+          },
+          "author": {
+            "@type": "Person",
+            "name": "Rajesh Patil"
+          },
+          "reviewRating": {
+            "@type": "Rating",
+            "ratingValue": "5",
+            "bestRating": "5"
+          },
+          "reviewBody": "The switch to nano bio-pesticides was a game-changer for my cotton farm. Not only did it protect my crops effectively, but I also earned premium prices for chemical-free cotton.",
+          "datePublished": "2025-03-29"
+        },
         {
           "@type": "ListItem",
           "position": 1,
@@ -75,6 +119,67 @@
         "position": 2,
         "name": "Products",
         "item": "https://joitabioseedai.com/pages/products.html"
+      }]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "Nano-Technology in Agriculture: The Science Behind Our Solutions",
+      "description": "Learn how our proprietary nano-formulation technology breaks down active ingredients into particles smaller than 100 nanometers for enhanced absorption and efficiency.",
+      "author": {
+        "@type": "Organization",
+        "name": "JOITA BIOSEED AI"
+      },
+      "datePublished": "2025-03-29",
+      "about": {
+        "@type": "Thing",
+        "name": "Nanotechnology in Agriculture"
+      },
+      "keywords": "nano-technology, agricultural nanotechnology, nano-fertilizers, nano-pesticides, sustainable agriculture",
+      "technicalSummary": "Our nano-formulation process achieves particle sizes below 100nm, resulting in 95% absorption rates and 60% reduction in product usage. The technology is protected by multiple patents and validated through extensive field trials."
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [{
+        "@type": "Question",
+        "name": "What makes JOITA BIOSEED AI's products different?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Our products use advanced nano-technology to make them more effective while being safer for you and the environment. They work better than traditional products while using less material."
+        }
+      }, {
+        "@type": "Question",
+        "name": "Are your nano-products safe for organic farming?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, our products are made from natural ingredients and are suitable for organic farming. They're designed to work with nature, not against it."
+        }
+      }, {
+        "@type": "Question",
+        "name": "How do I know which product is right for my farm?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Our team can help you choose the right products based on your crops, soil type, and specific challenges. Contact us for a personalized recommendation."
+        }
+      }, {
+        "@type": "Question",
+        "name": "Where can I buy your products in Haryana?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Our products are available through authorized dealers across Haryana, with our main distribution center in Kurukshetra. Contact us for the nearest dealer location."
+        }
+      }, {
+        "@type": "Question",
+        "name": "Do you provide training on how to use your products?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, we offer comprehensive training and support to ensure you get the best results from our products. This includes usage guidelines, timing recommendations, and best practices."
+        }
       }]
     }
     </script>
@@ -213,6 +318,260 @@
         .faq-answer {
             line-height: 1.6;
         }
+
+        /* Location Badge Styles */
+        .location-badge {
+            margin-top: 30px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .location-badge span {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* Product Intro Styles */
+        .product-intro {
+            text-align: center;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .achievement-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin: 40px 0;
+        }
+
+        .achievement {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .achievement strong {
+            display: block;
+            font-size: 2em;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        /* Comparison Table Styles */
+        .product-comparison {
+            margin: 40px 0;
+            padding: 0 20px;
+        }
+
+        .comparison-table-wrapper {
+            overflow-x: auto;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            background: white;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .comparison-table thead th {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .comparison-table thead th:first-child {
+            border-top-left-radius: 15px;
+        }
+
+        .comparison-table thead th:last-child {
+            border-top-right-radius: 15px;
+        }
+
+        .comparison-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .comparison-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        @media (max-width: 768px) {
+            .location-badge {
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .achievement-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stories-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Success Stories Styles */
+        .success-stories {
+            padding: 40px 20px;
+            margin: 40px 0;
+        }
+
+        .stories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .story-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .story-content {
+            padding: 30px;
+        }
+
+        .farmer-info {
+            color: #666;
+            font-size: 0.9em;
+            margin: 10px 0;
+        }
+
+        .results {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .result-item {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .result-item strong {
+            display: block;
+            font-size: 1.5em;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        .story-text {
+            line-height: 1.6;
+            margin: 20px 0;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .tags span {
+            background: #f0f7ff;
+            color: var(--primary-color);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        /* Science Behind Section Styles */
+        .science-behind {
+            background: linear-gradient(135deg, #E8F5E9, #E3F2FD);
+            padding: 60px 20px;
+            margin: 40px 0;
+            border-radius: 15px;
+        }
+
+        .science-content {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .tech-explanation {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .tech-benefits {
+            list-style: none;
+            padding: 0;
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .tech-benefits li {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding-left: 35px;
+            position: relative;
+        }
+
+        .tech-benefits li::before {
+            content: '🔬';
+            position: absolute;
+            left: 10px;
+        }
+
+        .tech-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .tech-stat {
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .tech-stat strong {
+            display: block;
+            font-size: 1.8em;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .tech-benefits {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -244,8 +603,74 @@
             </ul>
         </nav>
         <section class="product-hero reveal">
-            <h1>Our Nano-Enabled Solutions: Farming Made Easier</h1>
-            <p>Discover our range of innovative agricultural products designed to revolutionize farming</p>
+            <h1>Advanced Nano-Tech Agricultural Solutions for Indian Farmers</h1>
+            <p>Discover our range of innovative nano bio-pesticides, smart fertilizers, and AI-powered farming solutions. Made in Haryana, trusted by farmers across India.</p>
+            <div class="location-badge">
+                <span>🏢 Main Distribution Center: Kurukshetra, Haryana</span>
+                <span>📞 24/7 Support Available</span>
+            </div>
+        </section>
+
+        <section class="product-intro reveal">
+            <h2>Transform Your Farming with Nano Technology</h2>
+            <p>At JOITA BIOSEED AI, we combine cutting-edge nanotechnology with traditional agricultural wisdom to create products that are more effective, safer, and better for the environment. Our solutions help farmers increase yields while reducing input costs and environmental impact.</p>
+            
+            <div class="achievement-grid">
+                <div class="achievement">
+                    <strong>5000+</strong>
+                    <span>Acres Protected</span>
+                </div>
+                <div class="achievement">
+                    <strong>40%</strong>
+                    <span>Cost Reduction</span>
+                </div>
+                <div class="achievement">
+                    <strong>100%</strong>
+                    <span>Natural Ingredients</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="product-comparison reveal">
+            <h2>Compare Our Solutions</h2>
+            <div class="comparison-table-wrapper">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>Nano Bio-Pesticides</th>
+                            <th>Nano Fertilizers</th>
+                            <th>Smart Insecticides</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Application Method</td>
+                            <td>Foliar Spray</td>
+                            <td>Soil Application</td>
+                            <td>Targeted Spray</td>
+                        </tr>
+                        <tr>
+                            <td>Duration of Effect</td>
+                            <td>2-3 Weeks</td>
+                            <td>Full Season</td>
+                            <td>3-4 Weeks</td>
+                        </tr>
+                        <tr>
+                            <td>Best For</td>
+                            <td>All Crops</td>
+                            <td>Root Crops</td>
+                            <td>Vegetables</td>
+                        </tr>
+                        <tr>
+                            <td>Key Benefit</td>
+                            <td>Eco-friendly Protection</td>
+                            <td>Enhanced Growth</td>
+                            <td>Selective Control</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         <div class="products-grid">
@@ -261,7 +686,7 @@
                             <li>Good for the Environment</li>
                         </ul>
                     </div>
-                    <a href="products/nano-pesticides.html" class="button animated-button">Learn More</a>
+                    <a href="products/nano-pesticides.html" class="button animated-button">Explore Nano Bio-Pesticides →</a>
                 </div>
             </div>
 
@@ -277,7 +702,7 @@
                             <li>Healthier Soil</li>
                         </ul>
                     </div>
-                    <a href="products/nano-fertilizers.html" class="button animated-button">Learn More</a>
+                    <a href="products/nano-fertilizers.html" class="button animated-button">Discover Nano Fertilizers →</a>
                 </div>
             </div>
 
@@ -293,10 +718,98 @@
                             <li>Effective Protection</li>
                         </ul>
                     </div>
-                    <a href="products/nano-insecticides.html" class="button animated-button">Learn More</a>
+                    <a href="products/nano-insecticides.html" class="button animated-button">View Smart Insecticide Solutions →</a>
                 </div>
             </div>
         </div>
+
+        <section class="success-stories reveal">
+            <h2>Farmer Success Stories</h2>
+            <div class="stories-grid">
+                <div class="story-card">
+                    <div class="story-content">
+                        <h3>Rice Yield Improvement in Kurukshetra</h3>
+                        <p class="farmer-info">Farmer: Sukhwinder Singh | Crop: Basmati Rice</p>
+                        <div class="results">
+                            <div class="result-item">
+                                <strong>35%</strong>
+                                <span>Yield Increase</span>
+                            </div>
+                            <div class="result-item">
+                                <strong>50%</strong>
+                                <span>Less Pesticide Use</span>
+                            </div>
+                        </div>
+                        <p class="story-text">"Using JOITA BIOSEED AI's nano-fertilizers and PestShield AI app transformed my rice farming. The nano-technology ensures better nutrient absorption, while the AI alerts help me prevent pest outbreaks before they happen."</p>
+                        <div class="tags">
+                            <span>Nano-Fertilizers</span>
+                            <span>PestShield AI</span>
+                            <span>Rice Farming</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="story-card">
+                    <div class="story-content">
+                        <h3>Sustainable Cotton Farming in Maharashtra</h3>
+                        <p class="farmer-info">Farmer: Rajesh Patil | Crop: BT Cotton</p>
+                        <div class="results">
+                            <div class="result-item">
+                                <strong>40%</strong>
+                                <span>Cost Reduction</span>
+                            </div>
+                            <div class="result-item">
+                                <strong>Zero</strong>
+                                <span>Chemical Residue</span>
+                            </div>
+                        </div>
+                        <p class="story-text">"The switch to nano bio-pesticides was a game-changer for my cotton farm. Not only did it protect my crops effectively, but I also earned premium prices for chemical-free cotton. The local support team's guidance was invaluable."</p>
+                        <div class="tags">
+                            <span>Nano Bio-Pesticides</span>
+                            <span>Organic Farming</span>
+                            <span>Cotton</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="science-behind reveal">
+            <h2>The Science Behind Our Solutions</h2>
+            <div class="science-content">
+                <div class="tech-explanation">
+                    <h3>Nano-Technology in Agriculture</h3>
+                    <p>Our proprietary nano-formulation technology breaks down active ingredients into particles smaller than 100 nanometers. This revolutionary approach dramatically improves absorption and efficiency, allowing farmers to achieve better results with less product while maintaining environmental sustainability.</p>
+                    
+                    <div class="tech-stats">
+                        <div class="tech-stat">
+                            <strong>&lt;100nm</strong>
+                            <span>Particle Size</span>
+                        </div>
+                        <div class="tech-stat">
+                            <strong>95%</strong>
+                            <span>Absorption Rate</span>
+                        </div>
+                        <div class="tech-stat">
+                            <strong>60%</strong>
+                            <span>Less Product Needed</span>
+                        </div>
+                    </div>
+
+                    <h4>Technical Benefits:</h4>
+                    <ul class="tech-benefits">
+                        <li>Enhanced nutrient absorption through nano-scale delivery</li>
+                        <li>Improved pest control efficacy with targeted application</li>
+                        <li>Significantly reduced environmental impact</li>
+                        <li>Lower application rates for cost efficiency</li>
+                        <li>Extended protection duration</li>
+                        <li>Better resistance to environmental factors</li>
+                    </ul>
+
+                    <p class="tech-note">Our nano-formulation process is protected by multiple patents and has been validated through extensive field trials across different agro-climatic zones in India. The technology ensures uniform distribution and sustained release of active ingredients, maximizing effectiveness while minimizing environmental impact.</p>
+                </div>
+            </div>
+        </section>
 
         <section class="faq-section reveal">
             <h2>Frequently Asked Questions</h2>
