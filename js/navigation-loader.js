@@ -2,7 +2,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Check if we're in the root directory or a subdirectory
     const isRoot = !window.location.pathname.includes('/pages/');
-    
+
     // Create the navigation HTML
     let navHTML = `
         <div class="navbar">
@@ -15,13 +15,15 @@ document.addEventListener('DOMContentLoaded', function() {
             <a href="${isRoot ? 'pages/' : ''}investors.html" id="nav-investors">Investors</a>
             <a href="${isRoot ? 'pages/' : ''}news.html" id="nav-news">News</a>
             <a href="${isRoot ? 'pages/' : ''}contact-us.html" id="nav-contact">Contact</a>
+            <a href="${isRoot ? 'pages/' : ''}what-makes-us-different.html" id="nav-different">What Makes Us Different</a>
+            <a href="${isRoot ? 'pages/' : ''}north-star.html" id="nav-north-star">Our North Star</a>
             <a href="${isRoot ? '' : '../'}agri-assistant.html" id="nav-assistant">Agri-Smart Assistant</a>
         </div>
     `;
-    
+
     // Find the navbar container
     const navbarContainer = document.getElementById('navbar-container');
-    
+
     // If the container exists, insert the navigation
     if (navbarContainer) {
         navbarContainer.innerHTML = navHTML;

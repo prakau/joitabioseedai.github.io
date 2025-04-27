@@ -2,10 +2,10 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Get the current page URL
     const currentPage = window.location.pathname;
-    
+
     // Extract the page name from the URL
     let pageName = currentPage.split('/').pop();
-    
+
     // If it's the home page
     if (pageName === '' || pageName === 'index.html') {
         document.getElementById('nav-home').classList.add('active');
@@ -41,6 +41,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Contact page
     else if (pageName === 'contact-us.html') {
         document.getElementById('nav-contact').classList.add('active');
+    }
+    // What Makes Us Different page
+    else if (pageName === 'what-makes-us-different.html') {
+        document.getElementById('nav-different').classList.add('active');
+    }
+    // Our North Star page
+    else if (pageName === 'north-star.html') {
+        document.getElementById('nav-north-star').classList.add('active');
     }
     // Agri-Smart Assistant page
     else if (pageName === 'agri-assistant.html') {
