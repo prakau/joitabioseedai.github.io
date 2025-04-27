@@ -7,6 +7,8 @@
     width: 100%;
     position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 1000;
 }
 
@@ -30,7 +32,7 @@
 
 /* Add space below navbar for content */
 body {
-    padding-top: 60px; /* Adjust based on navbar height */
+    padding-top: 70px; /* Increased padding to ensure content doesn't overlap with navbar */
 }
 
 /* Responsive Navigation */
@@ -40,8 +42,8 @@ body {
         display: block;
         text-align: left;
     }
-    
+
     body {
-        padding-top: 50px;
+        padding-top: 60px;
     }
 }
