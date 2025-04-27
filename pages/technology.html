@@ -88,6 +88,8 @@
     </script>
     <link rel="stylesheet" href="../css/styles.css">
     <link rel="stylesheet" href="../css/animations.css">
+    <link rel="stylesheet" href="../css/fonts.css">
+    <link rel="stylesheet" href="../css/navigation.css">
     <style>
         /* Research Partnerships Styles */
         .research-partnerships {
@@ -257,22 +259,8 @@
     </style>
 </head>
 <body>
-    <header class="animated-header">
-        <nav>
-            <ul>
-                <li><a href="../index.html">Home</a></li>
-                <li><a href="about-us.html">About Us</a></li>
-                <li><a href="products.html">Products</a></li>
-                <li><a href="technology.html" class="active">Technology</a></li>
-                <li><a href="sustainability.html">Sustainability</a></li>
-                <li><a href="farmers.html">Farmers</a></li>
-                <li><a href="investors.html">Investors</a></li>
-                <li><a href="news.html">News & Blog</a></li>
-                <li><a href="contact-us.html">Contact Us</a></li>
-                <li><a href="what-makes-us-different.html">What Makes Us Different</a></li>
-                <li><a href="north-star.html">Our North Star</a></li>
-            </ul>
-        </nav>
+    <header>
+        <div id="navbar-container"></div>
     </header>
 
     <main class="fade-in">
@@ -288,7 +276,7 @@
                 <span class="moon">🌙</span>
             </button>
         </div>
-        
+
         <section class="hero-section parallax-section">
             <div class="container">
                 <h1 class="slide-in-left">Revolutionary Agricultural Technology</h1>
@@ -577,7 +565,7 @@
         // Dark mode toggle
         const darkModeToggle = document.getElementById('darkModeToggle');
         const body = document.body;
-        
+
         darkModeToggle.addEventListener('click', () => {
             body.classList.toggle('dark-mode');
             localStorage.setItem('darkMode', body.classList.contains('dark-mode'));
@@ -611,5 +599,6 @@
             observer.observe(bar);
         });
     </script>
+    <script src="../js/navigation.js"></script>
 </body>
 </html>

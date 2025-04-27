@@ -1,38 +1,43 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agri-Smart Assistant | JOITA BIOSEED AI</title>
     <meta name="description" content="AI-powered agricultural assistant for farmers and agri-professionals">
-    <style>
-        nav {
-            background: #333;
-            padding: 10px;
-        }
-        nav a {
-            color: white;
-            margin: 0 10px;
-            text-decoration: none;
-        }
-    </style>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/fonts.css">
+    <link rel="stylesheet" href="css/navigation.css">
+    <link rel="stylesheet" href="css/assistant.css">
 </head>
 <body>
-    <nav>
-        <a href="/">Home</a>
-        <a href="/about">About</a>
-        <a href="/products">Products</a>
-        <a href="/technology">Technology</a>
-        <a href="/sustainability">Sustainability</a>
-        <a href="/farmers">Farmers</a>
-        <a href="/investors">Investors</a>
-        <a href="/news">News</a>
-        <a href="/contact">Contact</a>
-    </nav>
+    <header>
+        <div class="navbar">
+            <a href="index.html" id="nav-home">Home</a>
+            <a href="pages/about-us.html" id="nav-about">About</a>
+            <a href="pages/products.html" id="nav-products">Products</a>
+            <a href="pages/technology.html" id="nav-technology">Technology</a>
+            <a href="pages/sustainability.html" id="nav-sustainability">Sustainability</a>
+            <a href="pages/farmers.html" id="nav-farmers">Farmers</a>
+            <a href="pages/investors.html" id="nav-investors">Investors</a>
+            <a href="pages/news.html" id="nav-news">News</a>
+            <a href="pages/contact-us.html" id="nav-contact">Contact</a>
+            <a href="agri-assistant.html" id="nav-assistant">Agri-Smart Assistant</a>
+        </div>
+    </header>
     <div id="app-container">
-        <iframe src="https://preview--agri-smart-query-assistant.lovable.app" 
-                frameborder="0" 
-                style="width:100%; height:calc(100vh - 50px); margin-top:10px;"></iframe>
+        <iframe src="https://preview--agri-smart-query-assistant.lovable.app"
+                frameborder="0"
+                title="Agri-Smart Query Assistant"
+                class="assistant-frame-with-nav"></iframe>
     </div>
+
+    <footer>
+        <p>&copy; 2025 JOITA BIOSEED AI. All rights reserved.</p>
+    </footer>
+
+    <script src="js/main.js"></script>
+    <script src="js/navigation.js"></script>
 </body>
 </html>

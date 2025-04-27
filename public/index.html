@@ -40,9 +40,36 @@
     </script>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/animations.css">
-    <link rel="stylesheet" href="css/fonts.css">
-    <link rel="stylesheet" href="css/navigation.css">
     <style>
+        /* Navigation Bar */
+        .navbar {
+            background-color: #2c3e50;
+            overflow: hidden;
+            padding: 10px 0;
+            font-family: Arial, sans-serif;
+        }
+        .navbar a {
+            color: white;
+            text-align: center;
+            padding: 12px 16px;
+            text-decoration: none;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .navbar a:hover {
+            background-color: #1a252f;
+        }
+        .navbar a.active {
+            background-color: #1a252f;
+        }
+        /* Responsive */
+        @media screen and (max-width: 600px) {
+            .navbar a {
+                float: none;
+                display: block;
+                text-align: left;
+            }
+        }
         /* Homepage specific styles */
         .value-props {
             display: grid;
@@ -234,8 +261,19 @@
     </style>
 </head>
 <body>
-    <header>
-        <div id="navbar-container"></div>
+    <header class="animated-header">
+        <div class="navbar">
+            <a href="index.html" class="active">Home</a>
+            <a href="pages/about-us.html">About</a>
+            <a href="pages/products.html">Products</a>
+            <a href="pages/technology.html">Technology</a>
+            <a href="pages/sustainability.html">Sustainability</a>
+            <a href="pages/farmers.html">Farmers</a>
+            <a href="pages/investors.html">Investors</a>
+            <a href="pages/news.html">News</a>
+            <a href="pages/contact-us.html">Contact</a>
+            <a href="agri-assistant.html">Agri-Smart Assistant</a>
+        </div>
     </header>
 
     <main class="fade-in">
@@ -250,7 +288,7 @@
             <div class="container">
                 <h2>Revolutionizing Indian Agriculture with AI & Nano-Technology</h2>
                 <p>JOITA BIOSEED AI integrates cutting-edge AI agriculture solutions with smart farming technology to revolutionize Indian agriculture. Our comprehensive platform combines agricultural AI software, advanced bio pesticides, and precision agriculture AI. Through digital farming solutions and agricultural automation, we deliver sustainable agricultural tech that transforms modern farming.</p>
-
+                
                 <div class="stats-grid">
                     <div class="stat-item">
                         <h3>30%</h3>
@@ -294,7 +332,7 @@
                 </div>
             </div>
 
-            <div class="value-prop-card reveal delay-1">
+            <div class="value-prop-card reveal" style="animation-delay: 0.2s;">
                 <h2>Advanced Bio-Protection</h2>
                 <p>Utilizing nano bio pesticides and advanced seed coating technology, our integrated pest management solutions deliver sustainable pest control with organic crop protection principles, ensuring agricultural safety standards.</p>
                 <div class="tech-features">
@@ -308,7 +346,7 @@
                 </div>
             </div>
 
-            <div class="value-prop-card reveal delay-2">
+            <div class="value-prop-card reveal" style="animation-delay: 0.4s;">
                 <h2>Digital Farming Solutions</h2>
                 <p>Our comprehensive digital agriculture platform combines agricultural IoT devices with smart irrigation technology. Our farm automation systems enable modern farming innovations while maintaining sustainable farming standards.</p>
                 <div class="tech-features">
@@ -339,7 +377,7 @@
                     <a href="pages/products/nano-pesticides.html" class="animated-button">Explore Nano Bio-Pesticides</a>
                 </div>
 
-                <div class="product-card reveal delay-1">
+                <div class="product-card reveal" style="animation-delay: 0.2s;">
                     <h3>RootBoost Nano</h3>
                     <p>Advanced nano seed coating technology that revolutionizes root development and plant growth. Our nano-formulation ensures optimal nutrient delivery for stronger, healthier crops with increased yield potential.</p>
                     <div class="product-features">
@@ -352,7 +390,7 @@
                     <a href="pages/products.html" class="animated-button">Discover Nano Seed Coating</a>
                 </div>
 
-                <div class="product-card reveal delay-2">
+                <div class="product-card reveal" style="animation-delay: 0.4s;">
                     <h3>PestShield AI</h3>
                     <p>AI-powered farming companion app that revolutionizes crop protection. Get real-time pest alerts, detailed crop health analysis, and personalized agronomic recommendations powered by advanced machine learning.</p>
                     <div class="product-features">
@@ -394,6 +432,5 @@
     </footer>
 
     <script src="js/main.js"></script>
-    <script src="js/navigation-loader.js"></script>
 </body>
 </html>

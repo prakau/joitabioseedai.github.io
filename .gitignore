@@ -19,3 +19,4 @@ postcss.config.js
 tailwind.config.js
 vite.config.js
 /documents/
+node_modules

@@ -1,0 +1,47 @@
+/* Navigation Bar Styles */
+.navbar {
+    background-color: #2c3e50;
+    overflow: hidden;
+    padding: 10px 0;
+    font-family: 'Arial', sans-serif;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    z-index: 1000;
+}
+
+.navbar a {
+    color: white;
+    text-align: center;
+    padding: 12px 16px;
+    text-decoration: none;
+    font-size: 16px;
+    transition: background-color 0.3s;
+    display: inline-block;
+}
+
+.navbar a:hover {
+    background-color: #1a252f;
+}
+
+.navbar a.active {
+    background-color: #1a252f;
+}
+
+/* Add space below navbar for content */
+body {
+    padding-top: 60px; /* Adjust based on navbar height */
+}
+
+/* Responsive Navigation */
+@media screen and (max-width: 768px) {
+    .navbar a {
+        float: none;
+        display: block;
+        text-align: left;
+    }
+    
+    body {
+        padding-top: 50px;
+    }
+}
