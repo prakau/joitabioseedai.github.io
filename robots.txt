@@ -52,6 +52,7 @@ Allow: /pages/products/nano-insecticides.html
 # Technical information and success stories
 Allow: /pages/technology.html
 Allow: /pages/what-makes-us-different.html
+Allow: /pages/agri-assistant.html
 
 # Resource files to exclude
 Disallow: /css/

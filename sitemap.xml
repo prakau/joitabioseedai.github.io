@@ -101,6 +101,14 @@
         <priority>0.7</priority>
     </url>
 
+    <!-- Agri-Smart Assistant -->
+    <url>
+        <loc>https://joitabioseedai.com/pages/agri-assistant.html</loc>
+        <lastmod>2025-04-27</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>0.8</priority>
+    </url>
+
     <!-- Investor Relations -->
     <url>
         <loc>https://joitabioseedai.com/pages/investors.html</loc>
