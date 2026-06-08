@@ -50,9 +50,17 @@ OpenRouter is supported only through a backend proxy. Do not place the OpenRoute
 - Backend function: `api/farmassist-chat.js`
 - Required environment variable: `OPENROUTER_API_KEY`
 - Template: `.env.example`
-- Preferred deployment: Vercel serverless function at `/api/farmassist-chat`
+- Main deployment: Vercel, with the serverless function at `/api/farmassist-chat`
+- Backup deployment: GitHub Pages for the static site only
 
-GitHub Pages cannot run `/api` functions. On GitHub Pages, FarmAssist falls back to the offline JOITA knowledge base unless the same site is also deployed behind a serverless provider such as Vercel, Netlify, Cloudflare Workers, Render, or Railway.
+GitHub Pages cannot run `/api` functions. Keep it as a static backup. The primary live site should run on Vercel or another serverless host so FarmAssist can call OpenRouter through the backend proxy.
+
+Vercel setup:
+
+1. Import/deploy this repository on Vercel.
+2. Add `OPENROUTER_API_KEY` in Vercel Project Settings only.
+3. Do not commit `.env` or any real key.
+4. Point `joitabioseedai.com` to the Vercel deployment when ready.
 
 ## Tech Stack
 

@@ -25,6 +25,7 @@ Simple, farmer-friendly, short, practical, and field-ready.
 Core rules:
 * Ask for missing crop, location, crop stage, symptoms, weather, and photo when needed.
 * For image diagnosis, never claim certainty. Say "likely issue" or "possible causes."
+* Do not ask users to upload personal documents or private information.
 * First describe visible symptoms.
 * Then give likely causes.
 * Then give immediate safe action.
@@ -81,6 +82,18 @@ Use only locally approved label dose and confirm with local KVK/extension expert
 When to Contact Expert:
 If symptoms spread quickly, plants wilt, or fruit/grain damage appears.`
   };
+}
+
+function readBody(req) {
+  if (!req.body) return {};
+  if (typeof req.body === "string") {
+    try {
+      return JSON.parse(req.body);
+    } catch {
+      return {};
+    }
+  }
+  return req.body;
 }
 
 async function callOpenRouter({ apiKey, model, userContent, signal }) {
@@ -146,7 +159,7 @@ export default async function handler(req, res) {
     language = "English",
     problemType = "general",
     imageUrl = ""
-  } = req.body || {};
+  } = readBody(req);
 
   const hasImage = Boolean(imageUrl);
   const models = hasImage ? visionModels : textModels;
