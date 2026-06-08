@@ -24,10 +24,30 @@ Official website for JOITA BIOSEED AI Pvt Ltd, showcasing our innovative agricul
 ## Deployment
 See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed GitHub Pages deployment instructions.
 
+## JOITA FarmAssist
+
+The public farmer assistant now lives at:
+
+- Source: `farmassist-src/`
+- GitHub Pages output: `farmassist/`
+- Live URL: `https://joitabioseedai.com/farmassist/`
+
+To rebuild FarmAssist:
+
+```bash
+cd farmassist-src
+npm install
+npm run build
+```
+
+The app is a React 18 + Vite + TypeScript + Tailwind offline-first web app. It uses public/no-key APIs where possible and stores optional API keys only in browser localStorage.
+
 ## Project Structure
 ```
 joitabioseedai.github.io/
 ├── index.html
+├── farmassist/
+├── farmassist-src/
 ├── css/
 │   ├── styles.css
 │   └── animations.css
@@ -64,6 +84,8 @@ When setting up the repository, create a .gitignore file with these contents:
 postcss.config.js
 tailwind.config.js
 vite.config.js
+*.tsbuildinfo
+!farmassist-src/postcss.config.js
 /documents/
 ```
 

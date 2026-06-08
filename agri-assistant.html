@@ -1,36 +1,42 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agri-Smart Assistant | JOITA BIOSEED AI</title>
-    <meta name="description" content="AI-powered agricultural assistant for farmers and agri-professionals">
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/animations.css">
-    <link rel="stylesheet" href="css/fonts.css">
-    <link rel="stylesheet" href="css/navigation.css">
-    <link rel="stylesheet" href="css/mobile.css">
-    <link rel="stylesheet" href="css/assistant.css">
-</head>
-<body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="refresh" content="2; url=/farmassist/" />
+    <title>JOITA FarmAssist | AI Agricultural Assistant for Farmers</title>
+    <meta
+      name="description"
+      content="Offline-first AI-powered agricultural companion by JOITA Bioseed AI for crop advisory, weather, disease support, soil recommendations, market prices, and field-health monitoring."
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/navigation.css" />
+    <link rel="stylesheet" href="css/mobile.css" />
+    <style>
+      body { background: #f3f7ef; color: #101510; }
+      .farmassist-redirect { min-height: 70vh; display: grid; place-items: center; padding: 32px 18px; }
+      .farmassist-panel { max-width: 760px; border: 1px solid #cbdcbc; background: #fff; border-radius: 8px; padding: 32px; box-shadow: 0 18px 48px rgba(36, 56, 29, .14); }
+      .farmassist-panel h1 { margin: 0 0 14px; color: #101510; font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1; }
+      .farmassist-panel p { color: #101510; font-size: 1.1rem; line-height: 1.7; }
+      .farmassist-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; border-radius: 6px; background: #304027; color: #fff; text-decoration: none; font-weight: 800; }
+    </style>
+  </head>
+  <body>
     <header>
-        <div id="navbar-container">
-            <!-- Navigation will be loaded here by navigation-loader.js -->
-        </div>
+      <div id="navbar-container"></div>
     </header>
-    <div id="app-container">
-        <iframe src="https://preview--agri-smart-query-assistant.lovable.app"
-                frameborder="0"
-                title="Agri-Smart Query Assistant"
-                class="assistant-frame-with-nav"></iframe>
-    </div>
-
+    <main class="farmassist-redirect">
+      <section class="farmassist-panel">
+        <h1>JOITA FarmAssist</h1>
+        <p>JOITA FarmAssist — AI-powered offline-first agricultural companion for farmers.</p>
+        <p>The old private assistant preview has been replaced with a public farmer-ready app.</p>
+        <a class="farmassist-button" href="/farmassist/">Open JOITA FarmAssist</a>
+      </section>
+    </main>
     <footer>
-        <p>&copy; 2025 JOITA BIOSEED AI. All rights reserved.</p>
+      <p>&copy; 2025 JOITA BIOSEED AI. All rights reserved.</p>
     </footer>
-
-    <script src="js/main.js"></script>
     <script src="js/navigation-loader.js"></script>
     <script src="js/navigation.js"></script>
-</body>
+  </body>
 </html>

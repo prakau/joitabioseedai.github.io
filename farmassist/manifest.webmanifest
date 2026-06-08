@@ -1,0 +1,17 @@
+{
+  "name": "JOITA FarmAssist",
+  "short_name": "FarmAssist",
+  "start_url": "/farmassist/",
+  "scope": "/farmassist/",
+  "display": "standalone",
+  "background_color": "#f3f7ef",
+  "theme_color": "#6f944e",
+  "description": "Offline-first agricultural companion for Indian farmers.",
+  "icons": [
+    {
+      "src": "/farmassist/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -6,7 +6,6 @@ import HomePage from './pages/Home';
 import AboutPage from './pages/About';
 import ProductPage from './pages/Product';
 import TechnologyPage from './pages/Technology';
-import AgriAssistantPage from './pages/AgriAssistant';
 import './styles/global.css';
 
 const App = () => {
@@ -20,7 +19,7 @@ const App = () => {
               <li><Link to="/about">About</Link></li>
               <li><Link to="/products">Products</Link></li>
               <li><Link to="/technology">Technology</Link></li>
-              <li><Link to="/agri-assistant">Agri Assistant</Link></li>
+              <li><a href="/farmassist/">Agri-Smart Assistant</a></li>
             </ul>
           </nav>
           <Routes>
@@ -28,7 +27,6 @@ const App = () => {
             <Route path="/about" element={<AboutPage />} />
             <Route path="/products" element={<ProductPage />} />
             <Route path="/technology" element={<TechnologyPage />} />
-            <Route path="/agri-assistant" element={<AgriAssistantPage />} />
           </Routes>
         </BaseLayout>
       </ThemeProvider>

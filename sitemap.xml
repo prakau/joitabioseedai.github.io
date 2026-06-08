@@ -101,10 +101,10 @@
         <priority>0.7</priority>
     </url>
 
-    <!-- Agri-Smart Assistant -->
+    <!-- JOITA FarmAssist -->
     <url>
-        <loc>https://joitabioseedai.com/pages/agri-assistant.html</loc>
-        <lastmod>2025-04-27</lastmod>
+        <loc>https://joitabioseedai.com/farmassist/</loc>
+        <lastmod>2026-06-08</lastmod>
         <changefreq>daily</changefreq>
         <priority>0.8</priority>
     </url>

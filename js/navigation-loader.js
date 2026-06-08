@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
             { id: 'nav-contact', text: 'Contact', href: `${isRoot ? 'pages/' : ''}contact-us.html` },
             { id: 'nav-different', text: 'What Makes Us Different', href: `${isRoot ? 'pages/' : ''}what-makes-us-different.html` },
             { id: 'nav-north-star', text: 'Our North Star', href: `${isRoot ? 'pages/' : ''}north-star.html` },
-            { id: 'nav-assistant', text: 'Agri-Smart Assistant', href: `${isRoot ? '' : '../'}agri-assistant.html` }
+            { id: 'nav-assistant', text: 'Agri-Smart Assistant', href: '/farmassist/' }
         ];
 
         // Add each link to the navbar

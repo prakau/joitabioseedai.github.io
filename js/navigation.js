@@ -61,8 +61,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const northStarLink = document.getElementById('nav-north-star');
         if (northStarLink) northStarLink.classList.add('active');
     }
-    // Agri-Smart Assistant page
-    else if (pageName === 'agri-assistant.html') {
+    // JOITA FarmAssist app
+    else if (currentPage.includes('/farmassist/')) {
         const assistantLink = document.getElementById('nav-assistant');
         if (assistantLink) assistantLink.classList.add('active');
     }

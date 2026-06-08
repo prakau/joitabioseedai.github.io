@@ -3,8 +3,9 @@ import React from 'react';
 const AgriAssistantPage = () => {
   return (
     <div className="page-container">
-      <h1>Agri-Smart Assistant</h1>
-      <p>Your AI-powered assistant for agricultural insights.</p>
+      <h1>JOITA FarmAssist</h1>
+      <p>AI-powered offline-first agricultural companion for farmers.</p>
+      <a href="/farmassist/">Open JOITA FarmAssist</a>
     </div>
   );
 };

@@ -14,7 +14,7 @@ const Header = () => {
           <NavLink to="/about" activeClassName="active">About</NavLink>
           <NavLink to="/products" activeClassName="active">Products</NavLink>
           <NavLink to="/technology" activeClassName="active">Technology</NavLink>
-          <NavLink to="/agri-assistant" activeClassName="active">Agri Assistant</NavLink>
+          <a href="/farmassist/">Agri-Smart Assistant</a>
         </div>
         <button 
           className="theme-toggle"
