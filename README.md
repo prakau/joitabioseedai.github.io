@@ -1,36 +1,41 @@
-# JOITA BIOSEED AI Website
+# JOITA Bioseed AI Website
 
-## Overview
-Official website for JOITA BIOSEED AI Pvt Ltd, showcasing our innovative agricultural solutions combining nano-technology and AI.
+Official GitHub Pages website for JOITA Bioseed AI.
 
-## Features
-- Smart Farming Technology
-- Advanced Bio-Protection Solutions
-- Digital Farming Platform
-- AI-Driven Agricultural Services
+JOITA Bioseed AI builds AI-prescribed nano-biological solutions for climate-resilient agriculture across India, Malaysia, and Ghana.
 
-## Tech Stack
-- HTML5
-- CSS3 (with animations)
-- Vanilla JavaScript
-- Schema.org structured data
-- Mobile-responsive design
+## Public Website
 
-## Setup Instructions
-1. Clone the repository
-2. No build process required - static HTML/CSS/JS
-3. Open index.html in a browser to view locally
+- Homepage: `https://joitabioseedai.com/`
+- FarmAssist AI page: `https://joitabioseedai.com/farmassist-ai.html`
+- Dedicated Agri-Smart Assistant page: `https://joitabioseedai.com/agri-smart-assistant.html`
+- FarmAssist app: `https://joitabioseedai.com/farmassist/`
 
-## Deployment
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed GitHub Pages deployment instructions.
+## 2026 Site Pages
+
+- `index.html`
+- `about.html`
+- `domains.html`
+- `products.html`
+- `farmassist-ai.html`
+- `agri-smart-assistant.html`
+- `data-validation.html`
+- `farmers-fpos.html`
+- `investors-partners.html`
+- `join-us.html`
+- `news.html`
+- `global-footprint.html`
+- `contact.html`
+
+Legacy URLs under `/pages/`, `agri-assistant.html`, and `contact-us.html` now redirect to the updated 2026 page set. The dedicated `agri-smart-assistant.html` page remains public for farmers and partners who know the original assistant name.
 
 ## JOITA FarmAssist
 
-The public farmer assistant now lives at:
+The public farmer assistant is a React 18 + Vite + TypeScript + Tailwind offline-first web app.
 
 - Source: `farmassist-src/`
 - GitHub Pages output: `farmassist/`
-- Live URL: `https://joitabioseedai.com/farmassist/`
+- Base path: `/farmassist/`
 
 To rebuild FarmAssist:
 
@@ -40,59 +45,30 @@ npm install
 npm run build
 ```
 
-The app is a React 18 + Vite + TypeScript + Tailwind offline-first web app. It uses public/no-key APIs where possible and stores optional API keys only in browser localStorage.
+FarmAssist uses public/no-key APIs where possible and stores optional API keys only in browser localStorage.
 
-## Project Structure
-```
-joitabioseedai.github.io/
-├── index.html
-├── farmassist/
-├── farmassist-src/
-├── css/
-│   ├── styles.css
-│   └── animations.css
-├── js/
-│   └── main.js
-├── images/
-└── pages/
-    ├── about-us.html
-    ├── products/
-    │   └── nano-pesticides.html
-    └── [other pages]
-```
+## Tech Stack
 
-## Required .gitignore Configuration
-When setting up the repository, create a .gitignore file with these contents:
-```
-# System files
-.DS_Store
-.env
-.env.local
-.env.*.local
+- Static HTML, CSS, and JavaScript for the public marketing site
+- React 18, Vite, TypeScript, Tailwind CSS for FarmAssist
+- GitHub Pages with custom domain through `CNAME`
 
-# Editor directories and files
-.idea
-.vscode
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+## Positioning
 
-# Development files
-*.py
-postcss.config.js
-tailwind.config.js
-vite.config.js
-*.tsbuildinfo
-!farmassist-src/postcss.config.js
-/documents/
-```
+Products and platform:
 
-## Contact
-For inquiries about this website, contact JOITA BIOSEED AI Pvt Ltd:
-- Address: 1379/10 VASHISTH COLONY, THANESAR, KURUKSHETRA - 136118, HARYANA, INDIA
-- Website: https://joitabioseedai.com (Once deployed)
+- BioSynth Nano
+- FarmAssist AI
+- SmartSeedMat
+- AquaSynth Nano
+- BioSynth Prime
+- GrowNano Boost
+- FieldProof Data Engine
+
+Footer disclaimer:
+
+JOITA products and technologies are under continuous field validation. Crop response may vary depending on crop, variety, location, season, soil, weather, application timing, and management practices. Product use should follow approved guidance, local regulations, and expert recommendations.
 
 ## License
-© 2025 JOITA BIOSEED AI. All rights reserved.
+
+Copyright 2025-2026 JOITA Bioseed AI. All rights reserved.

@@ -30,7 +30,7 @@ img {
     height: auto;
 }
 
-/* Floating Agri-Smart Assistant Button */
+/* Floating FarmAssist AI button */
 .mobile-assistant-button {
     display: none;
     position: fixed;
@@ -115,7 +115,7 @@ img {
         display: block;
     }
 
-    /* Show the floating Agri-Smart Assistant button */
+    /* Show the floating FarmAssist AI button */
     .mobile-assistant-button {
         display: block;
     }
@@ -167,12 +167,12 @@ img {
 
     /* Add icons to navigation links */
     .navbar a::before {
-        content: "•";
+        content: ">";
         margin-right: 10px;
         color: var(--primary-color);
     }
 
-    /* Ensure Agri-Smart Assistant link is always visible */
+    /* Ensure FarmAssist AI link is always visible */
     .navbar a#nav-assistant {
         background-color: rgba(46, 204, 113, 0.2); /* Highlight with primary color */
         border-left: 3px solid var(--primary-color);
@@ -185,7 +185,7 @@ img {
     }
 
     .navbar a#nav-assistant::before {
-        content: "🌱";
+        content: "FA";
     }
 
     /* Adjust body padding for fixed header */

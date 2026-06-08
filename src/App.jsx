@@ -1,10 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { ThemeProvider } from './context/themeContext';
-import BaseLayout from './layout/BaseLayout';
+import { ThemeProvider } from './context/ThemeContext';
+import BaseLayout from './layouts/BaseLayout';
 import HomePage from './pages/Home';
 import AboutPage from './pages/About';
-import ProductPage from './pages/Product';
+import ProductsPage from './pages/Products';
 import TechnologyPage from './pages/Technology';
 import './styles/global.css';
 
@@ -16,16 +16,21 @@ const App = () => {
           <nav>
             <ul>
               <li><Link to="/">Home</Link></li>
-              <li><Link to="/about">About</Link></li>
-              <li><Link to="/products">Products</Link></li>
-              <li><Link to="/technology">Technology</Link></li>
-              <li><a href="/farmassist/">Agri-Smart Assistant</a></li>
+              <li><a href="/about.html">About</a></li>
+              <li><a href="/domains.html">Domains</a></li>
+              <li><a href="/products.html">Products</a></li>
+              <li><a href="/farmassist-ai.html">FarmAssist AI</a></li>
+              <li><a href="/data-validation.html">Data & Field Validation</a></li>
+              <li><a href="/farmers-fpos.html">Farmers & FPOs</a></li>
+              <li><a href="/investors-partners.html">Investors & Partners</a></li>
+              <li><a href="/join-us.html">Join Us</a></li>
+              <li><a href="/contact.html">Contact</a></li>
             </ul>
           </nav>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/about" element={<AboutPage />} />
-            <Route path="/products" element={<ProductPage />} />
+            <Route path="/products" element={<ProductsPage />} />
             <Route path="/technology" element={<TechnologyPage />} />
           </Routes>
         </BaseLayout>

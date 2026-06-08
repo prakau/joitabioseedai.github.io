@@ -4,7 +4,7 @@ const AboutPage = () => {
   return (
     <div className="page-container">
       <h1>About Us</h1>
-      <p>Learn more about JOITA BIOSEED AI and our mission.</p>
+      <p>JOITA Bioseed AI builds AI-prescribed nano-biological solutions for climate-resilient agriculture.</p>
     </div>
   );
 };

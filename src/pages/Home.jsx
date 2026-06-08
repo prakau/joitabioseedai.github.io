@@ -11,24 +11,24 @@ const HomePage = () => {
           <Link to="/products" className="btn btn-primary">
             Explore Our Products
           </Link>
-          <Link to="/technology" className="btn btn-secondary">
-            Learn About Our Technology
-          </Link>
+          <a href="/farmassist-ai.html" className="btn btn-secondary">
+            Try FarmAssist AI
+          </a>
         </div>
       </section>
 
       <section className="features-section">
         <div className="feature-card">
           <h3>AI-Powered Solutions</h3>
-          <p>Smart farming technology for increased yields</p>
+          <p>Offline-first advisory for better crop-stage decisions</p>
         </div>
         <div className="feature-card">
           <h3>Nano-Enabled Products</h3>
-          <p>Advanced bio-protection for sustainable agriculture</p>
+          <p>BioSynth Nano, SmartSeed Mat, and AquaSynth Nano platforms</p>
         </div>
         <div className="feature-card">
           <h3>Digital Farming</h3>
-          <p>Comprehensive platform for modern farming</p>
+          <p>FieldProof records pilot observations and farmer feedback</p>
         </div>
       </section>
     </div>

@@ -1,6 +1,5 @@
 import React from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { NavLink } from 'react-router-dom';
 
 const Header = () => {
   const { theme, toggleTheme } = useTheme();
@@ -10,11 +9,16 @@ const Header = () => {
       <nav className="navbar">
         <div className="logo">JOITA BIOSEED AI</div>
         <div className="nav-links">
-          <NavLink to="/" exact activeClassName="active">Home</NavLink>
-          <NavLink to="/about" activeClassName="active">About</NavLink>
-          <NavLink to="/products" activeClassName="active">Products</NavLink>
-          <NavLink to="/technology" activeClassName="active">Technology</NavLink>
-          <a href="/farmassist/">Agri-Smart Assistant</a>
+          <a href="/">Home</a>
+          <a href="/about.html">About</a>
+          <a href="/domains.html">Domains</a>
+          <a href="/products.html">Products</a>
+          <a href="/farmassist-ai.html">FarmAssist AI</a>
+          <a href="/data-validation.html">Data & Field Validation</a>
+          <a href="/farmers-fpos.html">Farmers & FPOs</a>
+          <a href="/investors-partners.html">Investors & Partners</a>
+          <a href="/join-us.html">Join Us</a>
+          <a href="/contact.html">Contact</a>
         </div>
         <button 
           className="theme-toggle"

@@ -3,8 +3,8 @@ import React from 'react';
 const TechnologyPage = () => {
   return (
     <div className="page-container">
-      <h1>Our Technology</h1>
-      <p>Learn about the cutting-edge technology behind our agricultural solutions.</p>
+      <h1>Data and Field Validation</h1>
+      <p>FieldProof Data Engine helps JOITA track field conditions, application timing, farmer feedback, and observed crop response.</p>
     </div>
   );
 };

@@ -7,11 +7,15 @@ const Footer = () => {
   return (
     <footer className={`footer ${theme}`}>
       <div className="footer-content">
-        <p>© {new Date().getFullYear()} JOITA BIOSEED AI. All rights reserved.</p>
+        <p>Copyright 2025-2026 JOITA Bioseed AI. All rights reserved.</p>
+        <p className="footer-disclaimer">
+          JOITA products and technologies are under continuous field validation. Crop response may vary by crop, season, location, soil, weather, and management practices.
+        </p>
         <div className="footer-links">
-          <a href="/privacy">Privacy Policy</a>
-          <a href="/terms">Terms of Service</a>
-          <a href="/contact">Contact Us</a>
+          <a href="/products.html">Products</a>
+          <a href="/farmassist-ai.html">FarmAssist AI</a>
+          <a href="/join-us.html">Join Us</a>
+          <a href="/contact.html">Contact</a>
         </div>
       </div>
     </footer>

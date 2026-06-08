@@ -4,7 +4,7 @@ const ProductsPage = () => {
   return (
     <div className="page-container">
       <h1>Our Products</h1>
-      <p>Explore our range of innovative agricultural products.</p>
+      <p>Explore BioSynth Nano, FarmAssist AI, SmartSeed Mat, AquaSynth Nano, and FieldProof Data Engine.</p>
     </div>
   );
 };

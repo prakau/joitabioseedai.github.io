@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // Create a floating button for Agri-Smart Assistant on mobile
+        // Create a floating button for FarmAssist AI on mobile
         const assistantLink = document.getElementById('nav-assistant');
         if (assistantLink) {
             // Ensure the link is visible and styled properly
@@ -120,8 +120,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const assistantButton = document.createElement('a');
                 assistantButton.className = 'mobile-assistant-button';
                 assistantButton.href = assistantLink.href;
-                assistantButton.innerHTML = '🌱 Agri-Smart';
-                assistantButton.setAttribute('aria-label', 'Open Agri-Smart Assistant');
+                assistantButton.innerHTML = 'FarmAssist AI';
+                assistantButton.setAttribute('aria-label', 'Open FarmAssist AI');
 
                 // Add touch feedback
                 assistantButton.addEventListener('touchstart', function() {
