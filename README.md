@@ -43,6 +43,17 @@ npm run build
 
 FarmAssist uses public/no-key APIs where possible and stores optional API keys only in browser localStorage.
 
+## OpenRouter FarmAssist Proxy
+
+OpenRouter is supported only through a backend proxy. Do not place the OpenRouter key in frontend JavaScript or GitHub Pages HTML.
+
+- Backend function: `api/farmassist-chat.js`
+- Required environment variable: `OPENROUTER_API_KEY`
+- Template: `.env.example`
+- Preferred deployment: Vercel serverless function at `/api/farmassist-chat`
+
+GitHub Pages cannot run `/api` functions. On GitHub Pages, FarmAssist falls back to the offline JOITA knowledge base unless the same site is also deployed behind a serverless provider such as Vercel, Netlify, Cloudflare Workers, Render, or Railway.
+
 ## Tech Stack
 
 - Static HTML, CSS, and JavaScript for the public marketing site

@@ -35,6 +35,7 @@ import { fetchGbifContext, fetchINaturalistContext, fetchMandiPrices, fetchNasaC
 import { searchKnowledgeBase, type KbMatch } from "./services/semanticSearch";
 
 type QuestionRecord = { id: string; question: string; answer: string; date: string };
+type FarmAssistChatResponse = { ok: boolean; answer: string; model: string; mode: "text" | "vision" | "fallback" | string };
 type EhiReading = { id: string; date: string; ehi: number; activity: number; silence: number; frequency: number; interpretation: string };
 type LayoutRecord = { id: string; crop: string; length: number; width: number; rows: number; irrigation: string; notes: string; date: string };
 type SoilReport = { id: string; crop: string; ph: number; ec: number; oc: number; n: number; p: number; k: number; zn: number; fe: number; soil: string; summary: string; date: string };
@@ -68,6 +69,9 @@ const nav = [
 
 const symptoms = ["yellow leaves", "brown spots", "leaf curl", "white insects", "wilting", "fruit holes", "powdery growth", "black rot"];
 const issueTypes = ["Pest", "Disease", "Irrigation", "Fertilizer", "Weather", "Market", "Other"];
+const cropStages = ["not sure", "sowing", "seedling", "vegetative", "flowering", "fruiting", "grain filling", "harvest"];
+const problemTypes = ["general", "disease", "nutrition", "pest", "weather"];
+const languages = ["English", "Hindi", "Haryanvi"];
 
 function readList<T>(key: string, fallback: T[] = []) {
   if (typeof localStorage === "undefined") return fallback;
@@ -87,6 +91,10 @@ export default function App() {
   const [online, setOnline] = useState(navigator.onLine);
   const [question, setQuestion] = useState("How should I manage aphids in mustard?");
   const [questions, setQuestions] = useState<QuestionRecord[]>(() => readList(keys.questions));
+  const [chatForm, setChatForm] = useState({ crop: "Wheat", location: "Haryana", stage: "flowering", language: "English", problemType: "general", imageUrl: "", imageName: "" });
+  const [chatResponse, setChatResponse] = useState<FarmAssistChatResponse | null>(null);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState("");
   const [selectedCrop, setSelectedCrop] = useState("Wheat");
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>(["yellow leaves", "brown spots"]);
   const [imageName, setImageName] = useState("leaf-symptom.jpg");
@@ -116,6 +124,7 @@ export default function App() {
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
   const timer = useRef<number | null>(null);
+  const devMode = import.meta.env.DEV;
 
   useEffect(() => {
     const on = () => setOnline(true);
@@ -184,6 +193,81 @@ export default function App() {
     const next = [{ id: crypto.randomUUID(), question, answer: grounded, date: today() }, ...questions].slice(0, 30);
     setQuestions(next);
     saveList(keys.questions, next);
+  }
+
+  function offlineFarmAssistFallback(reason: string): FarmAssistChatResponse {
+    const offline = answerFarmQuestion(question);
+    return {
+      ok: false,
+      model: "offline-joita-kb",
+      mode: "fallback",
+      answer: `Likely Issue:
+${offline}
+
+Immediate Action:
+Monitor the crop, remove badly affected material where practical, correct irrigation stress, and avoid unnecessary spray.
+
+What to Check:
+Crop: ${chatForm.crop}. Stage: ${chatForm.stage}. Location: ${chatForm.location}. Check underside of leaves, spread pattern, recent weather, soil moisture, and nearby affected plants.
+
+Safe Advisory:
+Use only locally approved label dose and confirm with local KVK/extension expert.
+
+When to Contact Expert:
+Contact an expert if symptoms spread fast, plants wilt, or pest/disease pressure increases.
+
+Offline note: ${reason}`
+    };
+  }
+
+  async function askLiveFarmAssist() {
+    if (!question.trim()) return;
+    setChatLoading(true);
+    setChatError("");
+    try {
+      const response = await fetch("/api/farmassist-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: question,
+          crop: chatForm.crop,
+          location: chatForm.location,
+          stage: chatForm.stage,
+          language: chatForm.language,
+          problemType: chatForm.problemType,
+          imageUrl: chatForm.imageUrl
+        })
+      });
+      const data = await response.json().catch(() => null) as FarmAssistChatResponse | null;
+      if (!response.ok || !data?.answer) {
+        throw new Error(data?.answer || `FarmAssist backend returned ${response.status}`);
+      }
+      setChatResponse(data);
+      const next = [{ id: crypto.randomUUID(), question, answer: data.answer, date: today() }, ...questions].slice(0, 30);
+      setQuestions(next);
+      saveList(keys.questions, next);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "Live FarmAssist AI is unavailable.";
+      const fallback = offlineFarmAssistFallback(reason);
+      setChatResponse(fallback);
+      setChatError("Live FarmAssist AI is unavailable, so the offline JOITA KB answered this question.");
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  function handleChatImageUpload(file?: File) {
+    if (!file) return;
+    if (file.size > 4_500_000) {
+      setChatError("Please upload a crop photo smaller than 4.5 MB for live AI diagnosis.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setChatForm((current) => ({ ...current, imageUrl: String(reader.result ?? ""), imageName: file.name }));
+      setChatError("");
+    };
+    reader.readAsDataURL(file);
   }
 
   async function startRecording(testSeconds = 60) {
@@ -340,8 +424,27 @@ export default function App() {
       return (
         <Card><CardHeader><CardTitle>Ask FarmAssist</CardTitle></CardHeader><CardContent className="grid gap-4 lg:grid-cols-[1fr_340px]">
           <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              <select className="min-h-10 w-full rounded-md border border-sage-300 px-3 font-bold" value={chatForm.crop} onChange={(event) => setChatForm({ ...chatForm, crop: event.target.value })}>{cropGuides.map((item) => <option key={item.crop}>{item.crop}</option>)}</select>
+              <Input placeholder="Location" value={chatForm.location} onChange={(event) => setChatForm({ ...chatForm, location: event.target.value })} />
+              <select className="min-h-10 w-full rounded-md border border-sage-300 px-3 font-bold" value={chatForm.stage} onChange={(event) => setChatForm({ ...chatForm, stage: event.target.value })}>{cropStages.map((item) => <option key={item}>{item}</option>)}</select>
+              <select className="min-h-10 w-full rounded-md border border-sage-300 px-3 font-bold" value={chatForm.problemType} onChange={(event) => setChatForm({ ...chatForm, problemType: event.target.value })}>{problemTypes.map((item) => <option key={item}>{item}</option>)}</select>
+              <select className="min-h-10 w-full rounded-md border border-sage-300 px-3 font-bold" value={chatForm.language} onChange={(event) => setChatForm({ ...chatForm, language: event.target.value })}>{languages.map((item) => <option key={item}>{item}</option>)}</select>
+              <label className="flex min-h-10 cursor-pointer items-center justify-center rounded-md border border-sage-700 bg-sage-100 px-3 py-2 text-sm font-bold text-black hover:bg-sage-200">
+                Upload crop photo
+                <input className="sr-only" type="file" accept="image/*" capture="environment" onChange={(event) => handleChatImageUpload(event.target.files?.[0])} />
+              </label>
+            </div>
+            {chatForm.imageUrl ? <div className="flex flex-wrap items-center gap-3 rounded-md border border-sage-200 bg-white p-3"><img className="h-20 w-20 rounded-md object-cover" src={chatForm.imageUrl} alt="Uploaded crop preview" /><div className="min-w-0 flex-1"><p className="truncate font-bold">{chatForm.imageName || "Crop photo attached"}</p><p className="text-sm text-sage-900">Image diagnosis will use the vision model chain.</p></div><Button variant="ghost" onClick={() => setChatForm({ ...chatForm, imageUrl: "", imageName: "" })}>Remove photo</Button></div> : null}
             <Textarea value={question} onChange={(event) => setQuestion(event.target.value)} />
-            <Button onClick={ask}><Leaf className="h-4 w-4" /> Answer from Offline KB</Button>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={askLiveFarmAssist} disabled={chatLoading}><Leaf className="h-4 w-4" /> Ask Live FarmAssist AI</Button>
+              <Button variant="secondary" onClick={ask}><Leaf className="h-4 w-4" /> Answer from Offline KB</Button>
+              <Button variant="ghost" onClick={askLiveFarmAssist} disabled={chatLoading || !chatResponse}>Retry</Button>
+            </div>
+            {chatLoading ? <div className="animate-pulse rounded-md bg-sage-100 p-4 font-bold">FarmAssist AI is checking crop symptoms…</div> : null}
+            {chatError ? <div className="rounded-md border border-sage-300 bg-sage-100 p-3 text-sm font-bold">{chatError}</div> : null}
+            {chatResponse ? <div className="rounded-md border border-sage-200 bg-white p-4"><div className="whitespace-pre-wrap text-base font-semibold leading-7">{chatResponse.answer}</div>{devMode ? <p className="mt-3 text-xs font-bold text-sage-800">Dev model status: {chatResponse.model} · {chatResponse.mode} · {chatResponse.ok ? "ok" : "fallback"}</p> : null}<p className="mt-3 text-sm font-bold text-sage-900">AI-assisted advisory. Confirm pesticide/fertilizer use with local label, KVK, or agriculture expert.</p></div> : null}
             <SourceBadges weather={weather.data?.source ?? "Open-Meteo"} market={mandi.data?.source ?? "Offline Cache"} nasa={nasa.data?.source ?? "NASA POWER"} biodiversity={`${gbif.data?.source ?? "GBIF"}/${inat.data?.source ?? "iNaturalist"}`} />
             <div className="rounded-md bg-sage-100 p-4 text-base font-medium leading-7">{latest?.answer ?? answerFarmQuestion(question)}</div>
             <div className="grid gap-2 md:grid-cols-2">{kbMatches.map((match) => <Info key={`${match.source}-${match.mode}`} label={`${match.source} · ${match.mode}`} value={match.text} />)}</div>
@@ -488,7 +591,7 @@ export default function App() {
       return <Card><CardHeader><CardTitle>About JOITA Bioseed AI</CardTitle></CardHeader><CardContent className="space-y-4"><p className="text-lg font-semibold leading-8">JOITA FarmAssist is part of JOITA Bioseed AI's mission to combine AI, nanotechnology, crop science, and farmer-first advisory for climate-resilient agriculture.</p><p className="leading-7">This app is built for practical field use: offline knowledge, local persistence, transparent safety disclaimers, no paid backend requirement, and free API integration where it is reliable.</p><a href="https://joitabioseedai.com" target="_blank" rel="noreferrer"><Button><ExternalLink className="h-4 w-4" /> Visit main website</Button></a></CardContent></Card>;
     }
 
-    return <Card><CardHeader><CardTitle>Settings / Offline Data</CardTitle></CardHeader><CardContent className="space-y-4"><div className="grid gap-3 md:grid-cols-5">{storageCounts.map(([label, count]) => <Info key={label} label={label} value={String(count)} />)}</div><div className="grid gap-3 md:grid-cols-2"><Input placeholder="Farm name" value={settings.farmName} onChange={(event) => setSettings({ ...settings, farmName: event.target.value })} /><Input placeholder="Village" value={settings.village} onChange={(event) => setSettings({ ...settings, village: event.target.value })} /><Input placeholder="Optional Data.gov.in API key" value={settings.dataGovKey} onChange={(event) => setSettings({ ...settings, dataGovKey: event.target.value })} /><Input placeholder="Optional Pl@ntNet API key" value={settings.plantNetKey} onChange={(event) => setSettings({ ...settings, plantNetKey: event.target.value })} /><label className="flex items-center gap-2 rounded-md bg-sage-100 p-3 font-bold"><input type="checkbox" checked={settings.enableTransformers} onChange={(event) => { localStorage.setItem("joita-fa-enable-transformers", String(event.target.checked)); setSettings({ ...settings, enableTransformers: event.target.checked }); }} /> Enable Transformers.js semantic search</label><Button onClick={() => { localStorage.setItem(keys.settings, JSON.stringify(settings)); localStorage.setItem("joita-fa-enable-transformers", String(settings.enableTransformers)); }}><Save className="h-4 w-4" /> Save Settings</Button></div><Info label="PWA" value="Service worker caches the /farmassist/ shell. localStorage persists questions, EHI readings, weather cache, soil reports, farm layouts, and community posts." /><Info label="Optional AI" value="Gemini and Hugging Face Inference are backend-proxy only. Cloudflare Worker, Vercel Function, Netlify Function, or Supabase Edge Function can hold secrets safely." /><Info label="No fake claims" value="Core app works offline from JOITA KB. Online sources make it smarter; pesticide dose decisions always need local expert verification." /></CardContent></Card>;
+    return <Card><CardHeader><CardTitle>Settings / Offline Data</CardTitle></CardHeader><CardContent className="space-y-4"><div className="grid gap-3 md:grid-cols-5">{storageCounts.map(([label, count]) => <Info key={label} label={label} value={String(count)} />)}</div><div className="grid gap-3 md:grid-cols-2"><Input placeholder="Farm name" value={settings.farmName} onChange={(event) => setSettings({ ...settings, farmName: event.target.value })} /><Input placeholder="Village" value={settings.village} onChange={(event) => setSettings({ ...settings, village: event.target.value })} /><Input placeholder="Optional Data.gov.in API key" value={settings.dataGovKey} onChange={(event) => setSettings({ ...settings, dataGovKey: event.target.value })} /><Input placeholder="Optional Pl@ntNet API key" value={settings.plantNetKey} onChange={(event) => setSettings({ ...settings, plantNetKey: event.target.value })} /><label className="flex items-center gap-2 rounded-md bg-sage-100 p-3 font-bold"><input type="checkbox" checked={settings.enableTransformers} onChange={(event) => { localStorage.setItem("joita-fa-enable-transformers", String(event.target.checked)); setSettings({ ...settings, enableTransformers: event.target.checked }); }} /> Enable Transformers.js semantic search</label><Button onClick={() => { localStorage.setItem(keys.settings, JSON.stringify(settings)); localStorage.setItem("joita-fa-enable-transformers", String(settings.enableTransformers)); }}><Save className="h-4 w-4" /> Save Settings</Button></div><Info label="PWA" value="Service worker caches the /farmassist/ shell. localStorage persists questions, EHI readings, weather cache, soil reports, farm layouts, and community posts." /><Info label="OpenRouter AI" value="Live AI uses /api/farmassist-chat only when a backend proxy is deployed. OPENROUTER_API_KEY must stay in server environment variables and must never be saved in frontend JavaScript." /><Info label="No fake claims" value="Core app works offline from JOITA KB. Online sources make it smarter; pesticide dose decisions always need local expert verification." /></CardContent></Card>;
   }
 }
 
