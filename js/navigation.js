@@ -3,8 +3,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const map = [
         ['/', 'nav-home'],
         ['/index.html', 'nav-home'],
-        ['/about.html', 'nav-about'],
-        ['/domains.html', 'nav-domains'],
+        ['/about.html', 'nav-home'],
+        ['/domains.html', 'nav-data'],
         ['/products.html', 'nav-products'],
         ['/farmassist-ai.html', 'nav-assistant'],
         ['/agri-smart-assistant.html', 'nav-assistant'],

@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import BaseLayout from './layouts/BaseLayout';
 import HomePage from './pages/Home';
-import AboutPage from './pages/About';
 import ProductsPage from './pages/Products';
 import TechnologyPage from './pages/Technology';
 import './styles/global.css';
@@ -16,8 +15,6 @@ const App = () => {
           <nav>
             <ul>
               <li><Link to="/">Home</Link></li>
-              <li><a href="/about.html">About</a></li>
-              <li><a href="/domains.html">Domains</a></li>
               <li><a href="/products.html">Products</a></li>
               <li><a href="/farmassist-ai.html">FarmAssist AI</a></li>
               <li><a href="/data-validation.html">Data & Field Validation</a></li>
@@ -29,9 +26,9 @@ const App = () => {
           </nav>
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/about" element={<AboutPage />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/technology" element={<TechnologyPage />} />
+            <Route path="/about" element={<HomePage />} />
           </Routes>
         </BaseLayout>
       </ThemeProvider>

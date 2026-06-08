@@ -10,8 +10,6 @@ const Header = () => {
         <div className="logo">JOITA BIOSEED AI</div>
         <div className="nav-links">
           <a href="/">Home</a>
-          <a href="/about.html">About</a>
-          <a href="/domains.html">Domains</a>
           <a href="/products.html">Products</a>
           <a href="/farmassist-ai.html">FarmAssist AI</a>
           <a href="/data-validation.html">Data & Field Validation</a>

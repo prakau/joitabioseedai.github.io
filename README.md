@@ -2,7 +2,7 @@
 
 Official GitHub Pages website for JOITA Bioseed AI.
 
-JOITA Bioseed AI builds AI-prescribed nano-biological solutions for climate-resilient agriculture across India, Malaysia, and Ghana.
+JOITA Bioseed AI combines AI-guided recommendations, biological crop inputs, and field validation for farmer-first climate-resilient agriculture.
 
 ## Public Website
 
@@ -11,11 +11,9 @@ JOITA Bioseed AI builds AI-prescribed nano-biological solutions for climate-resi
 - Dedicated Agri-Smart Assistant page: `https://joitabioseedai.com/agri-smart-assistant.html`
 - FarmAssist app: `https://joitabioseedai.com/farmassist/`
 
-## 2026 Site Pages
+## Current Site Pages
 
 - `index.html`
-- `about.html`
-- `domains.html`
 - `products.html`
 - `farmassist-ai.html`
 - `agri-smart-assistant.html`
@@ -23,11 +21,9 @@ JOITA Bioseed AI builds AI-prescribed nano-biological solutions for climate-resi
 - `farmers-fpos.html`
 - `investors-partners.html`
 - `join-us.html`
-- `news.html`
-- `global-footprint.html`
 - `contact.html`
 
-Legacy URLs under `/pages/`, `agri-assistant.html`, and `contact-us.html` now redirect to the updated 2026 page set. The dedicated `agri-smart-assistant.html` page remains public for farmers and partners who know the original assistant name.
+Legacy URLs under `/pages/`, `about.html`, `domains.html`, `agri-assistant.html`, and `contact-us.html` now redirect to the updated page set. The dedicated `agri-smart-assistant.html` page remains public for farmers and partners who know the original assistant name.
 
 ## JOITA FarmAssist
 
@@ -61,9 +57,6 @@ Products and platform:
 - FarmAssist AI
 - SmartSeedMat
 - AquaSynth Nano
-- BioSynth Prime
-- GrowNano Boost
-- FieldProof Data Engine
 
 Footer disclaimer:
 
