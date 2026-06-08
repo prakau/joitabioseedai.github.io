@@ -1,6 +1,21 @@
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const REFERER = "https://joitabioseedai.com";
 const APP_TITLE = "JOITA FarmAssist AI";
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const MAX_MESSAGE_LENGTH = 1000;
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "6mb"
+    }
+  }
+};
+
+const rateLimitStore = globalThis.__joitaFarmAssistRateLimit ?? new Map();
+globalThis.__joitaFarmAssistRateLimit = rateLimitStore;
 
 const textModels = [
   "nvidia/nemotron-3-super-120b-a12b:free",
@@ -62,6 +77,56 @@ function setCors(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
+function setRateHeaders(res, bucket) {
+  res.setHeader("X-RateLimit-Limit", String(RATE_LIMIT_MAX));
+  res.setHeader("X-RateLimit-Remaining", String(Math.max(0, RATE_LIMIT_MAX - bucket.count)));
+  res.setHeader("X-RateLimit-Reset", String(Math.ceil(bucket.resetAt / 1000)));
+}
+
+function getClientIp(req) {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.trim()) return forwarded.split(",")[0].trim();
+  const realIp = req.headers["x-real-ip"];
+  if (typeof realIp === "string" && realIp.trim()) return realIp.trim();
+  return req.socket?.remoteAddress || req.connection?.remoteAddress || "unknown";
+}
+
+function checkRateLimit(req) {
+  const now = Date.now();
+  const ip = getClientIp(req);
+  for (const [key, bucket] of rateLimitStore.entries()) {
+    if (bucket.resetAt <= now) rateLimitStore.delete(key);
+  }
+  const current = rateLimitStore.get(ip);
+  if (!current || current.resetAt <= now) {
+    const bucket = { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS };
+    rateLimitStore.set(ip, bucket);
+    return { allowed: true, bucket };
+  }
+  current.count += 1;
+  return { allowed: current.count <= RATE_LIMIT_MAX, bucket: current };
+}
+
+function sanitizeLogField(value, fallback = "not provided") {
+  const clean = String(value || fallback)
+    .replace(/[^\w\s,.-]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
+  return clean || fallback;
+}
+
+function logSafeEvent({ crop, location, problemType, model }) {
+  const safeLog = {
+    crop: sanitizeLogField(crop),
+    locationDistrictState: sanitizeLogField(location),
+    problemType: sanitizeLogField(problemType, "general"),
+    model: sanitizeLogField(model, "not used"),
+    timestamp: new Date().toISOString()
+  };
+  console.info("[farmassist-chat]", JSON.stringify(safeLog));
+}
+
 function fallbackAnswer(message) {
   return {
     ok: false,
@@ -94,6 +159,17 @@ function readBody(req) {
     }
   }
   return req.body;
+}
+
+function estimateDataUrlBytes(imageUrl) {
+  if (!imageUrl) return 0;
+  if (typeof imageUrl !== "string") return Number.POSITIVE_INFINITY;
+  if (!imageUrl.startsWith("data:image/")) return Number.POSITIVE_INFINITY;
+  const commaIndex = imageUrl.indexOf(",");
+  if (commaIndex === -1) return Number.POSITIVE_INFINITY;
+  const base64 = imageUrl.slice(commaIndex + 1).replace(/\s/g, "");
+  const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+  return Math.floor((base64.length * 3) / 4) - padding;
 }
 
 async function callOpenRouter({ apiKey, model, userContent, signal }) {
@@ -141,17 +217,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({
-      ok: false,
-      model: "not-configured",
-      mode: "fallback",
-      answer: "FarmAssist AI is not configured. Missing OPENROUTER_API_KEY."
-    });
-  }
-
   const {
+    healthCheck = false,
     message = "",
     crop = "",
     location = "",
@@ -161,10 +228,61 @@ export default async function handler(req, res) {
     imageUrl = ""
   } = readBody(req);
 
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    return res.status(503).json({
+      ok: false,
+      model: "not-configured",
+      mode: healthCheck ? "health" : "fallback",
+      answer: "FarmAssist AI is not configured. Missing OPENROUTER_API_KEY."
+    });
+  }
+
+  if (healthCheck) {
+    return res.status(200).json({
+      ok: true,
+      model: "health-check",
+      mode: "health",
+      status: "AI online",
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  const rate = checkRateLimit(req);
+  setRateHeaders(res, rate.bucket);
+  if (!rate.allowed) {
+    return res.status(429).json({
+      ok: false,
+      model: "rate-limited",
+      mode: "fallback",
+      answer: "FarmAssist AI is receiving many requests. Please try again after one hour."
+    });
+  }
+
+  const cleanMessage = String(message || "").slice(0, MAX_MESSAGE_LENGTH);
+  if (String(message || "").length > MAX_MESSAGE_LENGTH) {
+    return res.status(400).json({
+      ok: false,
+      model: "validation",
+      mode: "fallback",
+      answer: "Please keep the FarmAssist question under 1000 characters."
+    });
+  }
+
+  const imageBytes = estimateDataUrlBytes(imageUrl);
+  if (imageBytes > MAX_IMAGE_BYTES) {
+    return res.status(400).json({
+      ok: false,
+      model: "validation",
+      mode: "fallback",
+      answer: "Please upload a crop image smaller than 4 MB. Personal documents are not accepted."
+    });
+  }
+
   const hasImage = Boolean(imageUrl);
   const models = hasImage ? visionModels : textModels;
   const mode = hasImage ? "vision" : "text";
-  const userText = `Farmer question: ${message}
+  const userText = `Farmer question: ${cleanMessage}
 Crop: ${crop || "not provided"}
 Location: ${location || "not provided"}
 Crop stage: ${stage || "not provided"}
@@ -185,6 +303,7 @@ Problem type: ${problemType || "general"}`;
     try {
       const answer = await callOpenRouter({ apiKey, model, userContent, signal: controller.signal });
       clearTimeout(timeout);
+      logSafeEvent({ crop, location, problemType, model });
       return res.status(200).json({ ok: true, answer, model, mode });
     } catch (error) {
       clearTimeout(timeout);
@@ -192,8 +311,9 @@ Problem type: ${problemType || "general"}`;
     }
   }
 
+  logSafeEvent({ crop, location, problemType, model: "offline-fallback" });
   return res.status(200).json({
-    ...fallbackAnswer(message),
+    ...fallbackAnswer(cleanMessage),
     errors: process.env.NODE_ENV === "development" ? errors : undefined
   });
 }

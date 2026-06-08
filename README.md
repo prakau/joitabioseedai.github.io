@@ -62,6 +62,14 @@ Vercel setup:
 3. Do not commit `.env` or any real key.
 4. Point `joitabioseedai.com` to the Vercel deployment when ready.
 
+Production hardening:
+
+- `/api/farmassist-chat` uses a simple in-memory Vercel rate limit of 10 requests per IP per hour.
+- Requests are capped at 1000 message characters and 4 MB crop image uploads.
+- Frontend shows `AI online` or `AI advisory temporarily offline` based on backend health.
+- Analytics hooks emit safe FarmAssist events only when analytics providers are configured.
+- Server logs include only crop, location district/state, problem type, model used, and timestamp.
+
 ## Tech Stack
 
 - Static HTML, CSS, and JavaScript for the public marketing site
