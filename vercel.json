@@ -1,0 +1,21 @@
+{
+  "installCommand": "cd farmassist-src && npm ci",
+  "buildCommand": "cd farmassist-src && npm run build",
+  "outputDirectory": ".",
+  "functions": {
+    "api/*.js": {
+      "maxDuration": 30
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    }
+  ]
+}

@@ -5,6 +5,8 @@ const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+const TEXT_MODEL = "openrouter/free";
+const VISION_MODEL = "openrouter/free";
 
 export const config = {
   api: {
@@ -17,44 +19,9 @@ export const config = {
 const rateLimitStore = globalThis.__joitaFarmAssistRateLimit ?? new Map();
 globalThis.__joitaFarmAssistRateLimit = rateLimitStore;
 
-const textModels = [
-  "nvidia/nemotron-3-super-120b-a12b:free",
-  "nvidia/nemotron-3-ultra-550b-a55b:free",
-  "openrouter/free"
-];
-
-const visionModels = [
-  "google/gemma-4-31b-it:free",
-  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-  "openrouter/free"
-];
-
 const systemPrompt = `You are FarmAssist AI by JOITA Bioseed AI.
 
-Your role:
-Help farmers, FPOs, field workers, and agri-input advisors with practical crop-stage-based agricultural guidance.
-
-Tone:
-Simple, farmer-friendly, short, practical, and field-ready.
-
-Core rules:
-* Ask for missing crop, location, crop stage, symptoms, weather, and photo when needed.
-* For image diagnosis, never claim certainty. Say "likely issue" or "possible causes."
-* Do not ask users to upload personal documents or private information.
-* First describe visible symptoms.
-* Then give likely causes.
-* Then give immediate safe action.
-* Then ask what to check next.
-* Never guarantee yield increase.
-* Never recommend banned chemicals.
-* Never give unsafe pesticide dosage.
-* For pesticides, herbicides, fungicides, or fertilizer dose, say: "Use only locally approved label dose and confirm with local KVK/extension expert."
-* Prefer IPM: sanitation, monitoring, irrigation correction, nutrition correction, biological options, and only then chemical escalation if needed.
-* Do not overpromote JOITA.
-* Mention JOITA products only softly when relevant: "BioSynth Nano may be considered as stress/nutrition support under expert guidance."
-* If user asks in Hindi, reply in simple Hindi.
-* If user asks in Haryanvi style, reply in simple farmer-friendly Hindi/Haryanvi mix.
-* Keep response under 180 words unless user asks for detailed plan.
+Give short, practical, farmer-friendly crop advisory. Ask for missing crop, location, stage, symptoms, and photo if needed. Never guarantee yield. Never give unsafe pesticide dose. For chemicals, say use locally approved label dose and confirm with KVK or agriculture expert.
 
 Answer format:
 Likely Issue:
@@ -189,24 +156,28 @@ async function callOpenRouter({ apiKey, model, userContent, signal }) {
         { role: "user", content: userContent }
       ],
       temperature: 0.3,
-      max_tokens: 700
+      max_tokens: 500
     })
   });
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     const detail = payload?.error?.message || payload?.message || response.statusText;
-    throw new Error(`${model}: ${detail}`);
+    const error = new Error(`${model}: ${detail}`);
+    error.status = response.status;
+    throw error;
   }
 
   const answer = payload?.choices?.[0]?.message?.content;
   if (!answer || typeof answer !== "string") {
-    throw new Error(`${model}: empty answer`);
+    const error = new Error(`${model}: empty answer`);
+    error.status = 502;
+    throw error;
   }
   return answer.trim();
 }
 
-export default async function handler(req, res) {
+async function handleFarmAssistChat(req, res) {
   setCors(req, res);
 
   if (req.method === "OPTIONS") {
@@ -228,22 +199,13 @@ export default async function handler(req, res) {
     imageUrl = ""
   } = readBody(req);
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    return res.status(503).json({
-      ok: false,
-      model: "not-configured",
-      mode: healthCheck ? "health" : "fallback",
-      answer: "FarmAssist AI is not configured. Missing OPENROUTER_API_KEY."
-    });
-  }
-
   if (healthCheck) {
+    const hasOpenRouterKey = Boolean(process.env.OPENROUTER_API_KEY);
     return res.status(200).json({
-      ok: true,
+      ok: hasOpenRouterKey,
       model: "health-check",
       mode: "health",
-      status: "AI online",
+      status: hasOpenRouterKey ? "AI online" : "FarmAssist AI is not configured yet. Add OPENROUTER_API_KEY in Vercel Environment Variables.",
       timestamp: new Date().toISOString()
     });
   }
@@ -260,6 +222,15 @@ export default async function handler(req, res) {
   }
 
   const cleanMessage = String(message || "").slice(0, MAX_MESSAGE_LENGTH);
+  if (!cleanMessage.trim()) {
+    return res.status(400).json({
+      ok: false,
+      model: "validation",
+      mode: "fallback",
+      answer: "Please ask a crop question so FarmAssist AI can help."
+    });
+  }
+
   if (String(message || "").length > MAX_MESSAGE_LENGTH) {
     return res.status(400).json({
       ok: false,
@@ -279,15 +250,25 @@ export default async function handler(req, res) {
     });
   }
 
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    return res.status(503).json({
+      ok: false,
+      model: "not-configured",
+      mode: "fallback",
+      answer: "FarmAssist AI is not configured yet. Add OPENROUTER_API_KEY in Vercel Environment Variables."
+    });
+  }
+
   const hasImage = Boolean(imageUrl);
-  const models = hasImage ? visionModels : textModels;
+  const model = hasImage ? VISION_MODEL : TEXT_MODEL;
   const mode = hasImage ? "vision" : "text";
-  const userText = `Farmer question: ${cleanMessage}
-Crop: ${crop || "not provided"}
+  const userText = `Crop: ${crop || "not provided"}
 Location: ${location || "not provided"}
-Crop stage: ${stage || "not provided"}
+Stage: ${stage || "not provided"}
 Language: ${language || "English"}
-Problem type: ${problemType || "general"}`;
+Problem type: ${problemType || "general"}
+Question: ${cleanMessage}`;
 
   const userContent = hasImage
     ? [
@@ -297,23 +278,53 @@ Problem type: ${problemType || "general"}`;
     : userText;
 
   const errors = [];
-  for (const model of models) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
-    try {
-      const answer = await callOpenRouter({ apiKey, model, userContent, signal: controller.signal });
-      clearTimeout(timeout);
-      logSafeEvent({ crop, location, problemType, model });
-      return res.status(200).json({ ok: true, answer, model, mode });
-    } catch (error) {
-      clearTimeout(timeout);
-      errors.push(error instanceof Error ? error.message : String(error));
-    }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  try {
+    const answer = await callOpenRouter({ apiKey, model, userContent, signal: controller.signal });
+    clearTimeout(timeout);
+    logSafeEvent({ crop, location, problemType, model });
+    return res.status(200).json({ ok: true, answer, model, mode });
+  } catch (error) {
+    clearTimeout(timeout);
+    errors.push(error);
   }
 
-  logSafeEvent({ crop, location, problemType, model: "offline-fallback" });
-  return res.status(200).json({
-    ...fallbackAnswer(cleanMessage),
+  const firstError = errors[0];
+  const upstreamStatus = typeof firstError?.status === "number" ? firstError.status : 502;
+  const answer = upstreamStatus === 401
+    ? "FarmAssist AI OpenRouter key is missing or invalid. Check OPENROUTER_API_KEY in Vercel Environment Variables."
+    : upstreamStatus === 402 || upstreamStatus === 429
+      ? "FarmAssist AI model access is temporarily limited by OpenRouter free-model quota or rate limits."
+      : "FarmAssist AI backend reached OpenRouter but did not receive a usable AI answer. Please check Vercel function logs.";
+  logSafeEvent({ crop, location, problemType, model });
+  return res.status(upstreamStatus).json({
+    ok: false,
+    answer,
+    model,
+    mode: "fallback",
+    upstreamStatus,
     errors: process.env.NODE_ENV === "development" ? errors : undefined
   });
+}
+
+export default async function handler(req, res) {
+  try {
+    return await handleFarmAssistChat(req, res);
+  } catch (error) {
+    console.error("[farmassist-chat]", JSON.stringify({
+      crop: "not provided",
+      locationDistrictState: "not provided",
+      problemType: "general",
+      model: TEXT_MODEL,
+      timestamp: new Date().toISOString()
+    }));
+    return res.status(500).json({
+      ok: false,
+      answer: "FarmAssist AI backend error. Please check Vercel function logs.",
+      model: TEXT_MODEL,
+      mode: "fallback",
+      error: process.env.NODE_ENV === "development" ? String(error) : undefined
+    });
+  }
 }
