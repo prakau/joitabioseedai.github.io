@@ -93,8 +93,8 @@ const pilotNotice = "FarmAssist is in pilot mode. Responses are AI-assisted and 
 const maxMessageLength = 1000;
 const maxImageBytes = 4 * 1024 * 1024;
 const joitaEmail = "joitabioseedai@gmail.com";
-const missingKeyMessage = "FarmAssist AI is not configured yet. Add OPENROUTER_API_KEY in Vercel Environment Variables.";
-const backendUnreachableMessage = "FarmAssist AI backend is not reachable. Please check Vercel deployment and OPENROUTER_API_KEY.";
+const offlineKbMessage = "Offline JOITA advisory mode is ready. FarmAssist will answer from the built-in crop knowledge base.";
+const liveAiFallbackMessage = "Live AI is temporarily offline. FarmAssist answered from the built-in JOITA crop knowledge base.";
 
 function readList<T>(key: string, fallback: T[] = []) {
   if (typeof localStorage === "undefined") return fallback;
@@ -141,13 +141,16 @@ function trackFarmAssistEvent(eventName: string, props: Record<string, string | 
 
 function diagnosticMessage(reason: string) {
   const lower = reason.toLowerCase();
-  if (lower.includes("openrouter_api_key") || lower.includes("not configured") || lower.includes("missing or invalid")) {
-    return missingKeyMessage;
-  }
-  if (lower.includes("rate") || lower.includes("quota") || lower.includes("limited")) {
+  if (lower.includes("please ask") || lower.includes("under 1000") || lower.includes("smaller than 4 mb")) {
     return reason;
   }
-  return backendUnreachableMessage;
+  if (lower.includes("openrouter_api_key") || lower.includes("not configured") || lower.includes("missing or invalid")) {
+    return liveAiFallbackMessage;
+  }
+  if (lower.includes("rate") || lower.includes("quota") || lower.includes("limited")) {
+    return "Live AI is busy right now. FarmAssist answered from the built-in JOITA crop knowledge base.";
+  }
+  return liveAiFallbackMessage;
 }
 
 export default function App() {
@@ -217,7 +220,7 @@ export default function App() {
     async function checkAiStatus() {
       if (!navigator.onLine) {
         setAiStatus("offline");
-        setAiStatusDetail("Device is offline. FarmAssist will use the offline JOITA knowledge base.");
+        setAiStatusDetail("Device is offline. FarmAssist will use the built-in JOITA crop knowledge base.");
         return;
       }
       setAiStatus("checking");
@@ -231,15 +234,15 @@ export default function App() {
           setAiStatusDetail("FarmAssist AI backend is online.");
         } else if (response.ok && data?.hasOpenRouterKey === false) {
           setAiStatus("offline");
-          setAiStatusDetail(missingKeyMessage);
+          setAiStatusDetail(offlineKbMessage);
         } else {
           setAiStatus("offline");
-          setAiStatusDetail(backendUnreachableMessage);
+          setAiStatusDetail(offlineKbMessage);
         }
       } catch {
         if (!cancelled) {
           setAiStatus("offline");
-          setAiStatusDetail(backendUnreachableMessage);
+          setAiStatusDetail(offlineKbMessage);
         }
       }
     }
@@ -333,7 +336,8 @@ Use only locally approved label dose and confirm with local KVK/extension expert
 When to Contact Expert:
 Contact an expert if symptoms spread fast, plants wilt, or pest/disease pressure increases.
 
-Offline note: ${reason}`
+Offline mode:
+This answer comes from the built-in JOITA crop knowledge base. Live AI can be connected through the secure backend when available.`
     };
   }
 
@@ -369,11 +373,11 @@ Offline note: ${reason}`
       const data = await response.json().catch(() => null) as FarmAssistChatResponse | null;
       if (!response.ok || !data?.answer) {
         setAiStatus("offline");
-        throw new Error(data?.answer || `FarmAssist backend returned ${response.status}`);
+        throw new Error(data?.answer || liveAiFallbackMessage);
       }
       if (data.ok === false || data.mode === "fallback") {
         setAiStatus("offline");
-        const detail = diagnosticMessage(data.answer || "AI advisory temporarily offline.");
+        const detail = diagnosticMessage(data.answer || liveAiFallbackMessage);
         setAiStatusDetail(detail);
         setChatError(detail);
         trackFarmAssistEvent("AI fallback triggered", {
@@ -557,7 +561,7 @@ Offline note: ${reason}`
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Badge className="gap-1.5">{online ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}{online ? "online" : "offline"}</Badge>
-            <Badge className="gap-1.5"><span className={`status-dot ${aiStatus}`} />{aiStatus === "online" ? "AI online" : aiStatus === "offline" ? "AI advisory temporarily offline" : "AI status checking"}</Badge>
+            <Badge className="gap-1.5"><span className={`status-dot ${aiStatus}`} />{aiStatus === "online" ? "AI online" : aiStatus === "offline" ? "Offline KB ready" : "AI status checking"}</Badge>
             <Badge>Haryana/North India KB</Badge>
             <a href="https://joitabioseedai.com" target="_blank" rel="noreferrer">
               <Button variant="secondary"><ExternalLink className="h-4 w-4" /> Main Website</Button>
