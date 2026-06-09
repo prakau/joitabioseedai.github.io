@@ -1,3 +1,5 @@
+const REFERER = "https://joitabioseedai.com";
+
 function setCors(req, res) {
   const origin = req.headers.origin;
   const allowedOrigins = new Set([
@@ -6,9 +8,15 @@ function setCors(req, res) {
     "http://localhost:5173",
     "http://127.0.0.1:5173"
   ]);
-  res.setHeader("Access-Control-Allow-Origin", allowedOrigins.has(origin) ? origin : "https://joitabioseedai.com");
+  res.setHeader("Access-Control-Allow-Origin", allowedOrigins.has(origin) ? origin : REFERER);
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Cache-Control", "no-store");
+}
+
+function environmentName() {
+  if (process.env.VERCEL_ENV) return process.env.VERCEL_ENV;
+  return process.env.NODE_ENV === "production" ? "production" : "local";
 }
 
 export default async function handler(req, res) {
@@ -25,7 +33,9 @@ export default async function handler(req, res) {
   return res.status(200).json({
     ok: true,
     service: "JOITA FarmAssist API",
+    hasGeminiKey: Boolean(process.env.GEMINI_API_KEY),
     hasOpenRouterKey: Boolean(process.env.OPENROUTER_API_KEY),
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    environment: environmentName()
   });
 }

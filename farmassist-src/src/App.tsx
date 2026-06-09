@@ -44,9 +44,10 @@ declare global {
 }
 
 type QuestionRecord = { id: string; question: string; answer: string; date: string };
-type FarmAssistChatResponse = { ok: boolean; answer: string; model: string; mode: "text" | "vision" | "fallback" | string };
-type FarmAssistHealthResponse = { ok: boolean; service?: string; hasOpenRouterKey?: boolean; timestamp?: string; status?: string };
-type AiStatus = "checking" | "online" | "offline";
+type FarmAssistSource = "gemini" | "openrouter" | "offline_kb" | "validation" | string;
+type FarmAssistChatResponse = { ok: boolean; answer: string; model: string; mode: "text" | "vision" | "fallback" | string; source?: FarmAssistSource; failureReason?: string; errorDebug?: unknown };
+type FarmAssistHealthResponse = { ok: boolean; service?: string; hasGeminiKey?: boolean; hasOpenRouterKey?: boolean; timestamp?: string; environment?: string; status?: string };
+type AiStatus = "checking" | "backend_connected" | "online" | "offline" | "not_configured";
 type EhiReading = { id: string; date: string; ehi: number; activity: number; silence: number; frequency: number; interpretation: string };
 type LayoutRecord = { id: string; crop: string; length: number; width: number; rows: number; irrigation: string; notes: string; date: string };
 type SoilReport = { id: string; crop: string; ph: number; ec: number; oc: number; n: number; p: number; k: number; zn: number; fe: number; soil: string; summary: string; date: string };
@@ -94,7 +95,8 @@ const maxMessageLength = 1000;
 const maxImageBytes = 4 * 1024 * 1024;
 const joitaEmail = "joitabioseedai@gmail.com";
 const offlineKbMessage = "Offline JOITA advisory mode is ready. FarmAssist will answer from the built-in crop knowledge base.";
-const liveAiFallbackMessage = "Live AI is temporarily offline. FarmAssist answered from the built-in JOITA crop knowledge base.";
+const liveAiFallbackMessage = "Live AI failed. Offline KB answered instead.";
+const liveAiNotConfiguredMessage = "Live AI is not configured. Add GEMINI_API_KEY or OPENROUTER_API_KEY in Vercel.";
 
 function readList<T>(key: string, fallback: T[] = []) {
   if (typeof localStorage === "undefined") return fallback;
@@ -144,13 +146,38 @@ function diagnosticMessage(reason: string) {
   if (lower.includes("please ask") || lower.includes("under 1000") || lower.includes("smaller than 4 mb")) {
     return reason;
   }
-  if (lower.includes("openrouter_api_key") || lower.includes("not configured") || lower.includes("missing or invalid")) {
-    return liveAiFallbackMessage;
+  if (lower.includes("gemini_api_key") || lower.includes("openrouter_api_key") || lower.includes("not configured") || lower.includes("missing or invalid")) {
+    return liveAiNotConfiguredMessage;
   }
   if (lower.includes("rate") || lower.includes("quota") || lower.includes("limited")) {
     return "Live AI is busy right now. FarmAssist answered from the built-in JOITA crop knowledge base.";
   }
   return liveAiFallbackMessage;
+}
+
+function sourceBadgeLabel(source?: FarmAssistSource) {
+  if (source === "gemini") return "Live AI: Gemini";
+  if (source === "openrouter") return "Live AI: OpenRouter";
+  if (source === "offline_kb") return "Offline KB";
+  return "FarmAssist";
+}
+
+function sourceBadgeClass(source?: FarmAssistSource) {
+  if (source === "gemini" || source === "openrouter") return "bg-sage-800 text-white";
+  if (source === "offline_kb") return "bg-amber-50 text-sage-900";
+  return "";
+}
+
+function statusDotClass(status: AiStatus) {
+  return status === "online" || status === "backend_connected" ? "online" : status === "checking" ? "checking" : "offline";
+}
+
+function aiStatusLabel(status: AiStatus) {
+  if (status === "backend_connected") return "Backend connected";
+  if (status === "online") return "Live AI online";
+  if (status === "offline") return "Live AI offline";
+  if (status === "not_configured") return "Live AI not configured";
+  return "AI status checking";
 }
 
 export default function App() {
@@ -165,6 +192,9 @@ export default function App() {
   const [aiStatus, setAiStatus] = useState<AiStatus>("checking");
   const [aiStatusDetail, setAiStatusDetail] = useState("");
   const [apiBaseOverride, setApiBaseOverride] = useState(() => localStorage.getItem(keys.apiBase) ?? "");
+  const [apiHealth, setApiHealth] = useState<FarmAssistHealthResponse | null>(null);
+  const [lastResponseSource, setLastResponseSource] = useState<FarmAssistSource>("none");
+  const [lastFailureReason, setLastFailureReason] = useState("");
   const [followUpContact, setFollowUpContact] = useState("");
   const [followUpSaved, setFollowUpSaved] = useState("");
   const [followUps, setFollowUps] = useState<FollowUpRecord[]>(() => readList(keys.followUps));
@@ -221,28 +251,35 @@ export default function App() {
       if (!navigator.onLine) {
         setAiStatus("offline");
         setAiStatusDetail("Device is offline. FarmAssist will use the built-in JOITA crop knowledge base.");
+        setLastFailureReason("Device is offline.");
         return;
       }
       setAiStatus("checking");
       setAiStatusDetail("Checking FarmAssist AI backend...");
       try {
-        const response = await fetch(apiEndpoint("/api/health"));
+        const response = await fetch(apiEndpoint("/api/health"), { cache: "no-store" });
         const data = await response.json().catch(() => null) as FarmAssistHealthResponse | null;
         if (cancelled) return;
-        if (response.ok && data?.hasOpenRouterKey) {
-          setAiStatus("online");
-          setAiStatusDetail("FarmAssist AI backend is online.");
-        } else if (response.ok && data?.hasOpenRouterKey === false) {
-          setAiStatus("offline");
-          setAiStatusDetail(offlineKbMessage);
+        setApiHealth(data);
+        if (response.ok && (data?.hasGeminiKey || data?.hasOpenRouterKey)) {
+          setAiStatus("backend_connected");
+          setAiStatusDetail("Backend connected. Live AI key available.");
+          setLastFailureReason("");
+        } else if (response.ok && data?.hasGeminiKey === false && data?.hasOpenRouterKey === false) {
+          setAiStatus("not_configured");
+          setAiStatusDetail(liveAiNotConfiguredMessage);
+          setLastFailureReason(liveAiNotConfiguredMessage);
         } else {
           setAiStatus("offline");
-          setAiStatusDetail(offlineKbMessage);
+          setAiStatusDetail("Backend health check failed. Live AI may be offline.");
+          setLastFailureReason(`Health check failed with status ${response.status}.`);
         }
-      } catch {
+      } catch (error) {
         if (!cancelled) {
+          setApiHealth(null);
           setAiStatus("offline");
-          setAiStatusDetail(offlineKbMessage);
+          setAiStatusDetail("Backend is not reachable from this page. If the domain is on GitHub Pages, set the temporary Vercel API base URL in Settings or move the domain to Vercel.");
+          setLastFailureReason(error instanceof Error ? error.message : "Health check request failed.");
         }
       }
     }
@@ -321,6 +358,8 @@ export default function App() {
       ok: false,
       model: "offline-joita-kb",
       mode: "fallback",
+      source: "offline_kb",
+      failureReason: reason,
       answer: `Likely Issue:
 ${offline}
 
@@ -373,11 +412,14 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
       const data = await response.json().catch(() => null) as FarmAssistChatResponse | null;
       if (!response.ok || !data?.answer) {
         setAiStatus("offline");
-        throw new Error(data?.answer || liveAiFallbackMessage);
+        throw new Error(data?.failureReason || data?.answer || liveAiFallbackMessage);
       }
-      if (data.ok === false || data.mode === "fallback") {
+      const responseSource = data.source || (data.ok ? "unknown" : "offline_kb");
+      setLastResponseSource(responseSource);
+      setLastFailureReason(data.failureReason || "");
+      if (responseSource === "offline_kb") {
         setAiStatus("offline");
-        const detail = diagnosticMessage(data.answer || liveAiFallbackMessage);
+        const detail = liveAiFallbackMessage;
         setAiStatusDetail(detail);
         setChatError(detail);
         trackFarmAssistEvent("AI fallback triggered", {
@@ -389,7 +431,8 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
         });
       } else {
         setAiStatus("online");
-        setAiStatusDetail("FarmAssist AI backend is online.");
+        setAiStatusDetail(sourceBadgeLabel(responseSource));
+        setChatError("");
         trackFarmAssistEvent("AI response received", {
           crop: chatForm.crop,
           location: chatForm.location,
@@ -407,6 +450,8 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
       const fallback = offlineFarmAssistFallback(reason);
       setAiStatus("offline");
       setAiStatusDetail(diagnosticMessage(reason));
+      setLastResponseSource("offline_kb");
+      setLastFailureReason(reason);
       setChatResponse(fallback);
       setChatError(diagnosticMessage(reason));
       trackFarmAssistEvent("AI fallback triggered", {
@@ -560,8 +605,8 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className="gap-1.5">{online ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}{online ? "online" : "offline"}</Badge>
-            <Badge className="gap-1.5"><span className={`status-dot ${aiStatus}`} />{aiStatus === "online" ? "AI online" : aiStatus === "offline" ? "Offline KB ready" : "AI status checking"}</Badge>
+            <Badge className="gap-1.5">{online ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}{online ? "Device online" : "Device offline"}</Badge>
+            <Badge className="gap-1.5"><span className={`status-dot ${statusDotClass(aiStatus)}`} />{aiStatusLabel(aiStatus)}</Badge>
             <Badge>Haryana/North India KB</Badge>
             <a href="https://joitabioseedai.com" target="_blank" rel="noreferrer">
               <Button variant="secondary"><ExternalLink className="h-4 w-4" /> Main Website</Button>
@@ -644,7 +689,7 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
             </div>
             {chatLoading ? <div className="soft-enter animate-pulse rounded-md bg-sage-100 p-4 font-bold">FarmAssist AI is checking crop symptoms...</div> : null}
             {chatError ? <div className="soft-enter rounded-md border border-sage-300 bg-sage-100 p-3 text-sm font-bold">{chatError}</div> : null}
-            {chatResponse ? <div className="answer-panel soft-enter rounded-md border border-sage-200 bg-white p-4"><div className="whitespace-pre-wrap text-base font-semibold leading-7">{chatResponse.answer}</div>{devMode ? <p className="mt-3 text-xs font-bold text-sage-800">Dev model status: {chatResponse.model} · {chatResponse.mode} · {chatResponse.ok ? "ok" : "fallback"}</p> : null}<p className="mt-3 text-sm font-bold text-sage-900">{pilotNotice}</p><p className="mt-2 text-sm font-bold text-sage-900">{privacyNotice}</p><p className="mt-2 text-sm font-bold text-sage-900">{safetyNotice}</p></div> : null}
+            {chatResponse ? <div className="answer-panel soft-enter rounded-md border border-sage-200 bg-white p-4"><div className="mb-3 flex flex-wrap gap-2"><Badge className={sourceBadgeClass(chatResponse.source)}>{sourceBadgeLabel(chatResponse.source)}</Badge>{chatResponse.source === "offline_kb" ? <Badge className="bg-amber-50 text-sage-900">Live AI failed. Offline KB answered instead.</Badge> : null}</div><div className="whitespace-pre-wrap text-base font-semibold leading-7">{chatResponse.answer}</div>{devMode ? <p className="mt-3 text-xs font-bold text-sage-800">Dev model status: {chatResponse.model} · {chatResponse.mode} · {chatResponse.ok ? "ok" : "fallback"} · {chatResponse.source ?? "unknown"}</p> : null}<p className="mt-3 text-sm font-bold text-sage-900">{pilotNotice}</p><p className="mt-2 text-sm font-bold text-sage-900">{privacyNotice}</p><p className="mt-2 text-sm font-bold text-sage-900">{safetyNotice}</p></div> : null}
             {chatResponse ? <div className="soft-enter rounded-md border border-sage-200 bg-sage-50 p-4"><h3 className="font-black">Want expert follow-up? Share WhatsApp/email.</h3><p className="mt-1 text-sm font-semibold text-sage-900">Optional, not required.</p><div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]"><Input placeholder="WhatsApp or email (optional)" value={followUpContact} onChange={(event) => setFollowUpContact(event.target.value)} /><Button variant="secondary" onClick={saveFollowUpRequest}>Save Follow-Up</Button><a href={followUpMailto}><Button>Email JOITA</Button></a></div>{followUpSaved ? <p className="mt-2 text-sm font-bold text-sage-900">{followUpSaved}</p> : null}</div> : null}
             <SourceBadges weather={weather.data?.source ?? "Open-Meteo"} market={mandi.data?.source ?? "Offline Cache"} nasa={nasa.data?.source ?? "NASA POWER"} biodiversity={`${gbif.data?.source ?? "GBIF"}/${inat.data?.source ?? "iNaturalist"}`} />
             <div className="rounded-md bg-sage-100 p-4 text-base font-medium leading-7">{latest?.answer ?? answerFarmQuestion(question)}</div>
@@ -822,8 +867,18 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
             }}><Save className="h-4 w-4" /> Save Settings</Button>
           </div>
           <Info label="Live API target" value={apiBase ? `${apiBase}/api/farmassist-chat` : "/api/farmassist-chat on the same domain"} />
+          <div className="rounded-md border border-sage-200 bg-sage-50 p-4">
+            <h3 className="mb-3 font-black">Admin Debug</h3>
+            <div className="grid gap-3 md:grid-cols-2">
+              <Info label="API health status" value={apiHealth ? `Gemini key: ${apiHealth.hasGeminiKey ? "yes" : "no"}. OpenRouter key: ${apiHealth.hasOpenRouterKey ? "yes" : "no"}. Environment: ${apiHealth.environment ?? "unknown"}. Checked: ${apiHealth.timestamp ?? "unknown"}.` : "No health response yet."} />
+              <Info label="Backend URL being called" value={`${apiEndpoint("/api/health")} and ${apiEndpoint("/api/farmassist-chat")}`} />
+              <Info label="Last response source" value={sourceBadgeLabel(lastResponseSource)} />
+              <Info label="Last failure reason" value={lastFailureReason || "None"} />
+              <Info label="Current hostname" value={typeof window !== "undefined" ? window.location.hostname : "unknown"} />
+            </div>
+          </div>
           <Info label="PWA" value="Service worker caches the /farmassist/ shell. localStorage persists questions, EHI readings, weather cache, soil reports, farm layouts, and community posts." />
-          <Info label="OpenRouter AI" value="Live AI uses /api/farmassist-chat only when a backend proxy is deployed. OPENROUTER_API_KEY must stay in server environment variables and must never be saved in frontend JavaScript." />
+          <Info label="Live AI keys" value="Live AI uses Gemini first and OpenRouter fallback through /api/farmassist-chat. GEMINI_API_KEY and OPENROUTER_API_KEY must stay in server environment variables and must never be saved in frontend JavaScript." />
           <Info label="Pilot, privacy, and safety" value={`${pilotNotice} ${privacyNotice} ${safetyNotice}`} />
           <Info label="No fake claims" value="Core app works offline from JOITA KB. Online sources make it smarter; pesticide dose decisions always need local expert verification." />
         </CardContent>

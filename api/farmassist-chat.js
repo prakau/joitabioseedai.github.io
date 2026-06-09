@@ -1,12 +1,14 @@
+const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const OPENROUTER_MODEL = "openrouter/free";
 const REFERER = "https://joitabioseedai.com";
 const APP_TITLE = "JOITA FarmAssist AI";
 const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
-const TEXT_MODEL = "openrouter/free";
-const VISION_MODEL = "openrouter/free";
+const PROVIDER_TIMEOUT_MS = 18000;
 
 export const config = {
   api: {
@@ -19,16 +21,7 @@ export const config = {
 const rateLimitStore = globalThis.__joitaFarmAssistRateLimit ?? new Map();
 globalThis.__joitaFarmAssistRateLimit = rateLimitStore;
 
-const systemPrompt = `You are FarmAssist AI by JOITA Bioseed AI.
-
-Give short, practical, farmer-friendly crop advisory. Ask for missing crop, location, stage, symptoms, and photo if needed. Never guarantee yield. Never give unsafe pesticide dose. For chemicals, say use locally approved label dose and confirm with KVK or agriculture expert.
-
-Answer format:
-Likely Issue:
-Immediate Action:
-What to Check:
-Safe Advisory:
-When to Contact Expert:`;
+const systemPrompt = "You are FarmAssist AI by JOITA Bioseed AI. Give short, practical, farmer-friendly crop advisory. Never guarantee yield. Never give unsafe pesticide dose. For chemicals say use locally approved label dose and confirm with KVK/agriculture expert.";
 
 function setCors(req, res) {
   const origin = req.headers.origin;
@@ -42,6 +35,7 @@ function setCors(req, res) {
   res.setHeader("Access-Control-Allow-Origin", corsOrigin);
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Cache-Control", "no-store");
 }
 
 function setRateHeaders(res, bucket) {
@@ -83,37 +77,35 @@ function sanitizeLogField(value, fallback = "not provided") {
   return clean || fallback;
 }
 
-function logSafeEvent({ crop, location, problemType, model }) {
+function safeProviderError(provider, error) {
+  return {
+    provider,
+    statusCode: typeof error?.statusCode === "number" ? error.statusCode : null,
+    message: sanitizeLogField(error?.message || String(error || "unknown provider error"), "unknown provider error")
+  };
+}
+
+function logSafeEvent({ crop, location, problemType, model, source, status = "ok" }) {
   const safeLog = {
     crop: sanitizeLogField(crop),
     locationDistrictState: sanitizeLogField(location),
     problemType: sanitizeLogField(problemType, "general"),
     model: sanitizeLogField(model, "not used"),
+    source: sanitizeLogField(source, "not used"),
+    status: sanitizeLogField(status, "ok"),
     timestamp: new Date().toISOString()
   };
   console.info("[farmassist-chat]", JSON.stringify(safeLog));
 }
 
-function fallbackAnswer(message) {
-  return {
-    ok: false,
-    model: "offline-fallback",
-    mode: "fallback",
-    answer: `Likely Issue:
-FarmAssist AI could not reach the live model right now. Based on your question, collect crop, stage, location, symptoms, weather, and a clear leaf/plant photo.
-
-Immediate Action:
-Use sanitation, correct irrigation stress, monitor pests, and avoid unnecessary spray.
-
-What to Check:
-Check underside of leaves, soil moisture, recent rain, and spread pattern. Question received: ${String(message || "not provided").slice(0, 180)}
-
-Safe Advisory:
-Use only locally approved label dose and confirm with local KVK/extension expert.
-
-When to Contact Expert:
-If symptoms spread quickly, plants wilt, or fruit/grain damage appears.`
-  };
+function logProviderFailure(provider, error, context) {
+  console.error("[farmassist-chat-provider-failed]", JSON.stringify({
+    ...safeProviderError(provider, error),
+    crop: sanitizeLogField(context.crop),
+    locationDistrictState: sanitizeLogField(context.location),
+    problemType: sanitizeLogField(context.problemType, "general"),
+    timestamp: new Date().toISOString()
+  }));
 }
 
 function readBody(req) {
@@ -139,42 +131,142 @@ function estimateDataUrlBytes(imageUrl) {
   return Math.floor((base64.length * 3) / 4) - padding;
 }
 
-async function callOpenRouter({ apiKey, model, userContent, signal }) {
-  const response = await fetch(OPENROUTER_URL, {
-    method: "POST",
-    signal,
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": REFERER,
-      "X-Title": APP_TITLE
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userContent }
-      ],
-      temperature: 0.3,
-      max_tokens: 500
-    })
-  });
+function buildUserPrompt({ crop, location, stage, language, problemType, message }) {
+  return `SYSTEM: ${systemPrompt}
 
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const detail = payload?.error?.message || payload?.message || response.statusText;
-    const error = new Error(`${model}: ${detail}`);
-    error.status = response.status;
-    throw error;
-  }
+USER: Crop: ${crop || "not provided"}
+Location: ${location || "not provided"}
+Stage: ${stage || "not provided"}
+Language: ${language || "English"}
+Problem type: ${problemType || "general"}
+Question: ${message}`;
+}
 
-  const answer = payload?.choices?.[0]?.message?.content;
-  if (!answer || typeof answer !== "string") {
-    const error = new Error(`${model}: empty answer`);
-    error.status = 502;
-    throw error;
+function withTimeout() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+  return {
+    signal: controller.signal,
+    done: () => clearTimeout(timeout)
+  };
+}
+
+async function readJsonResponse(response) {
+  const text = await response.text().catch(() => "");
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text.slice(0, 300) };
   }
-  return answer.trim();
+}
+
+function providerError(provider, statusCode, message) {
+  const error = new Error(`${provider}: ${message}`);
+  error.statusCode = statusCode;
+  return error;
+}
+
+async function callGemini({ apiKey, prompt }) {
+  if (!apiKey) throw providerError("gemini", null, "GEMINI_API_KEY not configured");
+  const timeout = withTimeout();
+  try {
+    const response = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(apiKey)}`, {
+      method: "POST",
+      signal: timeout.signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 500
+        }
+      })
+    });
+    const payload = await readJsonResponse(response);
+    if (!response.ok) {
+      throw providerError("gemini", response.status, payload?.error?.message || payload?.message || response.statusText);
+    }
+    const parts = payload?.candidates?.[0]?.content?.parts;
+    const answer = Array.isArray(parts)
+      ? parts.map((part) => part?.text).filter(Boolean).join("\n").trim()
+      : "";
+    if (!answer) throw providerError("gemini", 502, "empty answer");
+    return answer;
+  } catch (error) {
+    if (error?.name === "AbortError") throw providerError("gemini", 504, "request timed out");
+    throw error;
+  } finally {
+    timeout.done();
+  }
+}
+
+async function callOpenRouter({ apiKey, prompt }) {
+  if (!apiKey) throw providerError("openrouter", null, "OPENROUTER_API_KEY not configured");
+  const timeout = withTimeout();
+  try {
+    const response = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      signal: timeout.signal,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": REFERER,
+        "X-Title": APP_TITLE
+      },
+      body: JSON.stringify({
+        model: OPENROUTER_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.3,
+        max_tokens: 500
+      })
+    });
+    const payload = await readJsonResponse(response);
+    if (!response.ok) {
+      throw providerError("openrouter", response.status, payload?.error?.message || payload?.message || response.statusText);
+    }
+    const answer = payload?.choices?.[0]?.message?.content;
+    if (!answer || typeof answer !== "string") throw providerError("openrouter", 502, "empty answer");
+    return answer.trim();
+  } catch (error) {
+    if (error?.name === "AbortError") throw providerError("openrouter", 504, "request timed out");
+    throw error;
+  } finally {
+    timeout.done();
+  }
+}
+
+function offlineKbAnswer({ message, crop, location, stage }) {
+  return `Likely Issue:
+Live AI could not answer right now. For ${crop || "the crop"} at ${stage || "the current stage"} in ${location || "your area"}, start with basic field checks.
+
+Immediate Action:
+Check soil moisture, leaf underside, new growth, flower/pod condition, pest count, disease spots, and recent weather stress. Avoid unnecessary spray.
+
+What to Check:
+Question received: ${String(message || "not provided").slice(0, 180)}
+
+Safe Advisory:
+Use only locally approved label dose and confirm pesticide/fertilizer use with local KVK or agriculture expert.
+
+When to Contact Expert:
+Contact an expert if symptoms spread quickly, plants wilt, flowering/pod set is affected, or pest pressure increases.`;
+}
+
+function failureSummary(errors) {
+  return errors.map((error) => {
+    const safe = safeProviderError(error.provider, error.error);
+    const status = safe.statusCode ? `status ${safe.statusCode}` : "not available";
+    return `${safe.provider} ${status}: ${safe.message}`;
+  }).join("; ");
 }
 
 async function handleFarmAssistChat(req, res) {
@@ -189,7 +281,6 @@ async function handleFarmAssistChat(req, res) {
   }
 
   const {
-    healthCheck = false,
     message = "",
     crop = "",
     location = "",
@@ -199,25 +290,16 @@ async function handleFarmAssistChat(req, res) {
     imageUrl = ""
   } = readBody(req);
 
-  if (healthCheck) {
-    const hasOpenRouterKey = Boolean(process.env.OPENROUTER_API_KEY);
-    return res.status(200).json({
-      ok: hasOpenRouterKey,
-      model: "health-check",
-      mode: "health",
-      status: hasOpenRouterKey ? "AI online" : "FarmAssist AI is not configured yet. Add OPENROUTER_API_KEY in Vercel Environment Variables.",
-      timestamp: new Date().toISOString()
-    });
-  }
-
   const rate = checkRateLimit(req);
   setRateHeaders(res, rate.bucket);
   if (!rate.allowed) {
     return res.status(429).json({
       ok: false,
+      answer: "FarmAssist AI is receiving many requests. Please try again after one hour.",
+      source: "offline_kb",
       model: "rate-limited",
       mode: "fallback",
-      answer: "FarmAssist AI is receiving many requests. Please try again after one hour."
+      failureReason: "Rate limit exceeded: max 10 requests per IP per hour."
     });
   }
 
@@ -225,18 +307,20 @@ async function handleFarmAssistChat(req, res) {
   if (!cleanMessage.trim()) {
     return res.status(400).json({
       ok: false,
+      answer: "Please ask a crop question so FarmAssist AI can help.",
+      source: "validation",
       model: "validation",
-      mode: "fallback",
-      answer: "Please ask a crop question so FarmAssist AI can help."
+      mode: "fallback"
     });
   }
 
   if (String(message || "").length > MAX_MESSAGE_LENGTH) {
     return res.status(400).json({
       ok: false,
+      answer: "Please keep the FarmAssist question under 1000 characters.",
+      source: "validation",
       model: "validation",
-      mode: "fallback",
-      answer: "Please keep the FarmAssist question under 1000 characters."
+      mode: "fallback"
     });
   }
 
@@ -244,67 +328,56 @@ async function handleFarmAssistChat(req, res) {
   if (imageBytes > MAX_IMAGE_BYTES) {
     return res.status(400).json({
       ok: false,
+      answer: "Please upload a crop image smaller than 4 MB. Personal documents are not accepted.",
+      source: "validation",
       model: "validation",
-      mode: "fallback",
-      answer: "Please upload a crop image smaller than 4 MB. Personal documents are not accepted."
+      mode: "fallback"
     });
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    return res.status(503).json({
-      ok: false,
-      model: "not-configured",
-      mode: "fallback",
-      answer: "FarmAssist AI is not configured yet. Add OPENROUTER_API_KEY in Vercel Environment Variables."
-    });
-  }
+  const prompt = buildUserPrompt({ crop, location, stage, language, problemType, message: cleanMessage });
+  const providerErrors = [];
 
-  const hasImage = Boolean(imageUrl);
-  const model = hasImage ? VISION_MODEL : TEXT_MODEL;
-  const mode = hasImage ? "vision" : "text";
-  const userText = `Crop: ${crop || "not provided"}
-Location: ${location || "not provided"}
-Stage: ${stage || "not provided"}
-Language: ${language || "English"}
-Problem type: ${problemType || "general"}
-Question: ${cleanMessage}`;
-
-  const userContent = hasImage
-    ? [
-        { type: "text", text: userText },
-        { type: "image_url", image_url: { url: imageUrl } }
-      ]
-    : userText;
-
-  const errors = [];
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
   try {
-    const answer = await callOpenRouter({ apiKey, model, userContent, signal: controller.signal });
-    clearTimeout(timeout);
-    logSafeEvent({ crop, location, problemType, model });
-    return res.status(200).json({ ok: true, answer, model, mode });
+    const answer = await callGemini({ apiKey: process.env.GEMINI_API_KEY, prompt });
+    logSafeEvent({ crop, location, problemType, model: GEMINI_MODEL, source: "gemini" });
+    return res.status(200).json({
+      ok: true,
+      answer,
+      source: "gemini",
+      model: GEMINI_MODEL,
+      mode: "text"
+    });
   } catch (error) {
-    clearTimeout(timeout);
-    errors.push(error);
+    providerErrors.push({ provider: "gemini", error });
+    logProviderFailure("gemini", error, { crop, location, problemType });
   }
 
-  const firstError = errors[0];
-  const upstreamStatus = typeof firstError?.status === "number" ? firstError.status : 502;
-  const answer = upstreamStatus === 401
-    ? "FarmAssist AI OpenRouter key is missing or invalid. Check OPENROUTER_API_KEY in Vercel Environment Variables."
-    : upstreamStatus === 402 || upstreamStatus === 429
-      ? "FarmAssist AI model access is temporarily limited by OpenRouter free-model quota or rate limits."
-      : "FarmAssist AI backend reached OpenRouter but did not receive a usable AI answer. Please check Vercel function logs.";
-  logSafeEvent({ crop, location, problemType, model });
-  return res.status(upstreamStatus).json({
+  try {
+    const answer = await callOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY, prompt });
+    logSafeEvent({ crop, location, problemType, model: OPENROUTER_MODEL, source: "openrouter" });
+    return res.status(200).json({
+      ok: true,
+      answer,
+      source: "openrouter",
+      model: OPENROUTER_MODEL,
+      mode: "text"
+    });
+  } catch (error) {
+    providerErrors.push({ provider: "openrouter", error });
+    logProviderFailure("openrouter", error, { crop, location, problemType });
+  }
+
+  const failureReason = failureSummary(providerErrors);
+  logSafeEvent({ crop, location, problemType, model: "offline-kb", source: "offline_kb", status: "provider-fallback" });
+  return res.status(200).json({
     ok: false,
-    answer,
-    model,
+    answer: offlineKbAnswer({ message: cleanMessage, crop, location, stage }),
+    source: "offline_kb",
+    model: "offline-kb",
     mode: "fallback",
-    upstreamStatus,
-    errors: process.env.NODE_ENV === "development" ? errors : undefined
+    failureReason,
+    errorDebug: process.env.NODE_ENV === "production" ? undefined : providerErrors.map((item) => safeProviderError(item.provider, item.error))
   });
 }
 
@@ -312,19 +385,18 @@ export default async function handler(req, res) {
   try {
     return await handleFarmAssistChat(req, res);
   } catch (error) {
-    console.error("[farmassist-chat]", JSON.stringify({
-      crop: "not provided",
-      locationDistrictState: "not provided",
-      problemType: "general",
-      model: TEXT_MODEL,
+    console.error("[farmassist-chat-unhandled]", JSON.stringify({
+      message: sanitizeLogField(error?.message || String(error || "unknown error"), "unknown error"),
       timestamp: new Date().toISOString()
     }));
     return res.status(500).json({
       ok: false,
       answer: "FarmAssist AI backend error. Please check Vercel function logs.",
-      model: TEXT_MODEL,
+      source: "offline_kb",
+      model: "backend-error",
       mode: "fallback",
-      error: process.env.NODE_ENV === "development" ? String(error) : undefined
+      failureReason: "Unhandled backend error.",
+      errorDebug: process.env.NODE_ENV === "production" ? undefined : String(error)
     });
   }
 }
