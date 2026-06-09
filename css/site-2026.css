@@ -251,6 +251,68 @@ p { line-height: 1.6; }
 .step-arrow { color: var(--green-600); font-weight: 950; margin-top: 16px; }
 .product-tile { min-height: 270px; display: flex; flex-direction: column; justify-content: space-between; }
 .product-tag { display: inline-flex; width: max-content; border-radius: 999px; padding: 6px 9px; margin-top: 16px; background: #eef8e7; color: var(--green-800); font-weight: 900; font-size: .78rem; }
+.product-feature {
+  display: grid;
+  grid-template-columns: 1.2fr .8fr;
+  gap: 22px;
+  align-items: stretch;
+  margin-bottom: 18px;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.98), rgba(241,250,232,.95)),
+    repeating-linear-gradient(90deg, rgba(31,122,74,.07) 0 1px, transparent 1px 42px);
+}
+.product-feature::after {
+  content: "FA-WAP";
+  position: absolute;
+  right: 18px;
+  top: 14px;
+  color: rgba(18,63,43,.08);
+  font-size: clamp(3rem, 11vw, 7.4rem);
+  font-weight: 950;
+  line-height: .8;
+}
+.product-feature > * { position: relative; z-index: 1; }
+.product-feature h3 { font-size: clamp(1.55rem, 3vw, 2.35rem); margin: 0; letter-spacing: -.02em; }
+.product-feature .lead { margin-top: 8px; font-weight: 700; color: var(--ink); }
+.metric-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.metric-chip {
+  border: 1px solid #d8ebcb;
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(255,255,255,.82);
+}
+.metric-chip strong {
+  display: block;
+  color: var(--green-800);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+.metric-chip span {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 800;
+}
+.feature-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.feature-notes span {
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: #eef8e7;
+  color: var(--green-800);
+  font-size: .78rem;
+  font-weight: 900;
+}
 .split-card { min-height: 220px; }
 .cta-panel {
   border-radius: 30px;
@@ -311,6 +373,7 @@ textarea { min-height: 132px; }
   .site-nav { align-items: flex-start; flex-direction: column; }
   .nav-links { justify-content: flex-start; }
   .hero-grid, .grid.two, .grid.three, .grid.four { grid-template-columns: 1fr; }
+  .product-feature { grid-template-columns: 1fr; }
   .hero-grid { min-height: auto; padding-top: 42px; }
   .section-head { display: block; }
   .section-head p { margin-top: 10px; }
@@ -345,6 +408,7 @@ textarea { min-height: 132px; }
   .hero-punch { align-items: flex-start; border-radius: 18px; }
   .button-row { gap: 9px; }
   .card, .tile { border-radius: 18px; padding: 18px; }
+  .metric-strip { grid-template-columns: 1fr; }
   .hero-visual { padding: 12px; border-radius: 20px; }
 }
 @media (prefers-reduced-motion: reduce) {

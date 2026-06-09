@@ -24,7 +24,7 @@ const HomePage = () => {
         </div>
         <div className="feature-card">
           <h3>Nano-Enabled Products</h3>
-          <p>BioSynth Nano, FarmAssist AI, SmartSeedMat, and AquaSynth Nano</p>
+          <p>BioSynth Prime, BioSynth Nano, FarmAssist AI, SmartSeedMat, and AquaSynth Nano</p>
         </div>
         <div className="feature-card">
           <h3>Digital Farming</h3>
