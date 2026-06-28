@@ -2,20 +2,25 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
+  Bot,
   CalendarDays,
   Camera,
+  CheckCircle2,
   CloudSun,
   Ear,
   ExternalLink,
   Home,
   Info as InfoIcon,
   Leaf,
+  Loader2,
   Map,
   MessageSquare,
   Mic,
   NotebookPen,
   Save,
+  Send,
   Settings,
+  Sparkles,
   Sprout,
   Store,
   TestTube2,
@@ -93,10 +98,46 @@ const safetyNotice = "AI-assisted advisory. Confirm pesticide/fertilizer use wit
 const pilotNotice = "FarmAssist is in pilot mode. Responses are AI-assisted and should be confirmed with local expert recommendations.";
 const maxMessageLength = 1000;
 const maxImageBytes = 4 * 1024 * 1024;
+const chatRequestTimeoutMs = 25000;
+const defaultFarmAssistQuestion = "Hi. Please give quick practical crop checks for my farm.";
 const joitaEmail = "contact@joitabioseedai.com";
 const offlineKbMessage = "Offline JOITA advisory mode is ready. FarmAssist will answer from the built-in crop knowledge base.";
 const liveAiFallbackMessage = "Live AI failed. Offline KB answered instead.";
 const liveAiNotConfiguredMessage = "Live AI is not configured. Add GEMINI_API_KEY or OPENROUTER_API_KEY in Vercel.";
+const quickFarmPrompts = [
+  {
+    label: "Tomato leaf curl",
+    prompt: "Tomato leaves are yellowing and curling. What should I check?",
+    crop: "Tomato",
+    location: "Haryana",
+    stage: "flowering",
+    problemType: "disease"
+  },
+  {
+    label: "Mustard flowering",
+    prompt: "Mustard crop is at flowering stage in Haryana. What should I check this week?",
+    crop: "Mustard",
+    location: "Haryana",
+    stage: "flowering",
+    problemType: "general"
+  },
+  {
+    label: "Wheat heat stress",
+    prompt: "Wheat is facing hot dry weather. How should I manage irrigation and stress?",
+    crop: "Wheat",
+    location: "Haryana",
+    stage: "grain filling",
+    problemType: "weather"
+  },
+  {
+    label: "Cotton whitefly",
+    prompt: "Cotton has white insects on the underside of leaves. What safe checks should I do?",
+    crop: "Cotton",
+    location: "Haryana",
+    stage: "vegetative",
+    problemType: "pest"
+  }
+] as const;
 
 function readList<T>(key: string, fallback: T[] = []) {
   if (typeof localStorage === "undefined") return fallback;
@@ -180,6 +221,27 @@ function aiStatusLabel(status: AiStatus) {
   return "AI status checking";
 }
 
+function normalizeFarmAssistQuestion(value: string) {
+  return value.trim() || defaultFarmAssistQuestion;
+}
+
+async function fetchJsonWithTimeout<T>(url: string, options: RequestInit = {}, timeoutMs = chatRequestTimeoutMs) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    const data = await response.json().catch(() => null) as T | null;
+    return { response, data };
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("FarmAssist backend request timed out. Offline KB answered instead.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
 export default function App() {
   const [active, setActive] = useState("home");
   const [online, setOnline] = useState(navigator.onLine);
@@ -257,8 +319,7 @@ export default function App() {
       setAiStatus("checking");
       setAiStatusDetail("Checking FarmAssist AI backend...");
       try {
-        const response = await fetch(apiEndpoint("/api/health"), { cache: "no-store" });
-        const data = await response.json().catch(() => null) as FarmAssistHealthResponse | null;
+        const { response, data } = await fetchJsonWithTimeout<FarmAssistHealthResponse>(apiEndpoint("/api/health"), { cache: "no-store" }, 9000);
         if (cancelled) return;
         setApiHealth(data);
         if (response.ok && (data?.hasGeminiKey || data?.hasOpenRouterKey)) {
@@ -340,20 +401,22 @@ export default function App() {
   }, [chatForm.crop, chatForm.location, chatForm.problemType, followUpContact]);
 
   async function ask() {
-    const matches = await searchKnowledgeBase(question);
+    const askedQuestion = normalizeFarmAssistQuestion(question);
+    if (askedQuestion !== question) setQuestion(askedQuestion);
+    const matches = await searchKnowledgeBase(askedQuestion);
     setKbMatches(matches);
-    const result = answerFarmQuestion(question);
+    const result = answerFarmQuestion(askedQuestion);
     const weatherText = weather.data ? `Weather: ${weather.data.sprayDecision} Irrigation urgency ${weather.data.irrigationUrgency}/100. Disease risk ${weather.data.diseaseRisk}/100.` : "Weather: offline fallback or cached data.";
     const stageText = matches[0] ? `Best KB source: ${matches[0].source} (${matches[0].mode}).` : "Best KB source: JOITA offline crop database.";
     const marketText = mandi.data?.records?.length ? `Mandi context: ${mandi.data.source}.` : "Mandi context: offline cache.";
     const grounded = `${result} ${weatherText} ${stageText} ${marketText} Confidence: ${matches[0]?.score ? "Medium-High" : "Medium"} based on available offline/online signals.`;
-    const next = [{ id: crypto.randomUUID(), question, answer: grounded, date: today() }, ...questions].slice(0, 30);
+    const next = [{ id: crypto.randomUUID(), question: askedQuestion, answer: grounded, date: today() }, ...questions].slice(0, 30);
     setQuestions(next);
     saveList(keys.questions, next);
   }
 
-  function offlineFarmAssistFallback(reason: string): FarmAssistChatResponse {
-    const offline = answerFarmQuestion(question);
+  function offlineFarmAssistFallback(reason: string, askedQuestion = normalizeFarmAssistQuestion(question)): FarmAssistChatResponse {
+    const offline = answerFarmQuestion(askedQuestion);
     return {
       ok: false,
       model: "offline-joita-kb",
@@ -381,8 +444,9 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
   }
 
   async function askLiveFarmAssist() {
-    if (!question.trim()) return;
-    if (question.length > maxMessageLength) {
+    const askedQuestion = normalizeFarmAssistQuestion(question);
+    if (askedQuestion !== question) setQuestion(askedQuestion);
+    if (askedQuestion.length > maxMessageLength) {
       setChatError("Please keep the FarmAssist question under 1000 characters.");
       return;
     }
@@ -396,11 +460,11 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
       hasImage: Boolean(chatForm.imageUrl)
     });
     try {
-      const response = await fetch(apiEndpoint("/api/farmassist-chat"), {
+      const { response, data } = await fetchJsonWithTimeout<FarmAssistChatResponse>(apiEndpoint("/api/farmassist-chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: question,
+          message: askedQuestion,
           crop: chatForm.crop,
           location: chatForm.location,
           stage: chatForm.stage,
@@ -409,10 +473,33 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
           imageUrl: chatForm.imageUrl
         })
       });
-      const data = await response.json().catch(() => null) as FarmAssistChatResponse | null;
       if (!response.ok || !data?.answer) {
+        if (data?.answer) {
+          const fallbackData = {
+            ...data,
+            ok: false,
+            failureReason: data.failureReason || data.answer || `Backend returned status ${response.status}.`
+          };
+          setAiStatus("offline");
+          setAiStatusDetail(diagnosticMessage(fallbackData.failureReason));
+          setLastResponseSource(fallbackData.source || "offline_kb");
+          setLastFailureReason(fallbackData.failureReason);
+          setChatResponse(fallbackData);
+          setChatError(diagnosticMessage(fallbackData.failureReason));
+          const next = [{ id: crypto.randomUUID(), question: askedQuestion, answer: fallbackData.answer, date: today() }, ...questions].slice(0, 30);
+          setQuestions(next);
+          saveList(keys.questions, next);
+          trackFarmAssistEvent("AI fallback triggered", {
+            crop: chatForm.crop,
+            location: chatForm.location,
+            problemType: chatForm.problemType,
+            model: fallbackData.model,
+            hasImage: Boolean(chatForm.imageUrl)
+          });
+          return;
+        }
         setAiStatus("offline");
-        throw new Error(data?.failureReason || data?.answer || liveAiFallbackMessage);
+        throw new Error(data?.failureReason || liveAiFallbackMessage);
       }
       const responseSource = data.source || (data.ok ? "unknown" : "offline_kb");
       setLastResponseSource(responseSource);
@@ -442,18 +529,21 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
         });
       }
       setChatResponse(data);
-      const next = [{ id: crypto.randomUUID(), question, answer: data.answer, date: today() }, ...questions].slice(0, 30);
+      const next = [{ id: crypto.randomUUID(), question: askedQuestion, answer: data.answer, date: today() }, ...questions].slice(0, 30);
       setQuestions(next);
       saveList(keys.questions, next);
     } catch (error) {
       const reason = error instanceof Error ? error.message : "Live FarmAssist AI is unavailable.";
-      const fallback = offlineFarmAssistFallback(reason);
+      const fallback = offlineFarmAssistFallback(reason, askedQuestion);
       setAiStatus("offline");
       setAiStatusDetail(diagnosticMessage(reason));
       setLastResponseSource("offline_kb");
       setLastFailureReason(reason);
       setChatResponse(fallback);
       setChatError(diagnosticMessage(reason));
+      const next = [{ id: crypto.randomUUID(), question: askedQuestion, answer: fallback.answer, date: today() }, ...questions].slice(0, 30);
+      setQuestions(next);
+      saveList(keys.questions, next);
       trackFarmAssistEvent("AI fallback triggered", {
         crop: chatForm.crop,
         location: chatForm.location,
@@ -660,7 +750,21 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
     if (active === "ask") {
       const latest = questions[0];
       return (
-        <Card><CardHeader><CardTitle>Ask FarmAssist</CardTitle></CardHeader><CardContent className="grid gap-4 lg:grid-cols-[1fr_340px]">
+        <Card className="chat-card overflow-hidden">
+          <CardHeader className="chat-hero border-b border-sage-100">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <Badge className="bg-white text-sage-900"><Sparkles className="h-3.5 w-3.5" /> Farmer advisory desk</Badge>
+                <CardTitle className="mt-3 flex items-center gap-2 text-2xl"><Bot className="h-6 w-6" /> Ask FarmAssist</CardTitle>
+                <p className="mt-2 max-w-2xl text-sm font-bold leading-6 text-sage-900">Ask any crop question. Live AI replies when available, and the JOITA offline knowledge base answers if the backend is busy.</p>
+              </div>
+              <div className="rounded-md border border-white/70 bg-white/80 p-3 shadow-field">
+                <div className="flex items-center gap-2 text-sm font-black"><span className={`status-dot ${statusDotClass(aiStatus)}`} />{aiStatusLabel(aiStatus)}</div>
+                <p className="mt-1 text-xs font-bold text-sage-900">{aiStatusDetail || offlineKbMessage}</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="grid gap-4 lg:grid-cols-[1fr_340px]">
           <div className="space-y-3">
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               <select className="min-h-10 w-full rounded-md border border-sage-300 px-3 font-bold" value={chatForm.crop} onChange={(event) => setChatForm({ ...chatForm, crop: event.target.value })}>{cropGuides.map((item) => <option key={item.crop}>{item.crop}</option>)}</select>
@@ -674,31 +778,59 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
               </label>
             </div>
             {chatForm.imageUrl ? <div className="upload-preview flex flex-wrap items-center gap-3 rounded-md border border-sage-200 bg-white p-3"><img className="h-20 w-20 rounded-md object-cover" src={chatForm.imageUrl} alt="Uploaded crop preview" /><div className="min-w-0 flex-1"><p className="truncate font-bold">{chatForm.imageName || "Crop photo attached"}</p><p className="text-sm text-sage-900">Image diagnosis will use the vision model chain.</p></div><Button variant="ghost" onClick={() => setChatForm({ ...chatForm, imageUrl: "", imageName: "" })}>Remove photo</Button></div> : null}
-            <Textarea value={question} maxLength={maxMessageLength} onChange={(event) => setQuestion(event.target.value)} />
-            <p className="text-xs font-bold text-sage-800">{question.length}/{maxMessageLength} characters</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {quickFarmPrompts.map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  className="quick-prompt rounded-md border border-sage-200 bg-white p-3 text-left shadow-sm transition hover:border-sage-700 hover:bg-sage-50"
+                  onClick={() => {
+                    setQuestion(item.prompt);
+                    setChatForm({ ...chatForm, crop: item.crop, location: item.location, stage: item.stage, problemType: item.problemType });
+                    setChatError("");
+                  }}
+                >
+                  <span className="flex items-center gap-2 text-sm font-black"><Sparkles className="h-4 w-4" />{item.label}</span>
+                  <span className="mt-1 block text-xs font-semibold leading-5 text-sage-900">{item.prompt}</span>
+                </button>
+              ))}
+            </div>
+            <Textarea className="min-h-32 text-base font-semibold leading-7" value={question} maxLength={maxMessageLength} placeholder="Example: Tomato leaves are yellowing and curling. What should I check?" onChange={(event) => setQuestion(event.target.value)} />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-bold text-sage-800">{question.length}/{maxMessageLength} characters</p>
+              <p className="text-xs font-black text-sage-900"><CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />A reply is always available through live AI or Offline KB.</p>
+            </div>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={askLiveFarmAssist} disabled={chatLoading}><Leaf className="h-4 w-4" /> Ask Live FarmAssist AI</Button>
+              <Button className="ai-submit-button" onClick={askLiveFarmAssist} disabled={chatLoading}>{chatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Ask Live AI</Button>
               <Button variant="secondary" onClick={ask}><Leaf className="h-4 w-4" /> Answer from Offline KB</Button>
               <Button variant="ghost" onClick={askLiveFarmAssist} disabled={chatLoading || !chatResponse}>Retry</Button>
             </div>
-            {aiStatusDetail ? <div className={`rounded-md border p-3 text-sm font-bold leading-6 ${aiStatus === "online" ? "border-sage-300 bg-white" : "border-amber-300 bg-amber-50"}`}><div className="flex items-center gap-2"><span className={`status-dot ${aiStatus}`} />{aiStatusDetail}</div>{apiBase ? <p className="mt-1 text-xs text-sage-900">API base: {apiBase}</p> : null}</div> : null}
+            {aiStatusDetail ? <div className={`farmassist-status-panel rounded-md border p-3 text-sm font-bold leading-6 ${aiStatus === "online" || aiStatus === "backend_connected" ? "border-sage-300 bg-white" : "border-amber-300 bg-amber-50"}`}><div className="flex items-center gap-2"><span className={`status-dot ${statusDotClass(aiStatus)}`} />{aiStatusDetail}</div>{apiBase ? <p className="mt-1 text-xs text-sage-900">API base: {apiBase}</p> : null}</div> : null}
             <div className="rounded-md border border-sage-200 bg-sage-50 p-3 text-sm font-bold leading-6">
               <p>{pilotNotice}</p>
               <p>{privacyNotice}</p>
               <p>{safetyNotice}</p>
             </div>
-            {chatLoading ? <div className="soft-enter animate-pulse rounded-md bg-sage-100 p-4 font-bold">FarmAssist AI is checking crop symptoms...</div> : null}
+            {chatLoading ? <div className="typing-card soft-enter rounded-md border border-sage-200 bg-sage-100 p-4 font-bold"><span>FarmAssist AI is checking crop symptoms</span><span className="typing-dots" aria-hidden="true"><i /><i /><i /></span></div> : null}
             {chatError ? <div className="soft-enter rounded-md border border-sage-300 bg-sage-100 p-3 text-sm font-bold">{chatError}</div> : null}
-            {chatResponse ? <div className="answer-panel soft-enter rounded-md border border-sage-200 bg-white p-4"><div className="mb-3 flex flex-wrap gap-2"><Badge className={sourceBadgeClass(chatResponse.source)}>{sourceBadgeLabel(chatResponse.source)}</Badge>{chatResponse.source === "offline_kb" ? <Badge className="bg-amber-50 text-sage-900">Live AI failed. Offline KB answered instead.</Badge> : null}</div><div className="whitespace-pre-wrap text-base font-semibold leading-7">{chatResponse.answer}</div>{devMode ? <p className="mt-3 text-xs font-bold text-sage-800">Dev model status: {chatResponse.model} · {chatResponse.mode} · {chatResponse.ok ? "ok" : "fallback"} · {chatResponse.source ?? "unknown"}</p> : null}<p className="mt-3 text-sm font-bold text-sage-900">{pilotNotice}</p><p className="mt-2 text-sm font-bold text-sage-900">{privacyNotice}</p><p className="mt-2 text-sm font-bold text-sage-900">{safetyNotice}</p></div> : null}
+            {chatResponse ? <div className="answer-panel soft-enter rounded-md border border-sage-200 bg-white p-4"><div className="mb-3 flex flex-wrap items-center gap-2"><Badge className={sourceBadgeClass(chatResponse.source)}><CheckCircle2 className="h-3.5 w-3.5" />{sourceBadgeLabel(chatResponse.source)}</Badge>{chatResponse.source === "offline_kb" ? <Badge className="bg-amber-50 text-sage-900">Live AI failed. Offline KB answered instead.</Badge> : <Badge className="bg-sage-100 text-sage-900">Live AI online</Badge>}</div><div className="whitespace-pre-wrap text-base font-semibold leading-7">{chatResponse.answer}</div>{devMode ? <p className="mt-3 text-xs font-bold text-sage-800">Dev model status: {chatResponse.model} · {chatResponse.mode} · {chatResponse.ok ? "ok" : "fallback"} · {chatResponse.source ?? "unknown"}</p> : null}<p className="mt-3 text-sm font-bold text-sage-900">{pilotNotice}</p><p className="mt-2 text-sm font-bold text-sage-900">{privacyNotice}</p><p className="mt-2 text-sm font-bold text-sage-900">{safetyNotice}</p></div> : null}
             {chatResponse ? <div className="soft-enter rounded-md border border-sage-200 bg-sage-50 p-4"><h3 className="font-black">Want expert follow-up? Share WhatsApp/email.</h3><p className="mt-1 text-sm font-semibold text-sage-900">Optional, not required.</p><div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]"><Input placeholder="WhatsApp or email (optional)" value={followUpContact} onChange={(event) => setFollowUpContact(event.target.value)} /><Button variant="secondary" onClick={saveFollowUpRequest}>Save Follow-Up</Button><a href={followUpMailto}><Button>Email JOITA</Button></a></div>{followUpSaved ? <p className="mt-2 text-sm font-bold text-sage-900">{followUpSaved}</p> : null}</div> : null}
             <SourceBadges weather={weather.data?.source ?? "Open-Meteo"} market={mandi.data?.source ?? "Offline Cache"} nasa={nasa.data?.source ?? "NASA POWER"} biodiversity={`${gbif.data?.source ?? "GBIF"}/${inat.data?.source ?? "iNaturalist"}`} />
-            <div className="rounded-md bg-sage-100 p-4 text-base font-medium leading-7">{latest?.answer ?? answerFarmQuestion(question)}</div>
+            <div className="rounded-md bg-sage-100 p-4 text-base font-medium leading-7"><span className="font-black">Offline preview: </span>{latest?.answer ?? answerFarmQuestion(normalizeFarmAssistQuestion(question))}</div>
             <div className="grid gap-2 md:grid-cols-2">{kbMatches.map((match) => <Info key={`${match.source}-${match.mode}`} label={`${match.source} · ${match.mode}`} value={match.text} />)}</div>
             <p className="text-sm font-bold text-sage-900">Safety: verify pesticide and chemical decisions with a local KVK/agronomist before spraying.</p>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-3 lg:sticky lg:top-4 lg:self-start">
+            <div className="rounded-md border border-sage-200 bg-sage-50 p-4">
+              <h3 className="flex items-center gap-2 font-black"><Bot className="h-4 w-4" />Response promise</h3>
+              <div className="mt-3 grid gap-2 text-sm font-bold leading-6">
+                <p><CheckCircle2 className="mr-1 inline h-4 w-4" />Gemini is tried first.</p>
+                <p><CheckCircle2 className="mr-1 inline h-4 w-4" />OpenRouter is the fallback.</p>
+                <p><CheckCircle2 className="mr-1 inline h-4 w-4" />Offline KB answers if live AI is busy.</p>
+              </div>
+            </div>
             <h3 className="font-black">Past questions</h3>
-            {questions.slice(0, 5).map((item) => <div key={item.id} className="rounded-md border border-sage-200 p-3"><p className="font-bold">{item.question}</p><p className="mt-1 text-sm">{item.date}</p></div>)}
+            {questions.length ? questions.slice(0, 5).map((item) => <div key={item.id} className="rounded-md border border-sage-200 bg-white p-3"><p className="font-bold">{item.question}</p><p className="mt-1 text-sm">{item.date}</p></div>) : <div className="rounded-md border border-sage-200 bg-white p-3 text-sm font-bold">Your recent FarmAssist answers will appear here.</div>}
           </div>
         </CardContent></Card>
       );
