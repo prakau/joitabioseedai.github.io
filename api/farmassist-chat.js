@@ -22,7 +22,7 @@ export const config = {
 const rateLimitStore = globalThis.__joitaFarmAssistRateLimit ?? new Map();
 globalThis.__joitaFarmAssistRateLimit = rateLimitStore;
 
-const systemPrompt = "You are FarmAssist AI by JOITA Bioseed AI. Give short, practical, farmer-friendly crop advisory. Never guarantee yield. Never give unsafe pesticide dose. For chemicals say use locally approved label dose and confirm with KVK/agriculture expert.";
+const systemPrompt = "You are FarmAssist AI by JOITA Bioseed AI. Give complete, practical, farmer-friendly crop advisory in the requested language. Never guarantee yield. Never give unsafe pesticide dose. For chemicals say use locally approved label dose and confirm with KVK/agriculture expert.";
 
 function setCors(req, res) {
   const origin = req.headers.origin;
@@ -140,7 +140,13 @@ Location: ${location || "not provided"}
 Stage: ${stage || "not provided"}
 Language: ${language || "English"}
 Problem type: ${problemType || "general"}
-Question: ${message}`;
+Question: ${message}
+
+Return a complete answer with these short sections:
+Likely causes
+What to check today
+Immediate safe actions
+When to contact KVK/agriculture expert`;
 }
 
 function withTimeout() {
@@ -166,6 +172,15 @@ function providerError(provider, statusCode, message) {
   const error = new Error(`${provider}: ${message}`);
   error.statusCode = statusCode;
   return error;
+}
+
+function isCompleteAnswer(answer) {
+  const clean = String(answer || "").replace(/\s+/g, " ").trim();
+  if (clean.length < 120) return false;
+  const lower = clean.toLowerCase();
+  const incompleteEndings = [" due", " because", " and", " or", " to", " with", " for", " can be", " may be", " include"];
+  if (incompleteEndings.some((ending) => lower.endsWith(ending))) return false;
+  return /[.!?)]$/.test(clean);
 }
 
 async function callGemini({ apiKey, prompt }) {
@@ -198,6 +213,7 @@ async function callGemini({ apiKey, prompt }) {
       ? parts.map((part) => part?.text).filter(Boolean).join("\n").trim()
       : "";
     if (!answer) throw providerError("gemini", 502, "empty answer");
+    if (!isCompleteAnswer(answer)) throw providerError("gemini", 502, "incomplete answer");
     return answer;
   } catch (error) {
     if (error?.name === "AbortError") throw providerError("gemini", 504, "request timed out");
@@ -236,7 +252,9 @@ async function callOpenRouter({ apiKey, prompt }) {
     }
     const answer = payload?.choices?.[0]?.message?.content;
     if (!answer || typeof answer !== "string") throw providerError("openrouter", 502, "empty answer");
-    return answer.trim();
+    const cleanAnswer = answer.trim();
+    if (!isCompleteAnswer(cleanAnswer)) throw providerError("openrouter", 502, "incomplete answer");
+    return cleanAnswer;
   } catch (error) {
     if (error?.name === "AbortError") throw providerError("openrouter", 504, "request timed out");
     throw error;

@@ -225,6 +225,15 @@ function normalizeFarmAssistQuestion(value: string) {
   return value.trim() || defaultFarmAssistQuestion;
 }
 
+function isCompleteFarmAssistAnswer(answer: string) {
+  const clean = answer.replace(/\s+/g, " ").trim();
+  if (clean.length < 120) return false;
+  const lower = clean.toLowerCase();
+  const incompleteEndings = [" due", " because", " and", " or", " to", " with", " for", " can be", " may be", " include"];
+  if (incompleteEndings.some((ending) => lower.endsWith(ending))) return false;
+  return /[.!?)]$/.test(clean);
+}
+
 async function fetchJsonWithTimeout<T>(url: string, options: RequestInit = {}, timeoutMs = chatRequestTimeoutMs) {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
@@ -502,6 +511,9 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
         throw new Error(data?.failureReason || liveAiFallbackMessage);
       }
       const responseSource = data.source || (data.ok ? "unknown" : "offline_kb");
+      if ((responseSource === "gemini" || responseSource === "openrouter") && !isCompleteFarmAssistAnswer(data.answer)) {
+        throw new Error("Live AI returned an incomplete answer. Offline KB answered instead.");
+      }
       setLastResponseSource(responseSource);
       setLastFailureReason(data.failureReason || "");
       if (responseSource === "offline_kb") {
