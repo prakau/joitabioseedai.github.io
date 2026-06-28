@@ -222,7 +222,8 @@ function aiStatusLabel(status: AiStatus) {
 }
 
 function normalizeFarmAssistQuestion(value: string) {
-  return value.trim() || defaultFarmAssistQuestion;
+  const clean = value.trim();
+  return clean && !/^(hi|hello|hey|namaste|namaskar|hii|hlo)[\s.!?]*$/i.test(clean) ? clean : defaultFarmAssistQuestion;
 }
 
 function isCompleteFarmAssistAnswer(answer: string) {

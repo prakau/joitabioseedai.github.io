@@ -174,6 +174,10 @@ function providerError(provider, statusCode, message) {
   return error;
 }
 
+function isGreetingOnly(message) {
+  return /^(hi|hello|hey|namaste|namaskar|hii|hlo)[\s.!?]*$/i.test(String(message || "").trim());
+}
+
 function isCompleteAnswer(answer) {
   const clean = String(answer || "").replace(/\s+/g, " ").trim();
   if (clean.length < 120) return false;
@@ -344,7 +348,7 @@ async function handleFarmAssistChat(req, res) {
     });
   }
 
-  const cleanMessage = rawMessage.trim() ? rawMessage.trim().slice(0, MAX_MESSAGE_LENGTH) : DEFAULT_MESSAGE;
+  const cleanMessage = rawMessage.trim() && !isGreetingOnly(rawMessage) ? rawMessage.trim().slice(0, MAX_MESSAGE_LENGTH) : DEFAULT_MESSAGE;
 
   const rate = checkRateLimit(req);
   setRateHeaders(res, rate.bucket);
