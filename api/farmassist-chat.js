@@ -146,7 +146,9 @@ Return a complete answer with these short sections:
 Likely causes
 What to check today
 Immediate safe actions
-When to contact KVK/agriculture expert`;
+When to contact KVK/agriculture expert
+
+Write 120-180 words, complete every sentence, and do not stop mid-thought. If the user only greets you, still give a proactive crop checklist for the crop, stage, and location provided.`;
 }
 
 function withTimeout() {
@@ -180,11 +182,11 @@ function isGreetingOnly(message) {
 
 function isCompleteAnswer(answer) {
   const clean = String(answer || "").replace(/\s+/g, " ").trim();
-  if (clean.length < 120) return false;
+  if (clean.length < 90) return false;
   const lower = clean.toLowerCase();
   const incompleteEndings = [" due", " because", " and", " or", " to", " with", " for", " can be", " may be", " include"];
   if (incompleteEndings.some((ending) => lower.endsWith(ending))) return false;
-  return /[.!?)]$/.test(clean);
+  return true;
 }
 
 async function callGemini({ apiKey, prompt }) {
@@ -204,7 +206,7 @@ async function callGemini({ apiKey, prompt }) {
         ],
         generationConfig: {
           temperature: 0.3,
-          maxOutputTokens: 500
+          maxOutputTokens: 1200
         }
       })
     });
@@ -217,6 +219,10 @@ async function callGemini({ apiKey, prompt }) {
       ? parts.map((part) => part?.text).filter(Boolean).join("\n").trim()
       : "";
     if (!answer) throw providerError("gemini", 502, "empty answer");
+    const finishReason = payload?.candidates?.[0]?.finishReason;
+    if (finishReason && !["STOP", "FINISH_REASON_UNSPECIFIED"].includes(finishReason)) {
+      throw providerError("gemini", 502, `finish reason ${finishReason}`);
+    }
     if (!isCompleteAnswer(answer)) throw providerError("gemini", 502, "incomplete answer");
     return answer;
   } catch (error) {

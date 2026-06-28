@@ -228,11 +228,11 @@ function normalizeFarmAssistQuestion(value: string) {
 
 function isCompleteFarmAssistAnswer(answer: string) {
   const clean = answer.replace(/\s+/g, " ").trim();
-  if (clean.length < 120) return false;
+  if (clean.length < 90) return false;
   const lower = clean.toLowerCase();
   const incompleteEndings = [" due", " because", " and", " or", " to", " with", " for", " can be", " may be", " include"];
   if (incompleteEndings.some((ending) => lower.endsWith(ending))) return false;
-  return /[.!?)]$/.test(clean);
+  return true;
 }
 
 async function fetchJsonWithTimeout<T>(url: string, options: RequestInit = {}, timeoutMs = chatRequestTimeoutMs) {
