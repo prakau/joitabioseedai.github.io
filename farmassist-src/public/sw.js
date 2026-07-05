@@ -1,4 +1,4 @@
-const CACHE = "joita-farmassist-v1";
+const CACHE = "joita-farmassist-v2";
 const OFFLINE_URLS = [
   "/farmassist/",
   "/farmassist/index.html",

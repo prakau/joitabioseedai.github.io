@@ -1,8 +1,9 @@
 # JOITA Bioseed AI robots.txt
-# Last updated: 2026-06-08
+# Last updated: 2026-07-05
 
 User-agent: *
 Allow: /
+Allow: /llms.txt
 Disallow: /.git/
 Disallow: /node_modules/
 Disallow: /farmassist-src/node_modules/

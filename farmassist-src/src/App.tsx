@@ -302,9 +302,17 @@ export default function App() {
   const devMode = import.meta.env.DEV;
   const apiBase = useMemo(() => {
     const envBase = String(import.meta.env.VITE_FARMASSIST_API_BASE || "");
-    return (envBase || apiBaseOverride).trim().replace(/\/$/, "");
+    const productionHost = typeof window !== "undefined" && ["joitabioseedai.com", "www.joitabioseedai.com"].includes(window.location.hostname);
+    return (envBase || (productionHost ? "" : apiBaseOverride)).trim().replace(/\/$/, "");
   }, [apiBaseOverride]);
   const apiEndpoint = (path: string) => `${apiBase}${path}`;
+
+  useEffect(() => {
+    if (["joitabioseedai.com", "www.joitabioseedai.com"].includes(window.location.hostname)) {
+      localStorage.removeItem(keys.apiBase);
+      setApiBaseOverride("");
+    }
+  }, []);
 
   useEffect(() => {
     const on = () => setOnline(true);
