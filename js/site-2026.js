@@ -37,8 +37,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const rect = card.getBoundingClientRect();
       const x = ((event.clientX - rect.left) / rect.width) * 100;
       const y = ((event.clientY - rect.top) / rect.height) * 100;
+      const rx = ((50 - y) / 50) * 2.2;
+      const ry = ((x - 50) / 50) * 2.4;
       card.style.setProperty('--mx', `${x.toFixed(1)}%`);
       card.style.setProperty('--my', `${y.toFixed(1)}%`);
+      card.style.setProperty('--rx', `${rx.toFixed(2)}deg`);
+      card.style.setProperty('--ry', `${ry.toFixed(2)}deg`);
+    });
+    card.addEventListener('pointerleave', () => {
+      card.style.setProperty('--rx', '0deg');
+      card.style.setProperty('--ry', '0deg');
     });
   });
 });
