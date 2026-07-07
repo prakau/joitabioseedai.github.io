@@ -8,7 +8,8 @@ const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
-const PROVIDER_TIMEOUT_MS = 18000;
+const GEMINI_TIMEOUT_MS = 9000;
+const OPENROUTER_TIMEOUT_MS = 14000;
 const DEFAULT_MESSAGE = "Hi. Please give quick practical crop checks for my farm.";
 
 export const config = {
@@ -151,9 +152,9 @@ When to contact KVK/agriculture expert
 Write 120-180 words, complete every sentence, and do not stop mid-thought. If the user only greets you, still give a proactive crop checklist for the crop, stage, and location provided.`;
 }
 
-function withTimeout() {
+function withTimeout(timeoutMs) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   return {
     signal: controller.signal,
     done: () => clearTimeout(timeout)
@@ -191,7 +192,7 @@ function isCompleteAnswer(answer) {
 
 async function callGemini({ apiKey, prompt }) {
   if (!apiKey) throw providerError("gemini", null, "GEMINI_API_KEY not configured");
-  const timeout = withTimeout();
+  const timeout = withTimeout(GEMINI_TIMEOUT_MS);
   try {
     const response = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(apiKey)}`, {
       method: "POST",
@@ -238,7 +239,7 @@ async function callGemini({ apiKey, prompt }) {
 
 async function callOpenRouter({ apiKey, prompt }) {
   if (!apiKey) throw providerError("openrouter", null, "OPENROUTER_API_KEY not configured");
-  const timeout = withTimeout();
+  const timeout = withTimeout(OPENROUTER_TIMEOUT_MS);
   try {
     const response = await fetch(OPENROUTER_URL, {
       method: "POST",
