@@ -2,10 +2,16 @@ document.addEventListener('DOMContentLoaded', () => {
   document.documentElement.classList.add('has-js');
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const header = document.querySelector('.site-header');
+  const progress = document.createElement('span');
+  progress.className = 'scroll-progress';
+  progress.setAttribute('aria-hidden', 'true');
+  header?.appendChild(progress);
 
   const syncHeader = () => {
-    if (!header) return;
-    header.classList.toggle('scrolled', window.scrollY > 10);
+    const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+    const progressWidth = scrollable > 0 ? Math.min(100, Math.max(0, (window.scrollY / scrollable) * 100)) : 0;
+    progress.style.width = `${progressWidth.toFixed(2)}%`;
+    header?.classList.toggle('scrolled', window.scrollY > 10);
   };
   syncHeader();
   window.addEventListener('scroll', syncHeader, { passive: true });
