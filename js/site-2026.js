@@ -7,6 +7,56 @@ document.addEventListener('DOMContentLoaded', () => {
   progress.setAttribute('aria-hidden', 'true');
   header?.appendChild(progress);
 
+  const navLinks = Array.from(document.querySelectorAll('.nav-links a'));
+  const siteNav = document.querySelector('.site-nav');
+  const navContainer = document.querySelector('.nav-links');
+  if (siteNav && navContainer) {
+    const menuButton = document.createElement('button');
+    menuButton.type = 'button';
+    menuButton.className = 'mobile-menu-toggle';
+    menuButton.setAttribute('aria-label', 'Open navigation menu');
+    menuButton.setAttribute('aria-expanded', 'false');
+    menuButton.innerHTML = '<span></span><span></span><span></span><strong>Menu</strong>';
+    siteNav.insertBefore(menuButton, navContainer);
+    menuButton.addEventListener('click', () => {
+      const isOpen = header?.classList.toggle('menu-open') || false;
+      menuButton.setAttribute('aria-expanded', String(isOpen));
+      menuButton.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
+    });
+    navLinks.forEach((link) => link.addEventListener('click', () => {
+      header?.classList.remove('menu-open');
+      menuButton.setAttribute('aria-expanded', 'false');
+      menuButton.setAttribute('aria-label', 'Open navigation menu');
+    }));
+  }
+  const normalizePath = (value) => {
+    if (!value || value === '/index.html') return '/';
+    return value.endsWith('/') && value !== '/' ? value.slice(0, -1) : value;
+  };
+  const currentPath = normalizePath(window.location.pathname);
+  const activeMap = {
+    '/': '/',
+    '/products.html': '/products.html',
+    '/agritrust-trileaf-edge-node.html': '/products.html',
+    '/farmassist-ai.html': '/farmassist-ai.html',
+    '/agri-smart-assistant.html': '/farmassist-ai.html',
+    '/agri-assistant.html': '/farmassist-ai.html',
+    '/data-validation.html': '/data-validation.html',
+    '/farmers-fpos.html': '/farmers-fpos.html',
+    '/investors-partners.html': '/investors-partners.html',
+    '/join-us.html': '/join-us.html',
+    '/contact.html': '/contact.html',
+    '/contact-us.html': '/contact.html'
+  };
+  const activeHref = activeMap[currentPath] || currentPath;
+  navLinks.forEach((link) => {
+    const linkPath = normalizePath(new URL(link.href, window.location.origin).pathname);
+    const isActive = linkPath === activeHref;
+    link.classList.toggle('active', isActive);
+    if (isActive) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
+
   const syncHeader = () => {
     const scrollable = document.documentElement.scrollHeight - window.innerHeight;
     const progressWidth = scrollable > 0 ? Math.min(100, Math.max(0, (window.scrollY / scrollable) * 100)) : 0;

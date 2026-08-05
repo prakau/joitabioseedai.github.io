@@ -1,5 +1,5 @@
 # JOITA Bioseed AI robots.txt
-# Last updated: 2026-07-05
+# Last updated: 2026-08-05
 
 User-agent: *
 Allow: /

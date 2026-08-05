@@ -1,5 +1,7 @@
 # JOITA Bioseed AI
 
+Last updated: 2026-08-05
+
 JOITA Bioseed AI is a farmer-first agri-AI startup combining AI-guided recommendations, biological crop inputs, field validation, and edge sensing for climate-resilient agriculture.
 
 ## Primary Pages
@@ -16,12 +18,16 @@ JOITA Bioseed AI is a farmer-first agri-AI startup combining AI-guided recommend
 
 ## Product Portfolio
 
-- BioSynth Prime: waste-to-wealth soil-water resilience concept using FA-WAP hydrogel matrix and Bacillus subtilis under field validation.
-- BioSynth Nano: biological crop input platform designed to support crop resilience and smarter timing.
-- FarmAssist AI: public AI-powered agricultural assistant with offline-first crop advisory support.
+- BioSynth Prime: waste-to-wealth soil-water resilience concept using FA-WAP hydrogel matrix, rice stubble, fly ash, and Bacillus subtilis under field validation.
+- BioSynth Nano: biological crop input platform designed to support crop resilience and smarter input timing.
+- FarmAssist AI: public AI-powered agricultural assistant with offline-first crop advisory support, live AI when configured, weather context, disease advisory, soil recommendations, market prices, and field records.
 - SmartSeedMat: seed and nursery support material for early establishment and smallholder use.
 - AquaSynth Nano: aquaculture support concept for water-quality pilots and validation.
 - AgriTrust TriLeaf Edge Node: design-protected agricultural IoT sensing and edge-computing device for localized root-zone field intelligence and FarmAssist data loops.
+
+## Search Keywords
+
+JOITA Bioseed AI, AI agriculture India, agri-AI startup, biological crop inputs, climate-resilient farming, FarmAssist AI, AI crop advisory, BioSynth Prime, BioSynth Nano, AgriTrust TriLeaf Edge Node, FPO pilot agriculture, smallholder agriculture, field validation, agricultural IoT, root-zone sensing.
 
 ## Safety And Claims
 

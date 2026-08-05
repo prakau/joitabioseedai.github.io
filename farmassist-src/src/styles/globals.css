@@ -5,7 +5,7 @@
 :root {
   color: #101510;
   background: #f3f7ef;
-  font-size: 18px;
+  font-size: 19px;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -27,48 +27,48 @@ button, input, select, textarea {
 }
 
 .farm-bg .text-xs {
-  font-size: 0.96rem;
-  line-height: 1.42rem;
+  font-size: 1rem;
+  line-height: 1.48rem;
 }
 
 .farm-bg .text-sm {
-  font-size: 1.07rem;
-  line-height: 1.65rem;
+  font-size: 1.13rem;
+  line-height: 1.74rem;
 }
 
 .farm-bg .text-base {
-  font-size: 1.16rem;
-  line-height: 1.82rem;
+  font-size: 1.22rem;
+  line-height: 1.9rem;
 }
 
 .farm-bg button,
 .farm-bg input,
 .farm-bg select,
 .farm-bg textarea {
-  font-size: 1.08rem;
+  font-size: 1.14rem;
   line-height: 1.5;
 }
 
 .farm-bg input,
 .farm-bg select {
-  min-height: 52px;
+  min-height: 56px;
 }
 
 .farm-bg textarea {
-  min-height: 150px;
+  min-height: 160px;
 }
 
 @media (max-width: 640px) {
   :root {
-    font-size: 17px;
+    font-size: 18px;
   }
 
   .farm-bg .text-xs {
-    font-size: 0.92rem;
+    font-size: 0.98rem;
   }
 
   .farm-bg .text-sm {
-    font-size: 1rem;
+    font-size: 1.06rem;
   }
 }
 
