@@ -14,7 +14,7 @@ JOITA FarmAssist is a production-shaped, offline-first agricultural companion we
 - Market price tracker with offline mandi planning data and data.gov.in/Agmarknet integration notes.
 - Farmer community board backed by localStorage for offline posting and later sync.
 - Service worker and localStorage support for rural low-connectivity use.
-- Direct link to [JoitaBioseedai.com](https://JoitaBioseedai.com).
+- Direct link to [joitabioseedai.com](https://www.joitabioseedai.com).
 
 ## Free APIs
 
@@ -42,4 +42,4 @@ npm run build
 
 This repo includes `.github/workflows/joita-farmassist-pages.yml`. Push to `main`, enable GitHub Pages with `GitHub Actions` as the source, and the app will deploy the repository root after building `farmassist-src` into `farmassist/`.
 
-The Vite base path is `/farmassist/`, so the public URL is `https://joitabioseedai.com/farmassist/`.
+The Vite base path is `/farmassist/`, so the public URL is `https://www.joitabioseedai.com/farmassist/`.

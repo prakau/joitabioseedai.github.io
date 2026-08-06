@@ -1,20 +1,20 @@
 # JOITA Bioseed AI
 
-Last updated: 2026-08-05
+Last updated: 2026-08-06
 
 JOITA Bioseed AI is a farmer-first agri-AI startup combining AI-guided recommendations, biological crop inputs, field validation, and edge sensing for climate-resilient agriculture.
 
 ## Primary Pages
 
-- Home: https://joitabioseedai.com/
-- Products: https://joitabioseedai.com/products.html
-- FarmAssist AI overview: https://joitabioseedai.com/farmassist-ai.html
-- Public FarmAssist app: https://joitabioseedai.com/farmassist/
-- AgriTrust TriLeaf Edge Node: https://joitabioseedai.com/agritrust-trileaf-edge-node.html
-- Data & Field Validation: https://joitabioseedai.com/data-validation.html
-- Farmers & FPOs: https://joitabioseedai.com/farmers-fpos.html
-- Investors & Partners: https://joitabioseedai.com/investors-partners.html
-- Contact: https://joitabioseedai.com/contact.html
+- Home: https://www.joitabioseedai.com/
+- Products: https://www.joitabioseedai.com/products.html
+- FarmAssist AI overview: https://www.joitabioseedai.com/farmassist-ai.html
+- Public FarmAssist app: https://www.joitabioseedai.com/farmassist/
+- AgriTrust TriLeaf Edge Node: https://www.joitabioseedai.com/agritrust-trileaf-edge-node.html
+- Data & Field Validation: https://www.joitabioseedai.com/data-validation.html
+- Farmers & FPOs: https://www.joitabioseedai.com/farmers-fpos.html
+- Investors & Partners: https://www.joitabioseedai.com/investors-partners.html
+- Contact: https://www.joitabioseedai.com/contact.html
 
 ## Product Portfolio
 

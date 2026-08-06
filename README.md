@@ -6,10 +6,10 @@ JOITA Bioseed AI combines AI-guided recommendations, biological crop inputs, and
 
 ## Public Website
 
-- Homepage: `https://joitabioseedai.com/`
-- FarmAssist AI page: `https://joitabioseedai.com/farmassist-ai.html`
-- Dedicated Agri-Smart Assistant page: `https://joitabioseedai.com/agri-smart-assistant.html`
-- FarmAssist app: `https://joitabioseedai.com/farmassist/`
+- Homepage: `https://www.joitabioseedai.com/`
+- FarmAssist AI page: `https://www.joitabioseedai.com/farmassist-ai.html`
+- Dedicated Agri-Smart Assistant page: `https://www.joitabioseedai.com/agri-smart-assistant.html`
+- FarmAssist app: `https://www.joitabioseedai.com/farmassist/`
 
 ## Current Site Pages
 

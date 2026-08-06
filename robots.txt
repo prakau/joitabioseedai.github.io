@@ -1,5 +1,5 @@
 # JOITA Bioseed AI robots.txt
-# Last updated: 2026-08-05
+# Last updated: 2026-08-06
 
 User-agent: *
 Allow: /
@@ -8,4 +8,4 @@ Disallow: /.git/
 Disallow: /node_modules/
 Disallow: /farmassist-src/node_modules/
 
-Sitemap: https://joitabioseedai.com/sitemap.xml
+Sitemap: https://www.joitabioseedai.com/sitemap.xml

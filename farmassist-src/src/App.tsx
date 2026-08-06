@@ -719,7 +719,7 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
             <Badge className="gap-1.5">{online ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}{online ? "Device online" : "Device offline"}</Badge>
             <Badge className="gap-1.5"><span className={`status-dot ${statusDotClass(aiStatus)}`} />{aiStatusLabel(aiStatus)}</Badge>
             <Badge>Haryana/North India KB</Badge>
-            <a href="https://joitabioseedai.com" target="_blank" rel="noreferrer">
+            <a href="https://www.joitabioseedai.com" target="_blank" rel="noreferrer">
               <Button variant="secondary"><ExternalLink className="h-4 w-4" /> Main Website</Button>
             </a>
           </div>
@@ -987,7 +987,7 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
     }
 
     if (active === "about") {
-      return <Card><CardHeader><CardTitle>About JOITA Bioseed AI</CardTitle></CardHeader><CardContent className="space-y-4"><p className="text-lg font-semibold leading-8">JOITA FarmAssist is part of JOITA Bioseed AI's mission to combine AI, nanotechnology, crop science, and farmer-first advisory for climate-resilient agriculture.</p><p className="leading-7">This app is built for practical field use: offline knowledge, local persistence, transparent safety disclaimers, no paid backend requirement, and free API integration where it is reliable.</p><a href="https://joitabioseedai.com" target="_blank" rel="noreferrer"><Button><ExternalLink className="h-4 w-4" /> Visit main website</Button></a></CardContent></Card>;
+      return <Card><CardHeader><CardTitle>About JOITA Bioseed AI</CardTitle></CardHeader><CardContent className="space-y-4"><p className="text-lg font-semibold leading-8">JOITA FarmAssist is part of JOITA Bioseed AI's mission to combine AI, nanotechnology, crop science, and farmer-first advisory for climate-resilient agriculture.</p><p className="leading-7">This app is built for practical field use: offline knowledge, local persistence, transparent safety disclaimers, no paid backend requirement, and free API integration where it is reliable.</p><a href="https://www.joitabioseedai.com" target="_blank" rel="noreferrer"><Button><ExternalLink className="h-4 w-4" /> Visit main website</Button></a></CardContent></Card>;
     }
 
     return (

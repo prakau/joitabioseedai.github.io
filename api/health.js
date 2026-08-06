@@ -1,4 +1,4 @@
-const REFERER = "https://joitabioseedai.com";
+const REFERER = "https://www.joitabioseedai.com";
 
 function setCors(req, res) {
   const origin = req.headers.origin;
