@@ -8,6 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
   header?.appendChild(progress);
 
   const navLinks = Array.from(document.querySelectorAll('.nav-links a'));
+  navLinks.forEach((link, index) => {
+    link.style.setProperty('--nav-index', index);
+  });
   const siteNav = document.querySelector('.site-nav');
   const navContainer = document.querySelector('.nav-links');
   if (siteNav && navContainer) {
@@ -57,6 +60,17 @@ document.addEventListener('DOMContentLoaded', () => {
     else link.removeAttribute('aria-current');
   });
 
+  const isFarmAssistApp = currentPath === '/farmassist' || currentPath.startsWith('/farmassist/');
+  if (!isFarmAssistApp && !document.querySelector('.floating-farmassist')) {
+    const floatingFarmAssist = document.createElement('a');
+    floatingFarmAssist.className = 'floating-farmassist';
+    floatingFarmAssist.href = '/farmassist/';
+    floatingFarmAssist.textContent = 'Ask FarmAssist';
+    floatingFarmAssist.setAttribute('aria-label', 'Open JOITA FarmAssist AI');
+    document.body.appendChild(floatingFarmAssist);
+    window.setTimeout(() => floatingFarmAssist.classList.add('is-visible'), 700);
+  }
+
   const syncHeader = () => {
     const scrollable = document.documentElement.scrollHeight - window.innerHeight;
     const progressWidth = scrollable > 0 ? Math.min(100, Math.max(0, (window.scrollY / scrollable) * 100)) : 0;
@@ -67,12 +81,14 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('scroll', syncHeader, { passive: true });
 
   const items = document.querySelectorAll('.reveal');
+  const sections = document.querySelectorAll('section, .page-hero, .hero');
   items.forEach((item, index) => {
     item.style.setProperty('--reveal-index', Math.min(index % 6, 5));
   });
 
   if (!('IntersectionObserver' in window)) {
     items.forEach((item) => item.classList.add('is-visible'));
+    sections.forEach((section) => section.classList.add('section-in-view'));
     return;
   }
   const observer = new IntersectionObserver((entries) => {
@@ -85,7 +101,29 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { threshold: 0.14 });
   items.forEach((item) => observer.observe(item));
 
+  const sectionObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      entry.target.classList.toggle('section-in-view', entry.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -72% 0px', threshold: 0.01 });
+  sections.forEach((section) => sectionObserver.observe(section));
+
   if (prefersReducedMotion) return;
+
+  const magneticButtons = document.querySelectorAll('.button');
+  magneticButtons.forEach((button) => {
+    button.addEventListener('pointermove', (event) => {
+      const rect = button.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width - 0.5) * 6;
+      const y = ((event.clientY - rect.top) / rect.height - 0.5) * 5;
+      button.style.setProperty('--btn-x', `${x.toFixed(2)}px`);
+      button.style.setProperty('--btn-y', `${y.toFixed(2)}px`);
+    });
+    button.addEventListener('pointerleave', () => {
+      button.style.setProperty('--btn-x', '0px');
+      button.style.setProperty('--btn-y', '0px');
+    });
+  });
 
   const interactiveCards = document.querySelectorAll('.card, .tile');
   interactiveCards.forEach((card) => {
