@@ -11,6 +11,26 @@ const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 const GEMINI_TIMEOUT_MS = 9000;
 const OPENROUTER_TIMEOUT_MS = 14000;
 const DEFAULT_MESSAGE = "Hi. Please give quick practical crop checks for my farm.";
+const CROP_ALIASES = [
+  ["Rice", ["rice", "paddy", "dhan"]],
+  ["Wheat", ["wheat", "gehun"]],
+  ["Cotton", ["cotton", "kapas"]],
+  ["Tomato", ["tomato", "tomatoes"]],
+  ["Chickpea", ["chickpea", "chana", "gram"]],
+  ["Maize", ["maize", "corn", "makka"]],
+  ["Mustard", ["mustard", "sarson"]],
+  ["Chilli", ["chilli", "chili", "mirchi"]],
+  ["Onion", ["onion", "onions"]],
+  ["Potato", ["potato", "potatoes", "aloo"]],
+  ["Cucurbits", ["cucurbit", "cucurbits", "cucumber", "pumpkin", "melon"]],
+  ["Guava", ["guava", "amrud"]],
+  ["Okra", ["okra", "ladyfinger", "bhindi"]],
+  ["Cauliflower", ["cauliflower", "gobi"]],
+  ["Cabbage", ["cabbage"]],
+  ["Capsicum", ["capsicum", "bell pepper", "shimla mirch"]],
+  ["Bottle gourd", ["bottle gourd", "lauki"]],
+  ["Bitter gourd", ["bitter gourd", "karela"]]
+];
 
 export const config = {
   api: {
@@ -77,6 +97,21 @@ function sanitizeLogField(value, fallback = "not provided") {
     .trim()
     .slice(0, 120);
   return clean || fallback;
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function inferCropFromMessage(message) {
+  const text = String(message || "").toLowerCase();
+  for (const [cropName, aliases] of CROP_ALIASES) {
+    for (const alias of aliases) {
+      const pattern = new RegExp(`(^|[^a-z])${escapeRegExp(alias)}([^a-z]|$)`, "i");
+      if (pattern.test(text)) return cropName;
+    }
+  }
+  return "";
 }
 
 function safeProviderError(provider, error) {
@@ -359,13 +394,15 @@ async function handleFarmAssistChat(req, res) {
   }
 
   const cleanMessage = rawMessage.trim() && !isGreetingOnly(rawMessage) ? rawMessage.trim().slice(0, MAX_MESSAGE_LENGTH) : DEFAULT_MESSAGE;
+  const inferredCrop = inferCropFromMessage(cleanMessage);
+  const effectiveCrop = inferredCrop || crop;
 
   const rate = checkRateLimit(req);
   setRateHeaders(res, rate.bucket);
   if (!rate.allowed) {
     return res.status(429).json({
       ok: false,
-      answer: `${offlineKbAnswer({ message: cleanMessage, crop, location, stage })}
+      answer: `${offlineKbAnswer({ message: cleanMessage, crop: effectiveCrop, location, stage })}
 
 Rate limit note:
 Live AI is limited to 10 requests per IP per hour, so this answer came from the JOITA offline knowledge base.`,
@@ -387,47 +424,50 @@ Live AI is limited to 10 requests per IP per hour, so this answer came from the 
     });
   }
 
-  const prompt = buildUserPrompt({ crop, location, stage, language, problemType, message: cleanMessage });
+  const prompt = buildUserPrompt({ crop: effectiveCrop, location, stage, language, problemType, message: cleanMessage });
   const providerErrors = [];
 
   try {
     const answer = await callGemini({ apiKey: process.env.GEMINI_API_KEY, prompt });
-    logSafeEvent({ crop, location, problemType, model: GEMINI_MODEL, source: "gemini" });
+    logSafeEvent({ crop: effectiveCrop, location, problemType, model: GEMINI_MODEL, source: "gemini" });
     return res.status(200).json({
       ok: true,
       answer,
       source: "gemini",
       model: GEMINI_MODEL,
-      mode: "text"
+      mode: "text",
+      crop: effectiveCrop
     });
   } catch (error) {
     providerErrors.push({ provider: "gemini", error });
-    logProviderFailure("gemini", error, { crop, location, problemType });
+    logProviderFailure("gemini", error, { crop: effectiveCrop, location, problemType });
   }
 
   try {
     const answer = await callOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY, prompt });
-    logSafeEvent({ crop, location, problemType, model: OPENROUTER_MODEL, source: "openrouter" });
+    logSafeEvent({ crop: effectiveCrop, location, problemType, model: OPENROUTER_MODEL, source: "openrouter" });
     return res.status(200).json({
       ok: true,
       answer,
       source: "openrouter",
       model: OPENROUTER_MODEL,
-      mode: "text"
+      mode: "text",
+      crop: effectiveCrop
     });
   } catch (error) {
     providerErrors.push({ provider: "openrouter", error });
-    logProviderFailure("openrouter", error, { crop, location, problemType });
+    logProviderFailure("openrouter", error, { crop: effectiveCrop, location, problemType });
   }
 
   const failureReason = failureSummary(providerErrors);
-  logSafeEvent({ crop, location, problemType, model: "offline-kb", source: "offline_kb", status: "provider-fallback" });
+  logSafeEvent({ crop: effectiveCrop, location, problemType, model: "offline-kb", source: "offline_kb", status: "provider-fallback" });
   return res.status(200).json({
     ok: false,
-    answer: offlineKbAnswer({ message: cleanMessage, crop, location, stage }),
+    answer: offlineKbAnswer({ message: cleanMessage, crop: effectiveCrop, location, stage }),
     source: "offline_kb",
     model: "offline-kb",
     mode: "fallback",
+    crop: effectiveCrop,
     failureReason,
     errorDebug: process.env.NODE_ENV === "production" ? undefined : providerErrors.map((item) => safeProviderError(item.provider, item.error))
   });
@@ -439,6 +479,7 @@ export default async function handler(req, res) {
   } catch (error) {
     const body = readBody(req);
     const message = String(body?.message || "").trim() || DEFAULT_MESSAGE;
+    const effectiveCrop = inferCropFromMessage(message) || body?.crop;
     console.error("[farmassist-chat-unhandled]", JSON.stringify({
       message: sanitizeLogField(error?.message || String(error || "unknown error"), "unknown error"),
       timestamp: new Date().toISOString()
@@ -447,13 +488,14 @@ export default async function handler(req, res) {
       ok: false,
       answer: offlineKbAnswer({
         message,
-        crop: body?.crop,
+        crop: effectiveCrop,
         location: body?.location,
         stage: body?.stage
       }),
       source: "offline_kb",
       model: "backend-error",
       mode: "fallback",
+      crop: effectiveCrop,
       failureReason: "Unhandled backend error.",
       errorDebug: process.env.NODE_ENV === "production" ? undefined : String(error)
     });
