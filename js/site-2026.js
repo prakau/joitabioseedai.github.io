@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     '/': '/',
     '/products.html': '/products.html',
     '/agritrust-trileaf-edge-node.html': '/products.html',
+    '/soil-sathi-app.html': '/products.html',
     '/farmassist-ai.html': '/farmassist-ai.html',
     '/agri-smart-assistant.html': '/farmassist-ai.html',
     '/agri-assistant.html': '/farmassist-ai.html',
