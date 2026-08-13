@@ -711,7 +711,7 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-md bg-sage-800 text-white shadow-field"><Sprout aria-hidden /></div>
             <div>
-              <h1 className="text-4xl font-black tracking-normal text-black sm:text-5xl">JOITA FarmAssist</h1>
+              <h1 className="text-3xl font-black tracking-normal text-black sm:text-4xl">JOITA FarmAssist</h1>
               <p className="text-base font-bold text-sage-900">AI-powered, offline-first farm advisory for Indian farmers</p>
             </div>
           </div>
@@ -733,7 +733,7 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
             return (
               <button
                 key={item.id}
-                className={`nav-button flex min-h-16 items-center justify-center gap-2 rounded-md border px-4 py-3 text-xl font-bold transition lg:w-full lg:justify-start ${
+                className={`nav-button flex min-h-14 items-center justify-center gap-2 rounded-md border px-4 py-3 text-base font-bold transition lg:w-full lg:justify-start ${
                   active === item.id ? "border-sage-800 bg-sage-800 text-white" : "border-sage-200 bg-white text-black hover:bg-sage-100"
                 }`}
                 onClick={() => setActive(item.id)}
@@ -776,7 +776,7 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <Badge className="bg-white text-sage-900"><Sparkles className="h-3.5 w-3.5" /> Farmer advisory desk</Badge>
-                <CardTitle className="mt-3 flex items-center gap-2 text-4xl sm:text-5xl"><Bot className="h-9 w-9" /> Ask FarmAssist</CardTitle>
+                <CardTitle className="mt-3 flex items-center gap-2 text-3xl sm:text-4xl"><Bot className="h-8 w-8" /> Ask FarmAssist</CardTitle>
                 <p className="mt-2 max-w-2xl text-lg font-bold leading-8 text-sage-900">Ask any crop question. Live AI replies when available, and the JOITA offline knowledge base answers if the backend is busy.</p>
               </div>
               <div className="rounded-md border border-white/70 bg-white/80 p-3 shadow-field">
@@ -793,7 +793,7 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
               <select className="min-h-10 w-full rounded-md border border-sage-300 px-3 font-bold" value={chatForm.stage} onChange={(event) => setChatForm({ ...chatForm, stage: event.target.value })}>{cropStages.map((item) => <option key={item}>{item}</option>)}</select>
               <select className="min-h-10 w-full rounded-md border border-sage-300 px-3 font-bold" value={chatForm.problemType} onChange={(event) => setChatForm({ ...chatForm, problemType: event.target.value })}>{problemTypes.map((item) => <option key={item}>{item}</option>)}</select>
               <select className="min-h-10 w-full rounded-md border border-sage-300 px-3 font-bold" value={chatForm.language} onChange={(event) => setChatForm({ ...chatForm, language: event.target.value })}>{languages.map((item) => <option key={item}>{item}</option>)}</select>
-              <label className="flex min-h-14 cursor-pointer items-center justify-center rounded-md border border-sage-700 bg-sage-100 px-4 py-3 text-xl font-bold text-black hover:bg-sage-200">
+              <label className="flex min-h-12 cursor-pointer items-center justify-center rounded-md border border-sage-700 bg-sage-100 px-4 py-2.5 text-base font-bold text-black hover:bg-sage-200">
                 Upload crop photo
                 <input className="sr-only" type="file" accept="image/*" capture="environment" onChange={(event) => handleChatImageUpload(event.target.files?.[0])} />
               </label>
@@ -816,7 +816,7 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
                 </button>
               ))}
             </div>
-            <Textarea className="min-h-40 text-xl font-semibold leading-8" value={question} maxLength={maxMessageLength} placeholder="Example: Tomato leaves are yellowing and curling. What should I check?" onChange={(event) => setQuestion(event.target.value)} />
+            <Textarea className="min-h-32 text-base font-semibold leading-7" value={question} maxLength={maxMessageLength} placeholder="Example: Tomato leaves are yellowing and curling. What should I check?" onChange={(event) => setQuestion(event.target.value)} />
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs font-bold text-sage-800">{question.length}/{maxMessageLength} characters</p>
               <p className="text-xs font-black text-sage-900"><CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />A reply is always available through live AI or Offline KB.</p>
@@ -834,7 +834,7 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
             </div>
             {chatLoading ? <div className="typing-card soft-enter rounded-md border border-sage-200 bg-sage-100 p-4 font-bold"><span>FarmAssist AI is checking crop symptoms</span><span className="typing-dots" aria-hidden="true"><i /><i /><i /></span></div> : null}
             {chatError ? <div className="soft-enter rounded-md border border-sage-300 bg-sage-100 p-3 text-sm font-bold">{chatError}</div> : null}
-            {chatResponse ? <div className="answer-panel soft-enter rounded-md border border-sage-200 bg-white p-6"><div className="mb-3 flex flex-wrap items-center gap-2"><Badge className={sourceBadgeClass(chatResponse.source)}><CheckCircle2 className="h-3.5 w-3.5" />{sourceBadgeLabel(chatResponse.source)}</Badge>{chatResponse.source === "offline_kb" ? <Badge className="bg-amber-50 text-sage-900">Live AI failed. Offline KB answered instead.</Badge> : <Badge className="bg-sage-100 text-sage-900">Live AI online</Badge>}</div><div className="whitespace-pre-wrap text-2xl font-semibold leading-10">{chatResponse.answer}</div>{devMode ? <p className="mt-3 text-sm font-bold text-sage-800">Dev model status: {chatResponse.model} · {chatResponse.mode} · {chatResponse.ok ? "ok" : "fallback"} · {chatResponse.source ?? "unknown"}</p> : null}<p className="mt-3 text-lg font-bold text-sage-900">{pilotNotice}</p><p className="mt-2 text-lg font-bold text-sage-900">{privacyNotice}</p><p className="mt-2 text-lg font-bold text-sage-900">{safetyNotice}</p></div> : null}
+            {chatResponse ? <div className="answer-panel soft-enter rounded-md border border-sage-200 bg-white p-6"><div className="mb-3 flex flex-wrap items-center gap-2"><Badge className={sourceBadgeClass(chatResponse.source)}><CheckCircle2 className="h-3.5 w-3.5" />{sourceBadgeLabel(chatResponse.source)}</Badge>{chatResponse.source === "offline_kb" ? <Badge className="bg-amber-50 text-sage-900">Live AI failed. Offline KB answered instead.</Badge> : <Badge className="bg-sage-100 text-sage-900">Live AI online</Badge>}</div><div className="whitespace-pre-wrap text-lg font-semibold leading-8">{chatResponse.answer}</div>{devMode ? <p className="mt-3 text-sm font-bold text-sage-800">Dev model status: {chatResponse.model} · {chatResponse.mode} · {chatResponse.ok ? "ok" : "fallback"} · {chatResponse.source ?? "unknown"}</p> : null}<p className="mt-3 text-base font-bold text-sage-900">{pilotNotice}</p><p className="mt-2 text-base font-bold text-sage-900">{privacyNotice}</p><p className="mt-2 text-base font-bold text-sage-900">{safetyNotice}</p></div> : null}
             {chatResponse ? <div className="soft-enter rounded-md border border-sage-200 bg-sage-50 p-4"><h3 className="font-black">Want expert follow-up? Share WhatsApp/email.</h3><p className="mt-1 text-sm font-semibold text-sage-900">Optional, not required.</p><div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]"><Input placeholder="WhatsApp or email (optional)" value={followUpContact} onChange={(event) => setFollowUpContact(event.target.value)} /><Button variant="secondary" onClick={saveFollowUpRequest}>Save Follow-Up</Button><a href={followUpMailto}><Button>Email JOITA</Button></a></div>{followUpSaved ? <p className="mt-2 text-sm font-bold text-sage-900">{followUpSaved}</p> : null}</div> : null}
             <SourceBadges weather={weather.data?.source ?? "Open-Meteo"} market={mandi.data?.source ?? "Offline Cache"} nasa={nasa.data?.source ?? "NASA POWER"} biodiversity={`${gbif.data?.source ?? "GBIF"}/${inat.data?.source ?? "iNaturalist"}`} />
             <div className="rounded-md bg-sage-100 p-4 text-base font-medium leading-7"><span className="font-black">Offline preview: </span>{latest?.answer ?? answerFarmQuestion(normalizeFarmAssistQuestion(question))}</div>
@@ -873,7 +873,7 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
           </div>
           <div className="rounded-md border border-sage-200 bg-sage-50 p-5">
             <Badge>Symptom-assisted offline advisory</Badge>
-            <h3 className="mt-3 text-2xl font-black">{diagnosis.label}</h3>
+            <h3 className="mt-3 text-xl font-black">{diagnosis.label}</h3>
             <p className="mt-2 font-bold">Confidence: {diagnosis.confidence >= 75 ? "High" : diagnosis.confidence >= 58 ? "Medium" : "Low"}</p>
             <Info label="Immediate action" value={diagnosis.advice} />
             <Info label="Organic option" value="Remove badly affected leaves, improve airflow, use sticky traps or neem-based spray where appropriate, and avoid spraying in strong sun." />
@@ -896,8 +896,8 @@ This answer comes from the built-in JOITA crop knowledge base. Live AI can be co
             <Info label="Frequency activity proxy" value={`${audioMetrics.frequency}/100`} />
           </div>
           <div>
-            <div className="text-6xl font-black">{ehi}</div>
-            <p className="text-xl font-bold">{interpretation}</p>
+            <div className="text-5xl font-black">{ehi}</div>
+            <p className="text-lg font-bold">{interpretation}</p>
             <SourceBadges weather="Offline EHI metrics" market="Biodiversity: GBIF" nasa="iNaturalist" biodiversity="Signal proxy" />
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <Info label="GBIF nearby species" value={`${gbif.data?.records.length ?? 0} cached/live occurrence records within 10 km`} />
@@ -1055,7 +1055,7 @@ function soilRecommendations(input: { ph: number; ec: number; oc: number; n: num
 }
 
 function Metric({ icon: Icon, label, value }: { icon: typeof Activity; label: string; value: string }) {
-  return <Card><CardContent className="flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-md bg-sage-100"><Icon className="h-6 w-6" /></div><div><div className="text-xs font-bold uppercase text-sage-800">{label}</div><div className="text-2xl font-black">{value}</div></div></CardContent></Card>;
+  return <Card><CardContent className="flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-md bg-sage-100"><Icon className="h-6 w-6" /></div><div><div className="text-xs font-bold uppercase text-sage-800">{label}</div><div className="text-xl font-black">{value}</div></div></CardContent></Card>;
 }
 
 function Info({ label, value }: { label: string; value: string }) {
@@ -1063,7 +1063,7 @@ function Info({ label, value }: { label: string; value: string }) {
 }
 
 function WeatherTile({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-md bg-sage-100 p-4"><div className="text-sm font-bold text-sage-900">{label}</div><div className="mt-2 text-3xl font-black">{value}</div></div>;
+  return <div className="rounded-md bg-sage-100 p-4"><div className="text-sm font-bold text-sage-900">{label}</div><div className="mt-2 text-2xl font-black">{value}</div></div>;
 }
 
 function SourceBadges({ weather, market, nasa, biodiversity }: { weather: string; market: string; nasa: string; biodiversity: string }) {

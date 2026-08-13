@@ -1,6 +1,6 @@
 # JOITA Bioseed AI
 
-Last updated: 2026-08-06
+Last updated: 2026-08-13
 
 JOITA Bioseed AI is a farmer-first agri-AI startup combining AI-guided recommendations, biological crop inputs, field validation, and edge sensing for climate-resilient agriculture.
 
@@ -11,6 +11,7 @@ JOITA Bioseed AI is a farmer-first agri-AI startup combining AI-guided recommend
 - FarmAssist AI overview: https://www.joitabioseedai.com/farmassist-ai.html
 - Public FarmAssist app: https://www.joitabioseedai.com/farmassist/
 - AgriTrust TriLeaf Edge Node: https://www.joitabioseedai.com/agritrust-trileaf-edge-node.html
+- JOITA Soil Sathi App: https://www.joitabioseedai.com/soil-sathi-app.html
 - Data & Field Validation: https://www.joitabioseedai.com/data-validation.html
 - Farmers & FPOs: https://www.joitabioseedai.com/farmers-fpos.html
 - Investors & Partners: https://www.joitabioseedai.com/investors-partners.html
@@ -24,6 +25,7 @@ JOITA Bioseed AI is a farmer-first agri-AI startup combining AI-guided recommend
 - SmartSeedMat: seed and nursery support material for early establishment and smallholder use.
 - AquaSynth Nano: aquaculture support concept for water-quality pilots and validation.
 - AgriTrust TriLeaf Edge Node: design-protected agricultural IoT sensing and edge-computing device for localized root-zone field intelligence and FarmAssist data loops.
+- JOITA Soil Sathi App: soil meter companion for moisture, temperature, EC, pH, fertility, NPK readings, and supervised field records.
 
 ## Search Keywords
 
