@@ -12,6 +12,52 @@ const aliases: Record<string, string> = {
   lauki: "bottle gourd",
   karela: "bitter gourd",
   makka: "maize",
+  धान: "rice",
+  चावल: "rice",
+  गेहूं: "wheat",
+  गेहूँ: "wheat",
+  सरसों: "mustard",
+  टमाटर: "tomato",
+  प्याज: "onion",
+  आलू: "potato",
+  चना: "chickpea",
+  भिंडी: "okra",
+  लौकी: "bottle gourd",
+  करेला: "bitter gourd",
+  मक्का: "maize",
+  कपास: "cotton",
+  मिर्च: "chilli",
+  ਕਣਕ: "wheat",
+  ਝੋਨਾ: "rice",
+  ਸਰ੍ਹੋਂ: "mustard",
+  ਟਮਾਟਰ: "tomato",
+  ਆਲੂ: "potato",
+  तांदूळ: "rice",
+  गहू: "wheat",
+  कांदा: "onion",
+  बटाटा: "potato",
+  ઘઉં: "wheat",
+  ડાંગર: "rice",
+  ટામેટા: "tomato",
+  કપાસ: "cotton",
+  ধান: "rice",
+  গম: "wheat",
+  টমেটো: "tomato",
+  আলু: "potato",
+  தக்காளி: "tomato",
+  நெல்: "rice",
+  வெங்காயம்: "onion",
+  టమాటా: "tomato",
+  వరి: "rice",
+  మొక్కజొన్న: "maize",
+  ಟೊಮೇಟೊ: "tomato",
+  ಭತ್ತ: "rice",
+  തക്കാളി: "tomato",
+  നെല്ല്: "rice",
+  ଧାନ: "rice",
+  ٹماٹر: "tomato",
+  گندم: "wheat",
+  چاول: "rice",
 };
 const stopWords = new Set([
   "what",
@@ -34,7 +80,11 @@ const stopWords = new Set([
   "would",
 ]);
 export function searchCrops(query: string) {
-  const words = query.toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
+  const words =
+    query
+      .normalize("NFC")
+      .toLowerCase()
+      .match(/[\p{L}\p{M}\p{N}]+/gu) || [];
   const tokens = [
     ...new Set(
       words
@@ -61,7 +111,7 @@ export function searchCrops(query: string) {
     .map((item) => item.guide);
 }
 export function inferCrop(question: string, selected = "") {
-  const lower = question.toLowerCase();
+  const lower = question.normalize("NFC").toLowerCase();
   const candidates = cropGuides
     .flatMap((guide) =>
       [
@@ -74,7 +124,10 @@ export function inferCrop(question: string, selected = "") {
     .sort((a, b) => b.name.length - a.name.length);
   return (
     candidates.find(({ name }) =>
-      new RegExp(`(^|[^a-z])${name}([^a-z]|$)`).test(lower),
+      new RegExp(
+        `(^|[^\\p{L}\\p{M}\\p{N}])${name}([^\\p{L}\\p{M}\\p{N}]|$)`,
+        "u",
+      ).test(lower),
     )?.crop || selected
   );
 }

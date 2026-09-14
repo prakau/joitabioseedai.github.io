@@ -32,6 +32,15 @@ test("short greeting answer is accepted", async () => {
   globalThis.fetch = async () => geminiReply("Hello! Which crop would you like help with today?");
   const res = await run({ ...question, message: "Hi" }); assert.equal(res.data.source, "gemini"); assert.match(res.data.answer, /Hello/);
 });
+test("requested native language overrides the language of previous answers", async () => {
+  let prompt;
+  globalThis.fetch = async (_, options) => { prompt = JSON.parse(options.body).contents[0].parts[0].text; return geminiReply("टमाटर की पत्तियों के नीचे कीट देखें। मिट्टी की नमी जांचें। कारण की पुष्टि के लिए स्थानीय कृषि विशेषज्ञ से संपर्क करें।"); };
+  const res = await run({ ...question, language: "Hindi", history: [{question:"What crop?", answer:"Tomato."}] });
+  assert.equal(res.data.source, "gemini");
+  assert.match(prompt, /Answer language: Hindi/);
+  assert.match(prompt, /previous conversation's language must not override/);
+  assert.match(res.data.answer, /टमाटर/);
+});
 test("invalid inputs return JSON and do not call providers", async () => {
   globalThis.fetch = async () => { throw new Error("Should not be called"); };
   for (const body of ["null", { ...question, message: "" }, { ...question, message: "x".repeat(1001) }, { ...question, imageUrl: "https://example.com/private" }, { ...question, crop: { bad: true } }]) assert.equal((await run(body)).statusCode, 400);

@@ -1,4 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { answerLanguages } from "../../src/lib/languages";
 const advisory = "Inspect the undersides of your tomato leaves for whiteflies and mites. Compare new and older leaves, check soil moisture, and note when curling started. Confirm the cause with your local KVK before choosing any input.";
 async function setup(page: Page) {
   await page.route("**/api/health", route => route.fulfill({ json: { ok: true, hasGeminiKey: true, hasOpenRouterKey: true, hasMarketKey: false, environment: "test", timestamp: new Date().toISOString() } }));
@@ -10,7 +12,7 @@ async function setup(page: Page) {
 }
 async function nav(page: Page, label: string) {
   if (await page.getByRole("button", { name: "Toggle navigation" }).isVisible()) await page.getByRole("button", { name: "Toggle navigation" }).click();
-  await page.getByRole("navigation").getByRole("link", { name: label, exact: true }).click();
+  await page.getByRole("navigation", { name: "FarmAssist modules" }).getByRole("link", { name: label, exact: true }).click();
 }
 test.beforeEach(async ({page}) => { await setup(page); });
 test("dashboard has no invented measurements and all pages navigate", async ({page}) => {
@@ -75,4 +77,106 @@ test("mobile navigation, keyboard focus, and layout fit", async ({page}) => {
   await page.setViewportSize({width:390,height:844}); await page.goto("./");
   for(const label of ["Ask","3D Plot","Soil","EHI / Sound","Home"]) { await nav(page,label); expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true); }
   await page.screenshot({path:"test-results/dashboard-mobile.png",fullPage:true,animations:"disabled"}); await nav(page,"3D Plot"); await expect(page.locator("canvas")).toBeVisible(); await page.screenshot({path:"test-results/plot-mobile.png",fullPage:true,animations:"disabled"});
+});
+test("both home destinations stay visible without opening the menu", async ({page}) => {
+  for (const width of [320, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({width, height:900});
+    await page.goto("./#/ask");
+    const home = page.getByRole("link", {name:"FarmAssist home",exact:true});
+    const website = page.getByRole("link", {name:"JOITA website",exact:true});
+    await expect(home).toBeVisible(); await expect(website).toBeVisible();
+    await expect(website).toHaveAttribute("href", "https://www.joitabioseedai.com/");
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    expect((await home.boundingBox())!.y).toBeLessThan(200);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    await home.click(); await expect(page.locator(".page-title h2")).toContainText("Good farming");
+  }
+  await page.setViewportSize({width:390,height:844});
+  await page.getByRole("button",{name:"Toggle navigation",exact:true}).click();
+  await page.getByRole("link",{name:"FarmAssist home",exact:true}).click();
+  await expect(page.getByRole("button",{name:"Toggle navigation",exact:true})).toHaveAttribute("aria-expanded","false");
+  await page.route("https://www.joitabioseedai.com/", route => route.fulfill({contentType:"text/html",body:"<h1>JOITA main website</h1>"}));
+  await page.getByRole("link", {name:"JOITA website",exact:true}).click();
+  await expect(page).toHaveURL("https://www.joitabioseedai.com/");
+});
+test("all answer languages are submitted, saved, and shared between Ask, Diagnose, and Settings", async ({page}) => {
+  const submitted: string[] = [];
+  await page.route("**/api/farmassist-chat", async route => {
+    const language=route.request().postDataJSON().language; submitted.push(language);
+    await route.fulfill({json:{ok:true,source:"gemini",model:"test",answer:language === "Urdu" ? "ٹماٹر کے پتوں کے نیچے کیڑوں اور مٹی کی نمی کی جانچ کریں۔" : advisory}});
+  });
+  await page.goto("./#/ask"); await expect(page.getByLabel("Answer language").locator("option")).toHaveCount(14);
+  for (const language of answerLanguages) {
+    await page.getByLabel("Answer language").selectOption(language.name);
+    await page.getByLabel("Your question", {exact:true}).fill("Tomato curling leaves");
+    await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+    await expect(page.locator(".answer-copy")).toHaveAttribute("lang", language.locale);
+    await expect(page.locator(".answer-copy")).toHaveAttribute("dir", language.name === "Urdu" ? "rtl" : "ltr");
+  }
+  expect(submitted).toEqual(answerLanguages.map(language=>language.name));
+  await nav(page,"Settings"); await expect(page.getByLabel("Default answer language")).toHaveValue("Urdu");
+  await page.getByLabel("Default answer language").selectOption("Punjabi"); await nav(page,"Diagnose");
+  await expect(page.getByLabel("Answer language")).toHaveValue("Punjabi");
+  await page.reload(); await expect(page.getByLabel("Answer language")).toHaveValue("Punjabi");
+  await page.locator(".history-item").first().click();
+  await expect(page.locator(".answer-copy")).toHaveAttribute("lang", "ur-IN");
+  await expect(page.getByLabel("Answer language")).toHaveValue("Punjabi");
+  await nav(page,"Ask"); await page.getByLabel("Search crop or topic",{exact:true}).fill("ਟਮਾਟਰ");
+  await expect(page.locator(".knowledge-search summary").first()).toHaveText("Tomato");
+  await page.getByRole("button",{name:"Show more saved answers",exact:true}).click();
+  await expect(page.locator(".history-item")).toHaveCount(14);
+  await page.evaluate(()=>window.scrollTo(0,0));
+  await page.screenshot({path:"test-results/languages-desktop.png",fullPage:true,animations:"disabled"});
+});
+test("follow-ups carry context, new questions reset it, and history deletion can be undone", async ({page}) => {
+  const requests: {message:string; history:unknown[]}[]=[];
+  await page.route("**/api/farmassist-chat", async route=>{requests.push(route.request().postDataJSON()); await route.fulfill({json:{ok:true,source:"gemini",model:"test",answer:advisory}});});
+  await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling"); await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.getByRole("button",{name:"Ask a follow-up",exact:true}).click();
+  await expect(page.getByLabel("Your question",{exact:true})).toBeEmpty(); await expect(page.locator(".conversation-context")).toContainText("Tomato leaves curling");
+  await page.getByLabel("Your question",{exact:true}).fill("What if I see insects underneath?"); await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await expect(page.locator(".answer-copy")).toBeVisible(); expect(requests[1].history).toHaveLength(1);
+  await page.getByRole("button",{name:"New question",exact:true}).click(); await expect(page.locator(".advisory-result")).toHaveCount(0); await expect(page.getByLabel("Crop",{exact:true})).toHaveValue("");
+  await page.getByLabel("Your question",{exact:true}).fill("Wheat irrigation timing"); await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await expect(page.locator(".answer-copy")).toBeVisible(); expect(requests[2].history).toHaveLength(0);
+  await page.getByRole("button",{name:"Delete saved answer: Wheat irrigation timing",exact:true}).click(); await expect(page.locator(".history-item")).toHaveCount(2);
+  await page.getByRole("button",{name:"Undo",exact:true}).click(); await expect(page.locator(".history-item")).toHaveCount(3);
+  await page.getByLabel("Search saved questions",{exact:true}).fill("nonexistent-question"); await expect(page.getByText("No saved answers match this search.")).toBeVisible();
+  await page.reload(); await expect(page.locator(".history-item")).toHaveCount(3);
+});
+test("answer copy, download, share fallback, and denied permissions are handled", async ({page, context}) => {
+  await context.grantPermissions(["clipboard-read","clipboard-write"]);
+  await page.route("**/api/farmassist-chat", route=>route.fulfill({json:{ok:true,source:"gemini",model:"test",answer:advisory}}));
+  await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling"); await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.getByRole("button",{name:"Copy answer",exact:true}).click(); await expect(page.getByText("Answer copied.", {exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>navigator.clipboard.readText())).toContain("Source: gemini");
+  const downloaded=page.waitForEvent("download"); await page.getByRole("button",{name:"Download answer",exact:true}).click();
+  const file=await downloaded; expect(file.suggestedFilename()).toBe("farmassist-advisory.txt");
+  expect(await readFile((await file.path())!, "utf8")).toContain(advisory);
+  await page.evaluate(()=>Object.defineProperty(navigator,"share",{configurable:true,value:undefined}));
+  await page.getByRole("button",{name:"Share answer",exact:true}).click(); await expect(page.getByText("Answer copied.", {exact:true})).toBeVisible();
+  await page.evaluate(()=>{navigator.clipboard.writeText=async()=>{throw new DOMException("Denied","NotAllowedError");};});
+  await page.getByRole("button",{name:"Copy answer",exact:true}).click(); await expect(page.getByText(/Clipboard access is unavailable/)).toBeVisible();
+});
+test("read-aloud uses a matching voice, stops on navigation, and missing voices are explicit", async ({page}) => {
+  await page.addInitScript(()=>{
+    const state=window as unknown as {speechTest:{utterances:SpeechSynthesisUtterance[]; cancelled:number}};
+    state.speechTest={utterances:[],cancelled:0};
+    const synth=new EventTarget();
+    Object.assign(synth,{
+      getVoices:()=>[{name:"English test voice",lang:"en-IN",localService:true}],
+      cancel:()=>{state.speechTest.cancelled++;},
+      speak:(utterance:SpeechSynthesisUtterance)=>{state.speechTest.utterances.push(utterance);},
+    });
+    Object.defineProperty(window,"speechSynthesis",{configurable:true,value:synth});
+    // The platform normally creates these objects; the test speech engine only needs their fields.
+    Object.defineProperty(window,"SpeechSynthesisUtterance",{configurable:true,value:class{ constructor(public text:string){} }});
+  });
+  await page.route("**/api/farmassist-chat", route=>route.fulfill({json:{ok:true,source:"gemini",model:"test",answer:advisory}}));
+  await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling"); await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.getByRole("button",{name:"Read answer aloud",exact:true}).click(); await expect(page.getByRole("button",{name:"Stop reading",exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>(window as unknown as {speechTest:{utterances:{lang:string}[]}}).speechTest.utterances[0].lang)).toBe("en-IN");
+  await nav(page,"Home"); expect(await page.evaluate(()=>(window as unknown as {speechTest:{cancelled:number}}).speechTest.cancelled)).toBeGreaterThanOrEqual(2);
+  await nav(page,"Ask"); await page.getByLabel("Answer language").selectOption("Punjabi"); await page.getByLabel("Your question",{exact:true}).fill("Wheat irrigation"); await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.getByRole("button",{name:"Read answer aloud",exact:true}).click(); await expect(page.getByText(/No Punjabi voice is available/)).toBeVisible();
 });

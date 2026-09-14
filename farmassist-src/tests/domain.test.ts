@@ -6,6 +6,38 @@ import { analyzeSoil, emptySoil } from "../src/lib/soil";
 import { validateLayout, defaultLayout } from "../src/lib/plot";
 import { analyzeAudio } from "../src/lib/audio";
 import { filterMarketRows } from "../src/services/publicApis";
+import { answerLanguages, answerLanguage, matchingVoice, speechChunks } from "../src/lib/languages";
+test("all 14 answer languages have distinct names and usable locales", () => {
+  assert.equal(answerLanguages.length, 14);
+  assert.equal(new Set(answerLanguages.map(language => language.name)).size, 14);
+  for (const language of answerLanguages) {
+    assert.doesNotThrow(() => new Intl.Locale(language.locale));
+    assert.equal(answerLanguage(language.name), language);
+  }
+  assert.equal(answerLanguage("invalid").name, "English");
+});
+test("native crop search keeps vowel marks and does not match unrelated words", () => {
+  for (const word of ["टमाटर", "ਟਮਾਟਰ", "ટામેટા", "টমেটো", "தக்காளி", "టమాటా", "ಟೊಮೇಟೊ", "തക്കാളി", "ٹماٹر"]) {
+    assert.equal(searchCrops(word)[0]?.crop, "Tomato", word);
+    assert.equal(inferCrop(`${word} ?`, "Mustard"), "Tomato", word);
+  }
+  assert.equal(inferCrop("सरसों में क्या देखें?"), "Mustard");
+  assert.equal(searchCrops("கணினி").length, 0);
+});
+test("speech selects matching language only and uses local voices when offline", () => {
+  const voices = [{lang:"en-US", localService:true}, {lang:"hi-IN",localService:false}];
+  assert.equal(matchingVoice(voices, "en-IN"), voices[0]);
+  assert.equal(matchingVoice(voices, "hi-IN"), voices[1]);
+  assert.equal(matchingVoice(voices, "pa-IN"), undefined);
+  assert.equal(matchingVoice(voices, "hi-IN", true), undefined);
+});
+test("speech chunking preserves native-language text and avoids long utterances", () => {
+  const text = "टमाटर की पत्तियों की जांच करें। ".repeat(40).trim();
+  const chunks = speechChunks(text);
+  assert.equal(chunks.join(" "), text);
+  assert(chunks.every(chunk => chunk.length < 170));
+  assert.deepEqual(speechChunks(""), []);
+});
 test("question crop overrides unrelated selected crop", () => {
   assert.equal(inferCrop("Tomato leaves are yellowing and curling", "Mustard"), "Tomato");
   const answer = answerFarmQuestion("Tomato leaves are yellowing and curling", "Mustard");

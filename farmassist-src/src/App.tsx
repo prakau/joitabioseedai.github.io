@@ -25,6 +25,8 @@ import {
   X,
 } from "lucide-react";
 import { Advisory } from "./components/Advisory";
+import { LanguageSelect } from "./components/LanguageSelect";
+import { answerLanguage } from "./lib/languages";
 import { FarmPlot } from "./components/FarmPlot";
 import { Calendar, Community, Soil } from "./components/FieldRecords";
 import { SoundMonitor } from "./components/SoundMonitor";
@@ -88,6 +90,12 @@ export default function App() {
     district: "",
   });
   const [online, setOnline] = useState(navigator.onLine);
+  const [preferences, savePreferences] = useStored("joita-fa-preferences", {
+    language: "English",
+  });
+  const preferredLanguage = answerLanguage(preferences.language).name;
+  const setLanguage = (language: string) =>
+    savePreferences({ language: answerLanguage(language).name });
   const [menu, setMenu] = useState(false);
   const [lastAnswer, setLastAnswer] = useState<ChatResult | null>(null);
   const [storageWarning, setStorageWarning] = useState("");
@@ -159,9 +167,14 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <NavLink to="/" className="app-brand">
+        <NavLink to="/" className="app-brand" onClick={() => setMenu(false)}>
           <span className="brand-icon">
-            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="JOITA Bioseed AI" width="32" height="32" />
+            <img
+              src={`${import.meta.env.BASE_URL}logo.png`}
+              alt="JOITA Bioseed AI"
+              width="32"
+              height="32"
+            />
           </span>
           <span>
             <strong>JOITA FarmAssist</strong>
@@ -180,22 +193,32 @@ export default function App() {
             {status}
           </span>
         </div>
-        <a className="website-link" href="https://www.joitabioseedai.com/">
-          Main website
-          <ArrowUpRight size={17} />
-        </a>
+        <nav className="header-links" aria-label="Home links">
+          <NavLink to="/" end className="home-link" onClick={() => setMenu(false)}>
+            <Home size={18} />
+            FarmAssist home
+          </NavLink>
+          <a className="website-link" href="https://www.joitabioseedai.com/">
+            JOITA website
+            <ArrowUpRight size={17} />
+          </a>
+        </nav>
         <button
           className="menu-toggle"
           title="Toggle navigation"
           aria-label="Toggle navigation"
           aria-expanded={menu}
+          aria-controls="farm-navigation"
           onClick={() => setMenu(!menu)}
         >
           {menu ? <X /> : <Menu />}
         </button>
       </header>
       <div className="workspace">
-        <aside className={`app-sidebar ${menu ? "is-open" : ""}`}>
+        <aside
+          id="farm-navigation"
+          className={`app-sidebar ${menu ? "is-open" : ""}`}
+        >
           <div className="farm-profile">
             <small>YOUR WORKSPACE</small>
             <strong>{profile.farmName}</strong>
@@ -203,7 +226,7 @@ export default function App() {
           </div>
           <nav aria-label="FarmAssist modules">
             {modules.map(({ id, label, icon: Icon }) => (
-              <NavLink key={id} to={id === "home" ? "/" : `/${id}`} end>
+              <NavLink key={id} to={id === "home" ? "/" : `/${id}`} end onClick={() => setMenu(false)}>
                 <Icon size={19} />
                 {label}
               </NavLink>
@@ -348,6 +371,8 @@ export default function App() {
               <Advisory
                 key={active}
                 location={profile.district || place.label}
+                preferredLanguage={preferredLanguage}
+                onLanguage={setLanguage}
                 diagnose={active === "diagnose"}
                 onResult={setLastAnswer}
               />
@@ -372,6 +397,8 @@ export default function App() {
             {active === "settings" && (
               <SettingsPanel
                 profile={profile}
+                preferredLanguage={preferredLanguage}
+                onLanguage={setLanguage}
                 saveProfile={saveProfile}
                 place={place}
                 savePlace={savePlace}
@@ -404,6 +431,16 @@ export default function App() {
                       Photo review supports field checks; it does not confirm a
                       disease, laboratory measurement, or treatment
                       prescription.
+                    </p>
+                  </div>
+                  <div>
+                    <h3>Advisory languages</h3>
+                    <p>
+                      Choose from 14 answer languages in Ask or Settings. Live
+                      AI can answer in your selected language; built-in offline
+                      guides are in English. Read-aloud availability depends on
+                      your device's voices. App navigation is currently in
+                      English.
                     </p>
                   </div>
                   <div>
@@ -454,6 +491,8 @@ export default function App() {
 }
 function SettingsPanel({
   profile,
+  preferredLanguage,
+  onLanguage,
   saveProfile,
   place,
   savePlace,
@@ -464,6 +503,8 @@ function SettingsPanel({
   refresh,
 }: {
   profile: { farmName: string; district: string };
+  preferredLanguage: string;
+  onLanguage: (language: string) => void;
   saveProfile: (p: { farmName: string; district: string }) => boolean;
   place: Place;
   savePlace: (p: Place) => boolean;
@@ -483,7 +524,7 @@ function SettingsPanel({
     (async () => {
       try {
         const keys = await caches.keys();
-        const ready = keys.some((key) => key === "joita-farmassist-v3");
+        const ready = keys.some((key) => key === "joita-farmassist-v4");
         if (!cancelled)
           setOfflineStatus(
             ready
@@ -507,6 +548,17 @@ function SettingsPanel({
         title="Settings & offline data"
         description="Your farm profile, location, saved records, and service status."
       />
+      <div className="language-preference">
+        <LanguageSelect
+          label="Default answer language"
+          value={preferredLanguage}
+          onChange={onLanguage}
+        />
+        <p className="muted">
+          Live AI: 14 answer languages. Offline guides: English. Device voice
+          support varies.
+        </p>
+      </div>
       <form
         onSubmit={(e) => {
           e.preventDefault();

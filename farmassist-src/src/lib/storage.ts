@@ -5,10 +5,18 @@ export function readStored<T>(key: string, fallback: T): T {
     const value = JSON.parse(localStorage.getItem(key) || "null");
     if (value === null || (Array.isArray(fallback) && !Array.isArray(value)))
       return fallback;
-    if (typeof fallback === "object" && fallback !== null && !Array.isArray(fallback)) {
+    if (
+      typeof fallback === "object" &&
+      fallback !== null &&
+      !Array.isArray(fallback)
+    ) {
       if (typeof value !== "object" || Array.isArray(value)) return fallback;
       for (const field of Object.keys(fallback)) {
-        if (typeof value[field] !== typeof (fallback as Record<string, unknown>)[field]) return fallback;
+        if (
+          typeof value[field] !==
+          typeof (fallback as Record<string, unknown>)[field]
+        )
+          return fallback;
       }
     }
     return value as T;
@@ -41,9 +49,14 @@ export function useStored<T>(key: string, fallback: T) {
   return [value, save] as const;
 }
 export function downloadJson(name: string, data: unknown) {
-  const url = URL.createObjectURL(
-    new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
-  );
+  downloadText(name, JSON.stringify(data, null, 2), "application/json");
+}
+export function downloadText(
+  name: string,
+  text: string,
+  type = "text/plain;charset=utf-8",
+) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
   const link = document.createElement("a");
   link.href = url;
   link.download = name;

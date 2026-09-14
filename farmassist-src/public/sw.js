@@ -1,4 +1,4 @@
-const CACHE = "joita-farmassist-v3";
+const CACHE = "joita-farmassist-v4";
 const ROOT = "/farmassist/";
 self.addEventListener("install", (event) => {
   event.waitUntil(

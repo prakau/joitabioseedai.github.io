@@ -179,7 +179,7 @@ function buildUserPrompt({ crop, location, stage, language, problemType, message
 Crop: ${crop || "not provided"}
 Location: ${location || "not provided"}
 Stage: ${stage || "not provided"}
-Language: ${language || "English"}
+Answer language: ${language || "English"}. Write the complete answer in this language, including headings and safety guidance. Use its native script (Devanagari for Hindi and Haryanvi, Gurmukhi for Punjabi). Use familiar, farmer-friendly terms. The previous conversation's language must not override this selection.
 Problem type: ${problemType || "general"}
 Question: ${message}
 

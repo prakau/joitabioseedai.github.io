@@ -1,4 +1,11 @@
-import { cloneElement, isValidElement, useId, type ReactNode, type ReactElement, type SelectHTMLAttributes } from "react";
+import {
+  cloneElement,
+  isValidElement,
+  useId,
+  type ReactNode,
+  type ReactElement,
+  type SelectHTMLAttributes,
+} from "react";
 import ReactMarkdown from "react-markdown";
 import { CheckCircle2, Info, Loader2 } from "lucide-react";
 import { cropGuides } from "../data/agriculture";
@@ -39,7 +46,12 @@ export function Field({
   return (
     <label className="form-field" htmlFor={id}>
       <span id={`${id}-label`}>{label}</span>
-      {isValidElement(children) ? cloneElement(children as ReactElement<Record<string, unknown>>, { id, "aria-labelledby": `${id}-label` }) : children}
+      {isValidElement(children)
+        ? cloneElement(children as ReactElement<Record<string, unknown>>, {
+            id,
+            "aria-labelledby": `${id}-label`,
+          })
+        : children}
       {hint && <small>{hint}</small>}
     </label>
   );
@@ -105,7 +117,15 @@ export function Source({ source }: { source: ChatResult["source"] }) {
     </span>
   );
 }
-export function Answer({ result }: { result: ChatResult }) {
+export function Answer({
+  result,
+  language = "en-IN",
+  rtl = false,
+}: {
+  result: ChatResult;
+  language?: string;
+  rtl?: boolean;
+}) {
   return (
     <div className="advisory-result" aria-live="polite">
       <Source source={result.source} />
@@ -117,7 +137,7 @@ export function Answer({ result }: { result: ChatResult }) {
       {result.imageAnalyzed && (
         <span className="source">Photo included in AI analysis</span>
       )}
-      <div className="answer-copy">
+      <div className="answer-copy" lang={language} dir={rtl ? "rtl" : "ltr"}>
         <ReactMarkdown>{result.answer}</ReactMarkdown>
       </div>
       <p className="safety-note">{safetyNotice}</p>
