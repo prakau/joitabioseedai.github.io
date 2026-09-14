@@ -1,0 +1,25 @@
+import { chromium } from "@playwright/test";
+import assert from "node:assert/strict";
+const browser = await chromium.launch(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } : {});
+try {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  const errors = []; page.on("pageerror", e => errors.push(e.message));
+  await page.goto(process.env.FARMASSIST_TEST_URL || "http://localhost:4173/farmassist/");
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; await caches.open("unrelated-app-cache"); });
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+  const keys = await page.evaluate(async () => (await (await caches.open("joita-farmassist-v3")).keys()).map(request => new URL(request.url).pathname));
+  assert(keys.some(key => key.endsWith(".js"))); assert(keys.some(key => key.endsWith(".css"))); assert(!keys.some(key => key.startsWith("/api/")));
+  await context.setOffline(true);
+  await page.reload();
+  await page.getByRole("button", { name: "Toggle navigation" }).click(); await page.getByRole("navigation").getByRole("link", {name:"Ask",exact:true}).click();
+  await page.getByLabel("Your question", {exact:true}).fill("Mustard aphids at flowering. What should I inspect?");
+  await page.getByRole("button", {name:"Ask FarmAssist",exact:true}).click();
+  await page.locator(".advisory-result").waitFor();
+  assert.match(await page.locator(".advisory-result").innerText(), /Offline KB/);
+  assert.match(await page.locator(".advisory-result").innerText(), /aphid/);
+  await page.reload(); await page.locator(".history-item").first().click(); assert.match(await page.locator(".advisory-result").innerText(), /aphid/);
+  const savedCaches = await page.evaluate(() => caches.keys()); assert(savedCaches.includes("unrelated-app-cache")); assert.deepEqual(errors, []);
+  await page.screenshot({path:"test-results/offline-mobile.png",fullPage:true,animations:"disabled"});
+  console.log(JSON.stringify({offlineReload:true, offlineQuestion:true, savedAnswerAfterReload:true, assetsCached:keys.length, apiNeverCached:true, unrelatedCachePreserved:true, browserErrors:errors}));
+} finally { await browser.close(); }

@@ -43,7 +43,7 @@ export const config = {
 const rateLimitStore = globalThis.__joitaFarmAssistRateLimit ?? new Map();
 globalThis.__joitaFarmAssistRateLimit = rateLimitStore;
 
-const systemPrompt = "You are FarmAssist AI by JOITA Bioseed AI. Give complete, practical, farmer-friendly crop advisory in the requested language. Never guarantee yield. Never give unsafe pesticide dose. For chemicals say use locally approved label dose and confirm with KVK/agriculture expert.";
+const systemPrompt = "You are FarmAssist AI by JOITA Bioseed AI, an agricultural advisory assistant for India. Answer the actual question in the requested language. For greetings, greet and ask what help is needed. For crop symptoms, distinguish possible causes from confirmed diagnoses, give specific observations to check, and ask one relevant follow-up. Do not prescribe fertilizer, micronutrients, neem, or pesticides from symptoms alone. Never guarantee yield or diagnose a pathogen with certainty from a photo. Chemical use requires a locally approved crop label and KVK/agriculture expert confirmation. For irrigation or fertilizer quantities, ask for missing area, units, crop, stage, soil test and formulation; do not invent values. You do not have live weather, market prices or web search. Direct time-sensitive weather and price questions to the app's dated Weather and Market records. If an image is supplied, describe only visible features; identify unrelated or unreadable images and ask for a clear crop photo. Never claim to have analyzed an image when none was supplied. Do not invent sources, trials, species detection or field measurements. Keep answers clear, relevant and complete, usually under 220 words.";
 
 function setCors(req, res) {
   const origin = req.headers.origin;
@@ -58,6 +58,7 @@ function setCors(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Vary", "Origin");
 }
 
 function setRateHeaders(res, bucket) {
@@ -91,7 +92,11 @@ function checkRateLimit(req) {
 }
 
 function sanitizeLogField(value, fallback = "not provided") {
-  const clean = String(value || fallback)
+  let redacted = String(value || fallback);
+  for (const key of [process.env.GEMINI_API_KEY, process.env.OPENROUTER_API_KEY]) {
+    if (key) redacted = redacted.split(key).join("[redacted]");
+  }
+  const clean = redacted
     .replace(/[^\w\s,.-]/g, "")
     .replace(/\s+/g, " ")
     .trim()
@@ -149,18 +154,19 @@ function readBody(req) {
   if (!req.body) return {};
   if (typeof req.body === "string") {
     try {
-      return JSON.parse(req.body);
+      const parsed = JSON.parse(req.body);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
     } catch {
       return {};
     }
   }
-  return req.body;
+  return typeof req.body === "object" && !Array.isArray(req.body) ? req.body : {};
 }
 
 function estimateDataUrlBytes(imageUrl) {
   if (!imageUrl) return 0;
   if (typeof imageUrl !== "string") return Number.POSITIVE_INFINITY;
-  if (!imageUrl.startsWith("data:image/")) return Number.POSITIVE_INFINITY;
+  if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(imageUrl)) return Number.POSITIVE_INFINITY;
   const commaIndex = imageUrl.indexOf(",");
   if (commaIndex === -1) return Number.POSITIVE_INFINITY;
   const base64 = imageUrl.slice(commaIndex + 1).replace(/\s/g, "");
@@ -168,23 +174,18 @@ function estimateDataUrlBytes(imageUrl) {
   return Math.floor((base64.length * 3) / 4) - padding;
 }
 
-function buildUserPrompt({ crop, location, stage, language, problemType, message }) {
-  return `SYSTEM: ${systemPrompt}
-
-USER: Crop: ${crop || "not provided"}
+function buildUserPrompt({ crop, location, stage, language, problemType, message, history }) {
+  return `Farm context (user-provided, not verified measurements):
+Crop: ${crop || "not provided"}
 Location: ${location || "not provided"}
 Stage: ${stage || "not provided"}
 Language: ${language || "English"}
 Problem type: ${problemType || "general"}
 Question: ${message}
 
-Return a complete answer with these short sections:
-Likely causes
-What to check today
-Immediate safe actions
-When to contact KVK/agriculture expert
+${history.length ? `Recent conversation, for follow-up context only:\n${history.map(item => `Farmer: ${item.question}\nAssistant: ${item.answer}`).join("\n")}` : ""}
 
-Write 120-180 words, complete every sentence, and do not stop mid-thought. If the user only greets you, still give a proactive crop checklist for the crop, stage, and location provided.`;
+Answer the current question above directly. Use brief headings or a short list only when useful. Do not force disease headings onto greetings, calculations or planting questions.`;
 }
 
 function withTimeout(timeoutMs) {
@@ -218,14 +219,14 @@ function isGreetingOnly(message) {
 
 function isCompleteAnswer(answer) {
   const clean = String(answer || "").replace(/\s+/g, " ").trim();
-  if (clean.length < 90) return false;
+  if (clean.length < 20) return false;
   const lower = clean.toLowerCase();
   const incompleteEndings = [" due", " because", " and", " or", " to", " with", " for", " can be", " may be", " include"];
   if (incompleteEndings.some((ending) => lower.endsWith(ending))) return false;
   return true;
 }
 
-async function callGemini({ apiKey, prompt }) {
+async function callGemini({ apiKey, prompt, imageUrl }) {
   if (!apiKey) throw providerError("gemini", null, "GEMINI_API_KEY not configured");
   const timeout = withTimeout(GEMINI_TIMEOUT_MS);
   try {
@@ -234,10 +235,11 @@ async function callGemini({ apiKey, prompt }) {
       signal: timeout.signal,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
         contents: [
           {
             role: "user",
-            parts: [{ text: prompt }]
+            parts: [{ text: prompt }, ...(imageUrl ? [{ inlineData: { mimeType: imageUrl.slice(5, imageUrl.indexOf(";")), data: imageUrl.split(",")[1] } }] : [])]
           }
         ],
         generationConfig: {
@@ -272,7 +274,7 @@ async function callGemini({ apiKey, prompt }) {
   }
 }
 
-async function callOpenRouter({ apiKey, prompt }) {
+async function callOpenRouter({ apiKey, prompt, imageUrl }) {
   if (!apiKey) throw providerError("openrouter", null, "OPENROUTER_API_KEY not configured");
   const timeout = withTimeout(OPENROUTER_TIMEOUT_MS);
   try {
@@ -289,10 +291,10 @@ async function callOpenRouter({ apiKey, prompt }) {
         model: OPENROUTER_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: prompt }
+          { role: "user", content: imageUrl ? [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: imageUrl } }] : prompt }
         ],
         temperature: 0.3,
-        max_tokens: 500
+        max_tokens: 900
       })
     });
     const payload = await readJsonResponse(response);
@@ -302,6 +304,7 @@ async function callOpenRouter({ apiKey, prompt }) {
     const answer = payload?.choices?.[0]?.message?.content;
     if (!answer || typeof answer !== "string") throw providerError("openrouter", 502, "empty answer");
     const cleanAnswer = answer.trim();
+    if (payload?.choices?.[0]?.finish_reason === "length") throw providerError("openrouter", 502, "answer was truncated");
     if (!isCompleteAnswer(cleanAnswer)) throw providerError("openrouter", 502, "incomplete answer");
     return cleanAnswer;
   } catch (error) {
@@ -326,7 +329,7 @@ function offlineTopicGuidance({ message, crop, stage }) {
   if (text.includes("cotton") && (text.includes("whitefly") || text.includes("white insects"))) {
     return "For cotton white insects, check the underside of leaves for whitefly adults/nymphs, honeydew, sooty mould, and yellowing patches. Use field scouting before any spray decision.";
   }
-  if (text.includes("hi") || text.includes("hello")) {
+  if (isGreetingOnly(message)) {
     return "FarmAssist is ready. Share crop, location, stage, and the symptom you see. Meanwhile, check soil moisture, leaf underside, new growth, pest count, disease spots, and recent weather stress.";
   }
   return "Start with field scouting: check soil moisture, leaf underside, new growth, pest count, disease spots, recent weather stress, and whether the issue is spreading in patches or across the field.";
@@ -378,10 +381,13 @@ async function handleFarmAssistChat(req, res) {
     stage = "",
     language = "English",
     problemType = "general",
-    imageUrl = ""
+    imageUrl = "",
+    history: rawHistory = []
   } = readBody(req);
 
-  const rawMessage = String(message || "");
+  const rawMessage = typeof message === "string" ? message : "";
+  if (!rawMessage.trim()) return res.status(400).json({ ok: false, error: "Enter a crop question first.", source: "validation" });
+  if ([crop, location, stage, language, problemType].some(value => typeof value !== "string" || value.length > 160)) return res.status(400).json({ ok: false, error: "Invalid farm context.", source: "validation" });
   if (rawMessage.length > MAX_MESSAGE_LENGTH) {
     return res.status(400).json({
       ok: false,
@@ -393,7 +399,8 @@ async function handleFarmAssistChat(req, res) {
     });
   }
 
-  const cleanMessage = rawMessage.trim() && !isGreetingOnly(rawMessage) ? rawMessage.trim().slice(0, MAX_MESSAGE_LENGTH) : DEFAULT_MESSAGE;
+  const cleanMessage = rawMessage.trim();
+  const history = Array.isArray(rawHistory) ? rawHistory.slice(-3).filter(item => typeof item?.question === "string" && typeof item?.answer === "string").map(item => ({ question: item.question.slice(0, 1000), answer: item.answer.slice(0, 2400) })) : [];
   const inferredCrop = inferCropFromMessage(cleanMessage);
   const effectiveCrop = inferredCrop || crop;
 
@@ -424,18 +431,19 @@ Live AI is limited to 10 requests per IP per hour, so this answer came from the 
     });
   }
 
-  const prompt = buildUserPrompt({ crop: effectiveCrop, location, stage, language, problemType, message: cleanMessage });
+  const prompt = buildUserPrompt({ crop: effectiveCrop, location, stage, language, problemType, message: cleanMessage, history });
   const providerErrors = [];
 
   try {
-    const answer = await callGemini({ apiKey: process.env.GEMINI_API_KEY, prompt });
+    const answer = await callGemini({ apiKey: process.env.GEMINI_API_KEY, prompt, imageUrl });
     logSafeEvent({ crop: effectiveCrop, location, problemType, model: GEMINI_MODEL, source: "gemini" });
     return res.status(200).json({
       ok: true,
       answer,
       source: "gemini",
       model: GEMINI_MODEL,
-      mode: "text",
+      mode: imageUrl ? "vision" : "text",
+      imageAnalyzed: Boolean(imageUrl),
       crop: effectiveCrop
     });
   } catch (error) {
@@ -444,14 +452,15 @@ Live AI is limited to 10 requests per IP per hour, so this answer came from the 
   }
 
   try {
-    const answer = await callOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY, prompt });
+    const answer = await callOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY, prompt, imageUrl });
     logSafeEvent({ crop: effectiveCrop, location, problemType, model: OPENROUTER_MODEL, source: "openrouter" });
     return res.status(200).json({
       ok: true,
       answer,
       source: "openrouter",
       model: OPENROUTER_MODEL,
-      mode: "text",
+      mode: imageUrl ? "vision" : "text",
+      imageAnalyzed: Boolean(imageUrl),
       crop: effectiveCrop
     });
   } catch (error) {
@@ -466,6 +475,7 @@ Live AI is limited to 10 requests per IP per hour, so this answer came from the 
     answer: offlineKbAnswer({ message: cleanMessage, crop: effectiveCrop, location, stage }),
     source: "offline_kb",
     model: "offline-kb",
+    imageAnalyzed: false,
     mode: "fallback",
     crop: effectiveCrop,
     failureReason,

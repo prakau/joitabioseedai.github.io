@@ -1,79 +1,74 @@
-import { bioSpecies, cropGuides, diseaseRules, seasonalFallback } from "../data/agriculture";
-import { scoreFromText } from "./utils";
-
-export function answerFarmQuestion(question: string) {
-  const clean = question.trim();
-  if (!clean) return "Ask about a crop, fertilizer, pest, soil, irrigation, market planning, or biochar practice.";
-
-  const ranked = cropGuides
-    .map((guide) => ({
-      guide,
-      score: scoreFromText(clean, [...guide.keywords, ...guide.pests, guide.season])
-    }))
-    .sort((a, b) => b.score - a.score);
-
-  const top = ranked[0];
-  if (top.score > 0) {
-    return `${top.guide.crop}: sow ${top.guide.sowing}; harvest ${top.guide.harvest}. Water guidance: ${top.guide.water} Fertilizer: ${top.guide.fertilizer} Watch for ${top.guide.pests.join(", ")}.`;
+import { cropGuides } from "../data/agriculture";
+import { inferCrop } from "../services/semanticSearch";
+export function answerFarmQuestion(
+  question: string,
+  selectedCrop = "",
+  stage = "",
+) {
+  const crop = inferCrop(question, selectedCrop);
+  const guide = cropGuides.find((item) => item.crop === crop);
+  const text = question.toLowerCase();
+  const heading = crop
+    ? `**${crop}${stage && stage !== "not sure" ? ` / ${stage}` : ""}**\n\n`
+    : "";
+  const safety =
+    "\n\nThese are general checks, not a confirmed diagnosis. Confirm pesticide and fertilizer decisions with your local KVK and the approved crop label.";
+  if (/^(hi|hello|hey|namaste)[\s.!?]*$/i.test(question.trim()))
+    return `Hello! I can help with crop symptoms, irrigation, soil tests, and planting. ${crop ? `For your ${crop.toLowerCase()}, ` : "To begin, "}tell me what you see in the field and how long it has been happening.`;
+  if (/price|mandi|sell|market/.test(text))
+    return (
+      heading +
+      "I cannot quote a current mandi price from the offline database. Open Market to check dated AGMARKNET records. Compare the same market, variety, grade, arrival date, and rupees per quintal before deciding to sell."
+    );
+  if (/weather|forecast|rain tomorrow|temperature today/.test(text))
+    return (
+      heading +
+      "Offline knowledge cannot tell today's temperature or tomorrow's rainfall. Open Weather, choose your location, and check the source and observation time. Do not schedule spraying from seasonal averages."
+    );
+  if (/curl|yellow|whitefl|aphid|white insect|thrips|mite/.test(text)) {
+    const detail =
+      crop === "Mustard"
+        ? "Inspect the flowering shoots and undersides of leaves for aphid colonies, sticky honeydew, and beneficial insects. Record how many plants are affected across several parts of the field."
+        : crop === "Tomato"
+          ? "Inspect young curled leaves and their undersides for whiteflies, thrips, and mites. Leaf-curl viruses, water stress, herbicide injury, and nutrient problems can look similar; a photo alone cannot confirm a virus."
+          : `Inspect ${crop ? crop.toLowerCase() : "the crop"} leaves on both sides for insects, sticky deposits, uneven yellowing, and distorted new growth.`;
+    return (
+      heading +
+      `**Check today**\n${detail}\n\n**Before treatment**\nCompare affected and healthy plants. Check root-zone moisture and drainage; note recent spraying and whether the issue is spreading. Photograph the whole plant and a close leaf view. Avoid adding fertilizer or spraying until the cause is clearer.` +
+      safety
+    );
   }
-
-  const lower = clean.toLowerCase();
-  if (lower.includes("fert")) {
-    return "Use soil-test-led fertilizer. For most crops, apply compost or FYM before sowing, phosphorus and potassium basally, and nitrogen in split doses to reduce loss.";
-  }
-  if (lower.includes("pest") || lower.includes("insect")) {
-    return "Start with field scouting: count affected plants, check leaf undersides, identify beneficial insects, use traps, and spray only after local threshold advice is met.";
-  }
-  if (lower.includes("soil")) {
-    return "Healthy soil should hold moisture, drain excess water, and show biological activity. Add compost, rotate legumes, reduce deep tillage, and test pH/NPK once per season.";
-  }
-  if (lower.includes("biochar")) {
-    return "Charge biochar with compost, slurry, or urine before application. Start with small plots, mix into topsoil, and track crop response before scaling.";
-  }
-
-  return "FarmAssist offline answer: describe the crop, visible symptom, field age, soil type, and recent weather. I can then narrow advice for irrigation, pest, disease, fertilizer, or harvest timing.";
-}
-
-export function diagnosePlant(fileName: string, notes: string) {
-  const source = `${fileName} ${notes}`;
-  const ranked = diseaseRules
-    .map((rule) => ({ rule, score: scoreFromText(source, rule.cues) }))
-    .sort((a, b) => b.score - a.score);
-  const top = ranked[0];
-  const confidence = Math.min(92, 58 + top.score * 12);
-
-  if (top.score === 0) {
-    return {
-      label: "General crop stress check",
-      confidence: 52,
-      advice: "Image metadata and notes do not show strong disease cues. Check recent irrigation, root zone moisture, pest presence under leaves, and compare with healthy plants nearby."
-    };
-  }
-
-  return {
-    label: top.rule.name,
-    confidence,
-    advice: top.rule.advice
-  };
-}
-
-export function estimateBioacoustics(seconds: number, ambient: number) {
-  const recordingScore = Math.min(1, seconds / 60);
-  const noisePenalty = Math.max(0, (ambient - 55) / 45);
-  const diversity = bioSpecies.map((species, index) => ({
-    ...species,
-    detected: Math.max(0, Math.round(species.value * recordingScore - noisePenalty * 6 + index * 2))
-  }));
-  const ehi = Math.max(18, Math.min(96, Math.round(48 + recordingScore * 38 - noisePenalty * 22 + diversity.length * 2)));
-  return {
-    ehi,
-    diversity,
-    summary: ehi > 72 ? "High field biodiversity signal" : ehi > 50 ? "Moderate ecosystem activity" : "Low activity or noisy recording"
-  };
-}
-
-export function seasonalWeatherFallback(month = new Date().getMonth()) {
-  if (month >= 5 && month <= 8) return seasonalFallback.monsoon;
-  if (month >= 2 && month <= 4) return seasonalFallback.summer;
-  return seasonalFallback.winter;
+  if (/spot|blight|rot|wilt|disease|fung|powder/.test(text))
+    return (
+      heading +
+      "**Check the pattern**\nRecord spots, growth on the leaf, wilting, and whether roots are wet or damaged. Compare older and younger leaves. Several diseases and water stresses share these symptoms.\n\n**Immediate checks**\nInspect drainage and irrigation, avoid moving soil or tools from affected patches without cleaning, and bring clear photographs to a KVK if symptoms spread. Do not select a chemical from leaf colour alone." +
+      safety
+    );
+  if (/irrig|water|dry|heat|drought/.test(text))
+    return (
+      heading +
+      `**Water and stress**\n${guide?.water || "Check root-zone moisture before irrigating; soil texture, rooting depth, rainfall, and crop stage change water needs."}\n\n${guide?.stress || "Check drainage and compare shaded and exposed parts of the field."}\n\nUse actual soil moisture and a dated forecast. I cannot infer a fixed irrigation volume from the question alone.`
+    );
+  if (/fert|nutri|nitrogen|urea|npk|phosph|potass/.test(text))
+    return (
+      heading +
+      `**Nutrient planning**\n${guide?.fertilizer || "Use a laboratory soil test and the crop's local fertilizer recommendation."}\n\nA dose needs the field area, soil-test units, product composition, crop stage, and local recommendation. Avoid adding micronutrients based only on yellowing.` +
+      safety
+    );
+  if (/sow|plant|harvest|calendar|season/.test(text) && guide)
+    return (
+      heading +
+      `**Typical North India window**\nSowing: ${guide.sowing}.\n${guide.transplanting ? `Transplanting: ${guide.transplanting}.\n` : ""}Harvest: ${guide.harvest}.\n\nStages: ${guide.stages.join(" -> ")}.\n\nThese are regional guide windows, not dates confirmed for your variety or this season. Check local extension guidance.`
+    );
+  if (/soil|ph|salin|organic carbon/.test(text))
+    return (
+      heading +
+      "Enter your laboratory soil values and units in Soil. pH describes acidity, EC describes soluble salts, and organic carbon is a separate measurement. Sampling and test method matter; a sensor reading is not interchangeable with every laboratory test. Lime, gypsum, and fertilizer amounts need a local soil recommendation."
+    );
+  if (guide)
+    return (
+      heading +
+      `What specifically would you like to check: symptoms, irrigation, nutrients, or planting?\n\nFor ${guide.crop.toLowerCase()}, a useful first check is: ${guide.water}\n${guide.stress}\n\nShare the symptom, when it started, and how much of the field is affected.`
+    );
+  return "I do not have a reliable offline answer for that question. Tell me the crop and the specific symptom or farming decision. Use live AI for a broader question, or contact contact@joitabioseedai.com for expert follow-up.";
 }

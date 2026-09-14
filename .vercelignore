@@ -6,3 +6,6 @@
 node_modules
 farmassist-src/node_modules
 *.tsbuildinfo
+farmassist-src/test-results
+farmassist-src/playwright-report
+farmassist-src/tests

@@ -1,45 +1,45 @@
 # JOITA FarmAssist
 
-JOITA FarmAssist is a production-shaped, offline-first agricultural companion web app for farmers. It is built with React 18, Vite, TypeScript, Tailwind CSS, shadcn-style local UI primitives, React Query, and React Router.
+Public application: https://www.joitabioseedai.com/farmassist/
 
-## Features
+React 18, TypeScript, Vite, Tailwind, React Query, HashRouter, and Three.js. Source lives in this directory; the production build is written to `../farmassist/`. The surrounding JOITA website and CNAME remain separate.
 
-- Agricultural knowledge base with offline crop, fertilizer, pest, soil, and biochar guidance.
-- Plant disease diagnosis workflow with image upload, symptom notes, heuristic offline scoring, and optional online API path.
-- Bioacoustic field-health monitor that simulates a 60-second recording, detects biodiversity signal groups, and computes an Ecosystem Health Index.
-- Weather widget using the free Open-Meteo API with seasonal India offline fallback.
-- Crop calendar and growth-stage schedules for common India crops.
-- 3D farm plot visualizer with water, fertility, and canopy zones.
-- Soil recommendations for common India soil profiles.
-- Market price tracker with offline mandi planning data and data.gov.in/Agmarknet integration notes.
-- Farmer community board backed by localStorage for offline posting and later sync.
-- Service worker and localStorage support for rural low-connectivity use.
-- Direct link to [joitabioseedai.com](https://www.joitabioseedai.com).
+## Run and verify
 
-## Free APIs
-
-- Weather: Open-Meteo, no key required.
-- Plant diagnosis upgrade path: PlantNet, Hugging Face Spaces, or Roboflow free tier.
-- Market upgrade path: data.gov.in Agmarknet datasets when an API key is available.
-- Community sync upgrade path: Supabase free tier or Firebase free tier.
-
-## Run Locally
-
-```bash
-cd farmassist-src
-npm install
+```sh
+npm ci
 npm run dev
-```
-
-## Build
-
-```bash
-cd farmassist-src
+npm test
+npm run test:browser
 npm run build
 ```
 
-## GitHub Pages Hosting
+The local Vite server proxies `/api` to the existing JOITA production backend. It does not read or require production keys locally. Live requests use the ordinary production rate limit. Browser regression tests mock provider responses and data services; they do not spend live AI quota.
 
-This repo includes `.github/workflows/joita-farmassist-pages.yml`. Push to `main`, enable GitHub Pages with `GitHub Actions` as the source, and the app will deploy the repository root after building `farmassist-src` into `farmassist/`.
+Install a Playwright Chromium browser with `npx playwright install chromium`, or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to an existing Chromium executable. Browser tests expect Vite on port 5173. To verify the built offline app, run `npm run preview -- --port 4173`, then `node tests/verify-offline.mjs`.
 
-The Vite base path is `/farmassist/`, so the public URL is `https://www.joitabioseedai.com/farmassist/`.
+## What works
+
+- Ask: Gemini primary, OpenRouter fallback, honest local knowledge fallback; topic-aware crop guidance, short conversation context, saved answers, searchable history and export.
+- Diagnose: real JPEG/PNG/WebP bytes sent to the provider, with text symptoms and explicit photo-analysis status. Uploads limited to 4 MB and resized before base64 transport. Images are not included in saved history.
+- Plot: actual Three.js field geometry driven by dimensions and row count, camera controls, irrigation overlays, input validation, saved layout loading, deletion and export. A 2D plan remains available when WebGL is unsupported.
+- Weather: manual town search/geolocation; current Open-Meteo estimates and seven-day forecast, coordinate-specific cache with original observation time, and separately labeled NASA POWER historical climatology. No fabricated weather observations or numerical disease-risk scores.
+- Calendar: crop/topic/season search and local dated tasks with completion state.
+- Soil: measured lab values, units, range validation, screening guidance, history and export. Blank values are not treated as zero. Soil test methods and crop requirements take priority over generic screening ranges.
+- Sound: 60-second microphone recording, stop control, uploaded audio analysis, playback, measured RMS/activity/quiet frames, saved metrics and export. Permission and decoding errors are visible. Audio stays in the browser and is not sent to AI services.
+- Community: local field notes, search, delete, export and explicit sharing/email actions. No seeded users or fictional public posts.
+- Settings: farm profile, location, record export, offline cache status and diagnostics. No AI-key entry or browser AI credentials.
+
+## External services and limits
+
+Vercel runs `/api/health`, `/api/farmassist-chat`, and `/api/market`. `GEMINI_API_KEY` and `OPENROUTER_API_KEY` belong only in Vercel environment settings. Never commit keys or `.env` files. Optional `DATAGOV_API_KEY` enables the AGMARKNET adapter. Without it, Market shows an unavailable state and official market links, never demonstration prices. The simple chat limiter is per warm server instance, not a distributed global quota.
+
+There is no shared community database or automatic synchronization between devices. A scientifically validated EHI or acoustic species classifier is not connected; sound activity is not ecosystem health. Nearby GBIF/iNaturalist observations provide geographic context only, never species detections from a recording. Pl@ntNet is not presented as an active disease detector.
+
+## Offline and data integrity
+
+The service worker precaches the app shell, JS and CSS. It only intercepts this app's same-origin GET assets/navigation, and never caches `/api/health`, chat, or third-party API calls. Cache cleanup is restricted to JOITA FarmAssist caches. Weather/API caches include coordinates or filters and source timestamps.
+
+Existing questions/layouts/notes remain accessible. Earlier soil and EHI records remain exportable but are not relabeled as new validated measurements. Local storage failures display a warning; save confirmation appears only after successful persistence.
+
+The public website deploys from the repository to Vercel. A static GitHub Pages copy can serve the UI/offline tools but cannot run live API functions.

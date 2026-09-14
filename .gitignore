@@ -21,4 +21,6 @@ vite.config.js
 /documents/
 node_modules
 *.tsbuildinfo
+farmassist-src/test-results/
+farmassist-src/playwright-report/
 !farmassist-src/postcss.config.js

@@ -35,6 +35,7 @@ export default async function handler(req, res) {
     service: "JOITA FarmAssist API",
     hasGeminiKey: Boolean(process.env.GEMINI_API_KEY),
     hasOpenRouterKey: Boolean(process.env.OPENROUTER_API_KEY),
+    hasMarketKey: Boolean(process.env.DATAGOV_API_KEY),
     timestamp: new Date().toISOString(),
     environment: environmentName()
   });
