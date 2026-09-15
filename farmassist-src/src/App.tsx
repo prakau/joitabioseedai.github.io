@@ -5,6 +5,7 @@ import {
   Activity,
   ArrowUpRight,
   CalendarDays,
+  Calculator,
   Camera,
   CloudSun,
   Download,
@@ -22,12 +23,17 @@ import {
   TestTube2,
   Wifi,
   WifiOff,
+  Wallet,
   X,
 } from "lucide-react";
 import { Advisory } from "./components/Advisory";
 import { LanguageSelect } from "./components/LanguageSelect";
-import { answerLanguage } from "./lib/languages";
+import { languageChoice } from "./lib/languages";
 import { FarmPlot } from "./components/FarmPlot";
+import { FarmCalculators } from "./components/FarmCalculators";
+import { FarmLedger } from "./components/FarmLedger";
+import { UpcomingTasks } from "./components/FieldTasks";
+import { LEDGER_KEY } from "./lib/farm-tools";
 import { Calendar, Community, Soil } from "./components/FieldRecords";
 import { SoundMonitor } from "./components/SoundMonitor";
 import { LocationPicker, Market, Weather } from "./components/WeatherMarket";
@@ -51,6 +57,8 @@ const modules = [
   { id: "sound", label: "EHI / Sound", icon: Activity },
   { id: "weather", label: "Weather", icon: CloudSun },
   { id: "calendar", label: "Calendar", icon: CalendarDays },
+  { id: "calculators", label: "Calculators", icon: Calculator },
+  { id: "ledger", label: "Income & Costs", icon: Wallet },
   { id: "visualizer", label: "3D Plot", icon: Map },
   { id: "soil", label: "Soil", icon: TestTube2 },
   { id: "market", label: "Market", icon: Store },
@@ -59,6 +67,7 @@ const modules = [
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
 const recordKeys = [
+  LEDGER_KEY,
   "joita-fa-questions",
   "joita-fa-layouts",
   "joita-fa-soils-v3",
@@ -91,11 +100,11 @@ export default function App() {
   });
   const [online, setOnline] = useState(navigator.onLine);
   const [preferences, savePreferences] = useStored("joita-fa-preferences", {
-    language: "English",
+    language: "Auto",
   });
-  const preferredLanguage = answerLanguage(preferences.language).name;
+  const preferredLanguage = languageChoice(preferences.language);
   const setLanguage = (language: string) =>
-    savePreferences({ language: answerLanguage(language).name });
+    savePreferences({ language: languageChoice(language) });
   const [menu, setMenu] = useState(false);
   const [lastAnswer, setLastAnswer] = useState<ChatResult | null>(null);
   const [storageWarning, setStorageWarning] = useState("");
@@ -194,7 +203,12 @@ export default function App() {
           </span>
         </div>
         <nav className="header-links" aria-label="Home links">
-          <NavLink to="/" end className="home-link" onClick={() => setMenu(false)}>
+          <NavLink
+            to="/"
+            end
+            className="home-link"
+            onClick={() => setMenu(false)}
+          >
             <Home size={18} />
             FarmAssist home
           </NavLink>
@@ -226,7 +240,12 @@ export default function App() {
           </div>
           <nav aria-label="FarmAssist modules">
             {modules.map(({ id, label, icon: Icon }) => (
-              <NavLink key={id} to={id === "home" ? "/" : `/${id}`} end onClick={() => setMenu(false)}>
+              <NavLink
+                key={id}
+                to={id === "home" ? "/" : `/${id}`}
+                end
+                onClick={() => setMenu(false)}
+              >
                 <Icon size={19} />
                 {label}
               </NavLink>
@@ -309,6 +328,7 @@ export default function App() {
                     <small>North India reference windows</small>
                   </div>
                 </div>
+                <UpcomingTasks />
                 <h3 className="section-heading">Your farm tools</h3>
                 <div className="tool-grid">
                   {[
@@ -348,6 +368,18 @@ export default function App() {
                       title: "Record field sound",
                       text: "Measure sound activity and review nearby records.",
                     },
+                    {
+                      id: "calculators",
+                      icon: Calculator,
+                      title: "Calculate field quantities",
+                      text: "Area, seed quantity, water volume and pump time.",
+                    },
+                    {
+                      id: "ledger",
+                      icon: Wallet,
+                      title: "Track income & costs",
+                      text: "Your crop transactions and recorded balance.",
+                    },
                   ].map((tool) => (
                     <NavLink
                       className="tool-item"
@@ -378,6 +410,8 @@ export default function App() {
               />
             )}
             {active === "visualizer" && <FarmPlot />}
+            {active === "calculators" && <FarmCalculators />}
+            {active === "ledger" && <FarmLedger />}
             {active === "soil" && <Soil />}
             {active === "calendar" && <Calendar />}
             {active === "community" && <Community />}
@@ -446,10 +480,10 @@ export default function App() {
                   <div>
                     <h3>Your records</h3>
                     <p>
-                      Saved questions, plans, notes, and measurements stay in
-                      this browser. They are not automatically shared across
-                      devices. Export a backup in Settings before clearing
-                      browser data.
+                      Saved questions, plans, transactions, notes, and
+                      measurements stay in this browser. They are not
+                      automatically shared across devices. Export a backup in
+                      Settings before clearing browser data.
                     </p>
                   </div>
                   <div>
@@ -524,7 +558,7 @@ function SettingsPanel({
     (async () => {
       try {
         const keys = await caches.keys();
-        const ready = keys.some((key) => key === "joita-farmassist-v4");
+        const ready = keys.some((key) => key === "joita-farmassist-v5");
         if (!cancelled)
           setOfflineStatus(
             ready

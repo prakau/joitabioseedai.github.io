@@ -1,5 +1,13 @@
-import { useState } from "react";
-import { Check, Download, Mail, Save, Share2, Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Check, Download, Mail, Save, Share2, Trash2, X } from "lucide-react";
+import { TaskList } from "./FieldTasks";
+import {
+  PLAN_KEY,
+  calendarFile,
+  planStatus,
+  validatePlan,
+  type Plan,
+} from "../lib/planning";
 import { Button } from "./ui/button";
 import { Input, Textarea } from "./ui/input";
 import { CropSelect, Empty, Field, Notice, Select, Title } from "./workspace";
@@ -8,6 +16,7 @@ import { searchCrops } from "../services/semanticSearch";
 import {
   displayDate,
   downloadJson,
+  downloadText,
   timestamp,
   uid,
   useStored,
@@ -189,18 +198,14 @@ export function Soil() {
     </>
   );
 }
-type Plan = {
-  id: string;
-  crop: string;
-  sowing: string;
-  task: string;
-  due: string;
-  done: boolean;
-};
 export function Calendar() {
   const [search, setSearch] = useState("");
   const [season, setSeason] = useState("All");
-  const [plans, savePlans] = useStored<Plan[]>("joita-fa-plans-v3", []);
+  const [plans, savePlans] = useStored<Plan[]>(PLAN_KEY, []);
+  const [editing, setEditing] = useState("");
+  const [taskFilter, setTaskFilter] = useState("All");
+  const [taskError, setTaskError] = useState("");
+  const taskForm = useRef<HTMLFormElement>(null);
   const [form, setForm] = useState({
     crop: "Wheat",
     sowing: "",
@@ -282,10 +287,43 @@ export function Calendar() {
       <section className="section-divider">
         <h3>My field tasks</h3>
         <form
+          ref={taskForm}
           onSubmit={(e) => {
             e.preventDefault();
-            if (savePlans([{ id: uid(), ...form, done: false }, ...plans]))
-              setMessage("Field task saved on this device.");
+            setTaskError("");
+            setMessage("");
+            try {
+              validatePlan(form);
+              if (editing && !plans.some((plan) => plan.id === editing))
+                throw new Error(
+                  "This task was removed in another tab. Cancel the edit to add a new task.",
+                );
+              if (!editing && plans.length >= 1000)
+                throw new Error(
+                  "Export and remove older tasks before adding more.",
+                );
+              const updated = editing
+                ? plans.map((plan) =>
+                    plan.id === editing
+                      ? { ...plan, ...form, task: form.task.trim() }
+                      : plan,
+                  )
+                : [
+                    { id: uid(), ...form, task: form.task.trim(), done: false },
+                    ...plans,
+                  ];
+              if (savePlans(updated)) {
+                setMessage(
+                  editing
+                    ? "Field task updated."
+                    : "Field task saved on this device.",
+                );
+                setEditing("");
+                setForm({ ...form, task: "", due: "" });
+              }
+            } catch (failure) {
+              setTaskError((failure as Error).message);
+            }
           }}
         >
           <div className="fields fields-2">
@@ -319,43 +357,111 @@ export function Calendar() {
           </div>
           <Button>
             <Save size={18} />
-            Save task
+            {editing ? "Update task" : "Save task"}
           </Button>
+          {editing && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setEditing("");
+                setForm({ ...form, task: "", due: "" });
+              }}
+            >
+              <X size={17} />
+              Cancel edit
+            </Button>
+          )}
         </form>
+        {taskError && <Notice error>{taskError}</Notice>}
         {message && <Notice>{message}</Notice>}
         {!plans.length && <Empty>No scheduled tasks yet.</Empty>}
-        {plans.map((plan) => (
-          <div className="saved-row" key={plan.id}>
-            <label className="check-label">
-              <input
-                type="checkbox"
-                checked={plan.done}
-                onChange={() =>
-                  savePlans(
-                    plans.map((p) =>
-                      p.id === plan.id ? { ...p, done: !p.done } : p,
+        {!!plans.length && (
+          <>
+            <div className="task-filters">
+              <Field label="Task status">
+                <Select
+                  value={taskFilter}
+                  onChange={(event) => setTaskFilter(event.target.value)}
+                >
+                  {["All", "Today", "Overdue", "Upcoming", "Completed"].map(
+                    (filter) => (
+                      <option key={filter}>{filter}</option>
                     ),
-                  )
-                }
-              />
-              <span className={plan.done ? "completed" : ""}>
-                {plan.crop}: {plan.task}
-                <small>
-                  Due {plan.due}
-                  {plan.sowing ? ` / planted ${plan.sowing}` : ""}
-                </small>
-              </span>
-            </label>
-            <Button
-              variant="ghost"
-              aria-label="Delete task"
-              title="Delete task"
-              onClick={() => savePlans(plans.filter((p) => p.id !== plan.id))}
-            >
-              <Trash2 size={18} />
-            </Button>
-          </div>
-        ))}
+                  )}
+                </Select>
+              </Field>
+              <Button
+                variant="ghost"
+                disabled={!plans.some((plan) => !plan.done)}
+                onClick={() => {
+                  try {
+                    downloadText(
+                      "farmassist-open-tasks.ics",
+                      calendarFile(plans.filter((plan) => !plan.done)),
+                      "text/calendar;charset=utf-8",
+                    );
+                    setTaskError("");
+                  } catch (failure) {
+                    setTaskError((failure as Error).message);
+                  }
+                }}
+              >
+                <Download size={18} />
+                Export open tasks to calendar
+              </Button>
+            </div>
+            <p className="muted">
+              Calendar file export only. FarmAssist does not send background
+              notifications.
+            </p>
+            {!plans.some(
+              (plan) => taskFilter === "All" || planStatus(plan) === taskFilter,
+            ) && <Empty>No tasks with this status.</Empty>}
+            <TaskList
+              plans={plans
+                .filter(
+                  (plan) =>
+                    taskFilter === "All" || planStatus(plan) === taskFilter,
+                )
+                .sort(
+                  (a, b) =>
+                    Number(a.done) - Number(b.done) ||
+                    a.due.localeCompare(b.due),
+                )}
+              onEdit={(plan) => {
+                setEditing(plan.id);
+                setForm({
+                  crop: plan.crop,
+                  sowing: plan.sowing,
+                  task: plan.task,
+                  due: plan.due,
+                });
+                setMessage("");
+                taskForm.current?.scrollIntoView({
+                  block: "center",
+                  behavior: "instant",
+                });
+              }}
+              onChange={(plan, action) => {
+                if (action === "delete") {
+                  savePlans(plans.filter((item) => item.id !== plan.id));
+                  if (editing === plan.id) {
+                    setEditing("");
+                    setForm({ ...form, task: "", due: "" });
+                  }
+                } else
+                  savePlans(
+                    plans.map((item) =>
+                      item.id === plan.id
+                        ? { ...item, done: !item.done }
+                        : item,
+                    ),
+                  );
+              }}
+            />
+          </>
+        )}
       </section>
     </>
   );

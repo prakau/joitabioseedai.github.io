@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import {
   Camera,
   Send,
@@ -8,7 +9,14 @@ import {
   Search,
   Plus,
   Undo2,
+  Languages,
+  Square,
 } from "lucide-react";
+import {
+  advisoryLanguageHelp,
+  answerLanguage,
+  resolveAnswerLanguage,
+} from "../lib/languages";
 import { LanguageSelect } from "./LanguageSelect";
 import { AdvisoryAnswer } from "./AdvisoryAnswer";
 import { Button } from "./ui/button";
@@ -35,6 +43,7 @@ import { searchCrops, inferCrop } from "../services/semanticSearch";
 import {
   displayDate,
   downloadJson,
+  readStored,
   timestamp,
   uid,
   useStored,
@@ -84,6 +93,12 @@ export function Advisory({
   const answerAnchor = useRef<HTMLDivElement>(null);
   const [photo, setPhoto] = useState("");
   const [busy, setBusy] = useState(false);
+  const [partialAnswer, setPartialAnswer] = useState("");
+  const [progress, setProgress] = useState("");
+  const [elapsed, setElapsed] = useState(0);
+  const [requestLanguage, setRequestLanguage] = useState("English");
+  const request = useRef<AbortController | null>(null);
+  const streamAnchor = useRef<HTMLElement>(null);
   const [imageBusy, setImageBusy] = useState(false);
   const [error, setError] = useState("");
   const [historyFilter, setHistoryFilter] = useState("");
@@ -92,6 +107,21 @@ export function Advisory({
   const [thread, setThread] = useState<{ question: string; answer: string }[]>(
     [],
   );
+  useEffect(() => () => request.current?.abort(), []);
+  useEffect(() => {
+    if (!busy) return;
+    const start = Date.now();
+    setElapsed(0);
+    const timer = window.setInterval(
+      () => setElapsed(Math.floor((Date.now() - start) / 1000)),
+      1000,
+    );
+    streamAnchor.current?.scrollIntoView({
+      block: "nearest",
+      behavior: "instant",
+    });
+    return () => clearInterval(timer);
+  }, [busy]);
   useEffect(() => {
     if (!result) return;
     const frame = requestAnimationFrame(() =>
@@ -128,13 +158,14 @@ export function Advisory({
     if (form.current) form.current.reset();
     focusQuestion();
   }
-  async function submit(offline = false) {
+  async function submit(offline = false, followUp?: string) {
     if (busy) return;
-    if (!question.trim() && !(diagnose && photo)) {
+    if (!question.trim() && !followUp && !(diagnose && photo)) {
       setError("Describe your question or the symptoms you see.");
       return;
     }
     const message =
+      followUp ||
       question.trim() ||
       "Describe the visible crop symptoms in this photo. What should I inspect to narrow down the cause?";
     if (message.length > 1000) {
@@ -142,13 +173,27 @@ export function Advisory({
       return;
     }
     setBusy(true);
+    const controller = new AbortController();
+    request.current = controller;
+    setPartialAnswer("");
+    setProgress("Connecting to live advisory...");
     setError("");
     setResult(null);
     const actualContext = {
       ...context,
       crop: inferCrop(message, context.crop),
+      language: resolveAnswerLanguage(
+        context.language,
+        message,
+        activeRecord?.context?.language,
+      ),
     };
-    setContext(actualContext);
+    setContext({ ...context, crop: actualContext.crop });
+    setRequestLanguage(actualContext.language);
+    if (followUp) {
+      setQuestion(followUp);
+      setPhoto("");
+    }
     track("FarmAssist question submitted", {
       crop: actualContext.crop,
       location: context.location,
@@ -159,7 +204,23 @@ export function Advisory({
     try {
       if (offline || !navigator.onLine)
         throw new Error(offline ? "" : "Your device is offline.");
-      response = await sendQuestion(message, actualContext, photo, thread);
+      response = await sendQuestion(
+        message,
+        actualContext,
+        followUp ? "" : photo,
+        thread,
+        (event) => {
+          if (controller.signal.aborted) return;
+          if (event.type === "delta") {
+            setPartialAnswer((previous) => previous + event.text);
+            setProgress("Receiving live answer...");
+          } else {
+            if (event.type === "reset") setPartialAnswer("");
+            setProgress(event.message);
+          }
+        },
+        controller.signal,
+      );
       if (
         !response.answer?.trim() ||
         !["gemini", "openrouter", "offline_kb"].includes(response.source)
@@ -172,6 +233,12 @@ export function Advisory({
           context.stage,
         );
     } catch (failure) {
+      if (controller.signal.aborted) {
+        setPartialAnswer("");
+        setError("Request stopped. No unfinished answer was saved.");
+        setBusy(false);
+        return;
+      }
       response = {
         ok: true,
         source: "offline_kb",
@@ -185,11 +252,12 @@ export function Advisory({
             : "Live advisory is unavailable.",
       };
     }
-    if (photo && !response.imageAnalyzed)
+    if (photo && !followUp && !response.imageAnalyzed)
       response.answer =
         "**Photo not analyzed.** This result uses only your written symptoms.\n\n" +
         response.answer;
     setResult(response);
+    setPartialAnswer("");
     onResult(response);
     setFollowingUp(false);
     setThread((previous) =>
@@ -205,7 +273,12 @@ export function Advisory({
       imageAnalyzed: response.imageAnalyzed,
     };
     setActiveRecord(record);
-    saveHistory([record, ...history].slice(0, 50));
+    saveHistory(
+      [record, ...readStored<Record[]>("joita-fa-questions", history)].slice(
+        0,
+        50,
+      ),
+    );
     track(
       response.source === "offline_kb"
         ? "AI fallback triggered"
@@ -213,6 +286,7 @@ export function Advisory({
       { crop: actualContext.crop, model: response.model },
     );
     setBusy(false);
+    request.current = null;
   }
   const matchingHistory = history.filter((item) =>
     `${item.question} ${item.answer}`
@@ -233,6 +307,17 @@ export function Advisory({
     }
   }
   const body = `Expert follow-up request\nContact: ${contact}\nCrop: ${context.crop}\nLocation: ${context.location}\nQuestion: ${question}`;
+  const resolvedLanguage = resolveAnswerLanguage(
+    context.language,
+    question,
+    activeRecord?.context?.language,
+  );
+  const native = answerLanguage(resolvedLanguage);
+  const languageHelp = advisoryLanguageHelp(resolvedLanguage);
+  const chooseLanguage = (language: string) => {
+    setContext({ ...context, language });
+    onLanguage(language);
+  };
   return (
     <>
       <Title
@@ -244,12 +329,15 @@ export function Advisory({
         }
         action={
           <Button
+            className="new-question"
+            aria-label="New question"
+            title="New question"
             variant="secondary"
             disabled={busy || imageBusy}
             onClick={newQuestion}
           >
             <Plus size={18} />
-            New question
+            <span>New question</span>
           </Button>
         }
       />
@@ -265,90 +353,45 @@ export function Advisory({
             className="advisory-form"
           >
             <fieldset disabled={busy || imageBusy}>
-              <div className="fields fields-3">
-                <CropSelect
-                  value={context.crop}
-                  onChange={(crop) => setContext({ ...context, crop })}
-                />
-                <Field label="District / state">
-                  <Input
-                    value={context.location}
-                    maxLength={120}
-                    onChange={(e) =>
-                      setContext({ ...context, location: e.target.value })
-                    }
-                  />
-                </Field>
-                <Field label="Growth stage">
-                  <Select
-                    value={context.stage}
-                    onChange={(e) =>
-                      setContext({ ...context, stage: e.target.value })
-                    }
-                  >
-                    {[
-                      "not sure",
-                      "sowing",
-                      "seedling",
-                      "vegetative",
-                      "flowering",
-                      "fruiting",
-                      "grain filling",
-                      "harvest",
-                    ].map((s) => (
-                      <option key={s}>{s}</option>
-                    ))}
-                  </Select>
-                </Field>
-              </div>
-              <div className="fields fields-2">
+              <div className="advisory-language-bar">
                 <LanguageSelect
                   value={context.language}
-                  onChange={(language) => {
-                    setContext({ ...context, language });
-                    onLanguage(language);
-                  }}
+                  onChange={chooseLanguage}
                 />
-                <Field label="Topic">
-                  <Select
-                    value={context.problemType}
-                    onChange={(e) =>
-                      setContext({ ...context, problemType: e.target.value })
-                    }
-                  >
-                    {[
-                      "general",
-                      "disease",
-                      "pest",
-                      "nutrition",
-                      "irrigation",
-                      "planting",
-                    ].map((s) => (
-                      <option key={s}>{s}</option>
-                    ))}
-                  </Select>
-                </Field>
+                <div
+                  className="language-shortcuts"
+                  role="group"
+                  aria-label="Language shortcuts"
+                >
+                  {[
+                    ["Auto", "Auto"],
+                    ["Hindi", "हिन्दी"],
+                    ["Punjabi", "ਪੰਜਾਬੀ"],
+                    ["English", "English"],
+                  ].map(([value, label]) => (
+                    <button
+                      type="button"
+                      key={value}
+                      aria-pressed={context.language === value}
+                      onClick={() => chooseLanguage(value)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div
+                className="native-question-heading"
+                lang={native.locale}
+                dir={resolvedLanguage === "Urdu" ? "rtl" : "ltr"}
+              >
+                <Languages size={21} />
+                <strong>{languageHelp.heading}</strong>
               </div>
               {followingUp && activeRecord && (
                 <div className="conversation-context">
                   <small>FOLLOW-UP TO</small>
-                  <p>{activeRecord.question}</p>
-                </div>
-              )}
-              {!diagnose && (
-                <div className="suggestions">
-                  {prompts.map((prompt) => (
-                    <button
-                      type="button"
-                      key={prompt}
-                      onClick={() => {
-                        setQuestion(prompt);
-                        setContext({ ...context, crop: inferCrop(prompt) });
-                      }}
-                    >
-                      {prompt}
-                    </button>
-                  ))}
+                  <p dir="auto">{activeRecord.question}</p>
                 </div>
               )}
               <Field
@@ -360,37 +403,38 @@ export function Advisory({
                   dir="auto"
                   value={question}
                   maxLength={1000}
-                  placeholder="Tell us what you see, when it started, and how much of the field is affected."
+                  placeholder={languageHelp.example}
                   onChange={(e) => setQuestion(e.target.value)}
                 />
               </Field>
               <div className="form-meta">
                 <span>{question.length}/1000 characters</span>
-                <span>Photos: JPEG, PNG, WebP, up to 4 MB</span>
+                <span className="answer-language-preview">
+                  Answer: {native.native}
+                  {context.language === "Auto" ? " (automatic)" : ""}
+                </span>
               </div>
-              <Field label="Crop photo (optional)">
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  disabled={imageBusy || busy}
-                  onChange={(e) => void upload(e.target.files?.[0])}
-                />
-              </Field>
-              {imageBusy && <Busy label="Preparing photo" />}
-              {photo && (
-                <div className="photo-preview">
-                  <img src={photo} alt="Crop photo to be analyzed" />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setPhoto("")}
-                  >
-                    <Trash2 size={17} />
-                    Remove photo
-                  </Button>
+              {!diagnose && (
+                <div className="suggestions">
+                  {(resolvedLanguage === "English"
+                    ? prompts
+                    : [languageHelp.example]
+                  ).map((prompt) => (
+                    <button
+                      type="button"
+                      key={prompt}
+                      dir="auto"
+                      onClick={() => {
+                        setQuestion(prompt);
+                        setContext({ ...context, crop: inferCrop(prompt) });
+                      }}
+                    >
+                      {prompt}
+                    </button>
+                  ))}
                 </div>
               )}
-              <div className="actions">
+              <div className="actions question-actions">
                 <Button disabled={busy || imageBusy} type="submit">
                   {diagnose ? <Camera size={18} /> : <Send size={18} />}
                   {diagnose ? "Analyze crop" : "Ask FarmAssist"}
@@ -405,17 +449,129 @@ export function Advisory({
                 </Button>
               </div>
               <p className="muted">{privacyNotice}</p>
+              <details className="field-context" open={diagnose || undefined}>
+                <summary>
+                  Crop, location &amp; photo{" "}
+                  <span>
+                    {context.crop || "Optional crop details"} /{" "}
+                    {context.location || "Location not set"}
+                  </span>
+                </summary>
+                <div className="fields fields-3">
+                  <CropSelect
+                    value={context.crop}
+                    onChange={(crop) => setContext({ ...context, crop })}
+                  />
+                  <Field label="District / state">
+                    <Input
+                      value={context.location}
+                      maxLength={120}
+                      onChange={(e) =>
+                        setContext({ ...context, location: e.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field label="Growth stage">
+                    <Select
+                      value={context.stage}
+                      onChange={(e) =>
+                        setContext({ ...context, stage: e.target.value })
+                      }
+                    >
+                      {[
+                        "not sure",
+                        "sowing",
+                        "seedling",
+                        "vegetative",
+                        "flowering",
+                        "fruiting",
+                        "grain filling",
+                        "harvest",
+                      ].map((s) => (
+                        <option key={s}>{s}</option>
+                      ))}
+                    </Select>
+                  </Field>
+                </div>
+                <div className="fields fields-2">
+                  <Field label="Topic">
+                    <Select
+                      value={context.problemType}
+                      onChange={(e) =>
+                        setContext({ ...context, problemType: e.target.value })
+                      }
+                    >
+                      {[
+                        "general",
+                        "disease",
+                        "pest",
+                        "nutrition",
+                        "irrigation",
+                        "planting",
+                      ].map((s) => (
+                        <option key={s}>{s}</option>
+                      ))}
+                    </Select>
+                  </Field>
+                </div>
+                <Field label="Crop photo (optional)">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={imageBusy || busy}
+                    onChange={(e) => void upload(e.target.files?.[0])}
+                  />
+                </Field>
+                <small className="muted">JPEG, PNG, WebP, up to 4 MB</small>
+                {imageBusy && <Busy label="Preparing photo" />}
+                {photo && (
+                  <div className="photo-preview">
+                    <img src={photo} alt="Crop photo to be analyzed" />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setPhoto("")}
+                    >
+                      <Trash2 size={17} />
+                      Remove photo
+                    </Button>
+                  </div>
+                )}
+              </details>
             </fieldset>
           </form>
           {error && <Notice error>{error}</Notice>}
           {busy && (
-            <Busy
-              label={
-                photo
-                  ? "Reviewing the crop photo and your question..."
-                  : "Preparing your advisory..."
-              }
-            />
+            <section
+              className="streaming-answer"
+              ref={streamAnchor}
+              aria-label="Live answer in progress"
+              aria-busy="true"
+            >
+              <div className="streaming-toolbar">
+                <Busy label={`${progress} ${elapsed}s`} />
+                <Button
+                  variant="secondary"
+                  onClick={() => request.current?.abort()}
+                >
+                  <Square size={16} />
+                  Stop
+                </Button>
+              </div>
+              <p className="streaming-caution">
+                Answer in progress. Wait for the complete guidance before
+                acting.
+              </p>
+              {partialAnswer && (
+                <div
+                  className="answer-copy streaming-copy"
+                  lang={answerLanguage(requestLanguage).locale}
+                  dir={requestLanguage === "Urdu" ? "rtl" : "ltr"}
+                >
+                  <ReactMarkdown>{partialAnswer}</ReactMarkdown>
+                </div>
+              )}
+            </section>
           )}
           {result && activeRecord && (
             <>
@@ -424,9 +580,18 @@ export function Advisory({
                   key={activeRecord.id}
                   result={result}
                   question={activeRecord.question}
+                  crop={activeRecord.context?.crop || ""}
                   language={activeRecord.context?.language || "English"}
                   date={activeRecord.date}
                   disabled={busy || imageBusy}
+                  onSimplify={() =>
+                    void submit(
+                      false,
+                      advisoryLanguageHelp(
+                        activeRecord.context?.language || "English",
+                      ).simplify,
+                    )
+                  }
                   onFollowUp={() => {
                     setQuestion("");
                     setPhoto("");

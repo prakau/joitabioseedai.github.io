@@ -6,26 +6,32 @@ import {
   Share2,
   Square,
   Volume2,
+  Lightbulb,
 } from "lucide-react";
 import { answerLanguage, matchingVoice, speechChunks } from "../lib/languages";
 import { downloadText, displayDate } from "../lib/storage";
 import type { ChatResult } from "../lib/network";
 import { Answer, safetyNotice } from "./workspace";
 import { Button } from "./ui/button";
+import { AdvisoryTask } from "./FieldTasks";
 
 export function AdvisoryAnswer({
   result,
   language,
   question,
   date,
+  crop,
   onFollowUp,
+  onSimplify,
   disabled,
 }: {
   result: ChatResult;
   language: string;
   question: string;
   date: string;
+  crop: string;
   onFollowUp: () => void;
+  onSimplify: () => void;
   disabled: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
@@ -151,7 +157,12 @@ export function AdvisoryAnswer({
     <section className="answer-panel" ref={root} aria-label="FarmAssist answer">
       <div className="answer-meta">
         <strong>{actualLanguage.native}</strong>
-        <span>{displayDate(date)}</span>
+        <span>
+          {displayDate(date)}
+          {result.source !== "offline_kb" && result.responseTimeMs
+            ? ` / ${(result.responseTimeMs / 1000).toFixed(1)}s`
+            : ""}
+        </span>
       </div>
       {result.source === "offline_kb" && language !== "English" && (
         <p className="language-notice">
@@ -208,6 +219,17 @@ export function AdvisoryAnswer({
           disabled={disabled}
           onClick={() => {
             stop();
+            onSimplify();
+          }}
+        >
+          <Lightbulb size={17} />
+          Explain simply
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={disabled}
+          onClick={() => {
+            stop();
             onFollowUp();
           }}
         >
@@ -221,6 +243,7 @@ export function AdvisoryAnswer({
             ? `Read-aloud voice for ${actualLanguage.name} is not available on this device.`
             : "")}
       </p>
+      <AdvisoryTask crop={crop} />
     </section>
   );
 }

@@ -8,8 +8,8 @@ const originalEnv = { gemini: process.env.GEMINI_API_KEY, router: process.env.OP
 beforeEach(() => { globalThis.__joitaFarmAssistRateLimit.clear(); process.env.GEMINI_API_KEY = "test-gemini-token"; process.env.OPENROUTER_API_KEY = "test-router-token"; process.env.NODE_ENV = "production"; delete process.env.DATAGOV_API_KEY; });
 afterEach(() => { globalThis.fetch = originalFetch; for (const [key, value] of Object.entries({ GEMINI_API_KEY: originalEnv.gemini, OPENROUTER_API_KEY: originalEnv.router, NODE_ENV: originalEnv.node, DATAGOV_API_KEY: originalEnv.market })) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } });
 const question = { message: "Tomato leaves are yellowing and curling. What should I check?", crop: "Mustard", location: "Haryana", stage: "flowering", language: "English", problemType: "disease" };
-function response() { return { statusCode: 200, headers: {}, data: null, setHeader(k, v) { this.headers[k] = v; }, status(n) { this.statusCode = n; return this; }, json(data) { this.data = data; return this; }, end() { return this; } }; }
-async function run(body, method = "POST") { const res = response(); await handler({ method, body, headers: {}, socket: { remoteAddress: "test-ip" } }, res); return res; }
+function response() { return { statusCode: 200, headers: {}, data: null, stream: "", headersSent: false, setHeader(k, v) { this.headers[k] = v; }, flushHeaders() { this.headersSent = true; }, write(chunk) { this.stream += chunk; }, status(n) { this.statusCode = n; return this; }, json(data) { this.data = data; return this; }, end() { this.writableEnded = true; return this; } }; }
+async function run(body, method = "POST", headers = {}) { const res = response(); await handler({ method, body, headers, socket: { remoteAddress: "test-ip" } }, res); return res; }
 function geminiReply(answer = "Inspect the underside of the leaves and compare soil moisture in affected and healthy patches. Confirm the cause with your KVK before choosing an input.") { return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: answer }] }, finishReason: "STOP" }] }), { status: 200 }); }
 test("Gemini receives the photo bytes, actual crop, and follow-up context", async () => {
   let request;
@@ -56,4 +56,50 @@ test("health reports configuration without exposing credentials", async () => {
 });
 test("unconfigured market does not return demonstration prices", async () => {
   const res = response(); await market({ method: "GET", query: {} }, res); assert.equal(res.data.status, "unavailable"); assert.deepEqual(res.data.records, []);
+});
+
+function eventResponse(events) {
+  const bytes = new TextEncoder().encode(": keepalive\n\n" + events.map(event => `data: ${JSON.stringify(event)}\n\n`).join(""));
+  // Deliberately split UTF-8 characters and SSE records across transport chunks.
+  return new Response(new ReadableStream({ start(controller) { for (let i = 0; i < bytes.length; i += 7) controller.enqueue(bytes.slice(i, i + 7)); controller.close(); } }), {headers:{"Content-Type":"text/event-stream"}});
+}
+function appEvents(res) { return res.stream.trim().split("\n\n").map(frame => ({type:frame.split("\n")[0].slice(7),data:JSON.parse(frame.split("\n")[1].slice(6))})); }
+test("streamed Gemini preserves native text and completes only after the provider finishes", async () => {
+  const chunks = ["टमाटर की पत्तियों के नीचे कीट देखें। ", "मिट्टी की नमी जांचें। स्थानीय विशेषज्ञ से कारण की पुष्टि करें।"];
+  globalThis.fetch = async (url, options) => {
+    assert.match(url, /:streamGenerateContent\?alt=sse/);
+    assert.equal(JSON.parse(options.body).generationConfig.maxOutputTokens, 1600);
+    return eventResponse([{candidates:[{content:{parts:[{text:"hidden reasoning",thought:true}]}}]}, ...chunks.map(text => ({candidates:[{content:{parts:[{text}]}}]})), {candidates:[{finishReason:"STOP"}]}]);
+  };
+  const res = await run({...question, language:"Hindi"}, "POST", {accept:"text/event-stream"});
+  const events = appEvents(res);
+  assert.match(res.headers["Content-Type"], /text\/event-stream/);
+  assert.equal(events.filter(e=>e.type==="delta").map(e=>e.data.text).join(""), chunks.join(""));
+  assert.equal(events.at(-1).type, "complete"); assert.equal(events.at(-1).data.source, "gemini");
+  assert.equal(events.at(-1).data.answer, chunks.join("")); assert.equal(events.at(-1).data.language, "Hindi");
+  assert.doesNotMatch(res.stream, /hidden reasoning|test-gemini-token/);
+});
+test("partial Gemini failure resets the answer and streams OpenRouter fallback", async () => {
+  let calls = 0;
+  globalThis.fetch = async (_, options) => {
+    if (++calls === 1) return eventResponse([{candidates:[{content:{parts:[{text:"Discard this unfinished answer"}]}}]}, {error:{code:503,message:"Connection lost"}}]);
+    assert.equal(JSON.parse(options.body).stream, true);
+    return eventResponse([{choices:[{delta:{content:"Compare soil moisture and the underside of affected leaves. Ask your KVK to confirm the cause."}}]}, {choices:[{delta:{},finish_reason:"stop"}]}]);
+  };
+  const events = appEvents(await run(question,"POST",{accept:"text/event-stream"}));
+  assert.equal(calls, 2); assert.equal(events.find(e=>e.type==="reset").data.provider, "openrouter");
+  assert.equal(events.at(-1).data.source,"openrouter"); assert.doesNotMatch(events.at(-1).data.answer,/Discard/);
+});
+test("unfinished streams cannot be represented as a successful live answer", async () => {
+  let calls=0;
+  globalThis.fetch = async () => ++calls === 1
+    ? eventResponse([{candidates:[{content:{parts:[{text:"This looks complete but the stream closed unexpectedly."}]}}]}])
+    : eventResponse([{choices:[{delta:{content:"Another unfinished answer that must not be saved as live."},finish_reason:"length"}]}]);
+  const result = appEvents(await run(question,"POST",{accept:"text/event-stream"})).at(-1).data;
+  assert.equal(result.source,"offline_kb"); assert.equal(result.ok,false);
+  assert.match(result.failureReason,/missing finish reason/); assert.match(result.failureReason,/length/);
+});
+test("stream requests retain ordinary JSON validation errors", async () => {
+  const res = await run({...question,message:""},"POST",{accept:"text/event-stream"});
+  assert.equal(res.statusCode,400); assert.equal(res.stream,""); assert.equal(res.data.ok,false);
 });

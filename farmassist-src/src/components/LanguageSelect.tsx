@@ -13,6 +13,7 @@ export function LanguageSelect({
   return (
     <Field label={label}>
       <Select value={value} onChange={(event) => onChange(event.target.value)}>
+        <option value="Auto">Automatic / Match my question</option>
         {answerLanguages.map(({ name, native }) => (
           <option key={name} value={name}>
             {name === native ? name : `${name} / ${native}`}

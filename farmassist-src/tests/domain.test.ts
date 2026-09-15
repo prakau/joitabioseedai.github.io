@@ -7,6 +7,54 @@ import { validateLayout, defaultLayout } from "../src/lib/plot";
 import { analyzeAudio } from "../src/lib/audio";
 import { filterMarketRows } from "../src/services/publicApis";
 import { answerLanguages, answerLanguage, matchingVoice, speechChunks } from "../src/lib/languages";
+import { areaInMetres, calculateWater, calculateSeed, parseMoney, ledgerTotals } from "../src/lib/farm-tools";
+import { calendarFile, isDay, localDay, planStatus, upcomingPlans, validatePlan, type Plan } from "../src/lib/planning";
+import ICAL from "ical.js";
+test("area and seed calculations convert units without prescribing a rate", () => {
+  assert.equal(areaInMetres("1", "Hectares"), 10000);
+  assert.equal(areaInMetres("1", "Acres"), 4046.8564224);
+  assert.equal(calculateSeed(areaInMetres("2", "Acres"), "20", "kg/acre"), 40);
+  assert.equal(calculateSeed(5000, "100", "kg/ha"), 50);
+  for (const value of ["", "0", "-3", "NaN", "Infinity"]) assert.throws(() => areaInMetres(value, "Acres"));
+  assert.throws(() => calculateSeed(5000, "", "kg/ha"));
+});
+test("water volume and pump duration preserve millimetres and litres units", () => {
+  assert.deepEqual(calculateWater(10000, "25", "500"), {litres:250000, minutes:500});
+  assert.deepEqual(calculateWater(1000, "10", ""), {litres:10000, minutes:null});
+  for (const flow of ["0", "-2", "NaN"]) assert.throws(() => calculateWater(1000, "10", flow));
+  assert.throws(() => calculateWater(1000, "1001", ""));
+});
+test("ledger arithmetic uses integer paise and rejects invalid money", () => {
+  assert.equal(parseMoney("0.10") + parseMoney("0.20"), 30);
+  assert.equal(parseMoney(".50"), 50);
+  for (const value of ["", "0", "-3", "0.001", "100000001", "1e6", "NaN"]) assert.throws(() => parseMoney(value));
+  const base={id:"1",date:"2026-09-15",crop:"Wheat",note:"",category:"Seed"};
+  assert.deepEqual(ledgerTotals([{...base,type:"income",amountPaise:20000},{...base,id:"2",type:"expense",amountPaise:12550}]),{income:20000,expenses:12550,net:7450});
+});
+test("task date handling respects local dates, leap years, and overdue states", () => {
+  assert.equal(localDay(new Date(2026,8,15,0,1)), "2026-09-15");
+  assert.equal(isDay("2026-02-30"),false); assert.equal(isDay("2028-02-29"),true);
+  const base: Plan={id:"1",crop:"Wheat",task:"Inspect irrigation",sowing:"",due:"2026-09-15",done:false};
+  assert.equal(planStatus(base,"2026-09-15"),"Today");
+  assert.equal(planStatus({...base,due:"2026-09-14"},"2026-09-15"),"Overdue");
+  assert.equal(planStatus({...base,done:true},"2026-09-16"),"Completed");
+  assert.equal(upcomingPlans([{...base,id:"2",due:"2026-10-01"},base,{...base,id:"3",done:true}])[0].id,"1");
+  assert.throws(()=>validatePlan({...base,task:"   "}));
+  assert.throws(()=>validatePlan({...base,due:"2026-02-30"}));
+});
+test("calendar files round-trip native titles, unique IDs, and all-day year boundaries", () => {
+  const base: Plan={id:"record-1",crop:"Mustard",task:"सरसों के खेत की जांच करें",sowing:"",due:"2028-02-29",done:false};
+  const calendar = new ICAL.Component(ICAL.parse(calendarFile([base,{...base,id:"record-2",due:"2026-12-31",task:"Inspect; \nBEGIN:VEVENT\n rows"}])));
+  const events=calendar.getAllSubcomponents("vevent");
+  assert.equal(events.length,2);
+  assert.equal(events[0].getFirstPropertyValue("summary"),`Mustard: ${base.task}`);
+  assert.equal(String(events[0].getFirstPropertyValue("dtstart")),"2028-02-29");
+  assert.equal(String(events[0].getFirstPropertyValue("dtend")),"2028-03-01");
+  assert.equal(String(events[1].getFirstPropertyValue("dtend")),"2027-01-01");
+  assert.equal(events[0].getFirstPropertyValue("uid"),"record-1@farmassist.joitabioseedai.com");
+  assert.equal(events[0].getFirstPropertyValue("class"),"PRIVATE");
+  assert.throws(()=>calendarFile([]));
+});
 test("all 14 answer languages have distinct names and usable locales", () => {
   assert.equal(answerLanguages.length, 14);
   assert.equal(new Set(answerLanguages.map(language => language.name)).size, 14);

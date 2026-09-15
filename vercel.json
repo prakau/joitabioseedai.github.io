@@ -1,5 +1,5 @@
 {
-  "installCommand": "cd farmassist-src && npm ci",
+  "installCommand": "npm ci --prefix api && npm ci --prefix farmassist-src",
   "buildCommand": "cd farmassist-src && npm run build",
   "outputDirectory": ".",
   "functions": {

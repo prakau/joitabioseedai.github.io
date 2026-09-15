@@ -18,7 +18,7 @@ test.beforeEach(async ({page}) => { await setup(page); });
 test("dashboard has no invented measurements and all pages navigate", async ({page}) => {
   const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
   await page.goto("./"); await expect(page.getByText("No recording measured yet")).toBeVisible();
-  for (const name of ["Ask", "Diagnose", "EHI / Sound", "Weather", "Calendar", "3D Plot", "Soil", "Market", "Community", "About", "Settings", "Home"]) {
+  for (const name of ["Ask", "Diagnose", "EHI / Sound", "Weather", "Calendar", "Calculators", "Income & Costs", "3D Plot", "Soil", "Market", "Community", "About", "Settings", "Home"]) {
     await nav(page, name); await expect(page.locator(".page-title h2")).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   }
@@ -75,7 +75,7 @@ test("weather location selection and market empty state are honest", async ({pag
 });
 test("mobile navigation, keyboard focus, and layout fit", async ({page}) => {
   await page.setViewportSize({width:390,height:844}); await page.goto("./");
-  for(const label of ["Ask","3D Plot","Soil","EHI / Sound","Home"]) { await nav(page,label); expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true); }
+  for(const label of ["Ask","Diagnose","3D Plot","Soil","EHI / Sound","Calendar","Calculators","Income & Costs","Weather","Market","Community","Settings","Home"]) { await nav(page,label); expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true); }
   await page.screenshot({path:"test-results/dashboard-mobile.png",fullPage:true,animations:"disabled"}); await nav(page,"3D Plot"); await expect(page.locator("canvas")).toBeVisible(); await page.screenshot({path:"test-results/plot-mobile.png",fullPage:true,animations:"disabled"});
 });
 test("both home destinations stay visible without opening the menu", async ({page}) => {
@@ -105,7 +105,7 @@ test("all answer languages are submitted, saved, and shared between Ask, Diagnos
     const language=route.request().postDataJSON().language; submitted.push(language);
     await route.fulfill({json:{ok:true,source:"gemini",model:"test",answer:language === "Urdu" ? "ٹماٹر کے پتوں کے نیچے کیڑوں اور مٹی کی نمی کی جانچ کریں۔" : advisory}});
   });
-  await page.goto("./#/ask"); await expect(page.getByLabel("Answer language").locator("option")).toHaveCount(14);
+  await page.goto("./#/ask"); await expect(page.getByLabel("Answer language").locator("option")).toHaveCount(15);
   for (const language of answerLanguages) {
     await page.getByLabel("Answer language").selectOption(language.name);
     await page.getByLabel("Your question", {exact:true}).fill("Tomato curling leaves");
@@ -158,6 +158,55 @@ test("answer copy, download, share fallback, and denied permissions are handled"
   await page.evaluate(()=>{navigator.clipboard.writeText=async()=>{throw new DOMException("Denied","NotAllowedError");};});
   await page.getByRole("button",{name:"Copy answer",exact:true}).click(); await expect(page.getByText(/Clipboard access is unavailable/)).toBeVisible();
 });
+test("native question automatically selects its language and simplified follow-ups preserve context", async ({page}) => {
+  const requests: {language:string;history:unknown[];message:string}[]=[];
+  await page.route("**/api/farmassist-chat",async route=>{
+    requests.push(route.request().postDataJSON());
+    await route.fulfill({json:{ok:true,source:"gemini",model:"test",answer:"टमाटर की पत्तियों के नीचे कीट देखें। मिट्टी की नमी जांचें।",responseTimeMs:1234}});
+  });
+  await page.goto("./#/ask"); await expect(page.getByLabel("Answer language")).toHaveValue("Auto");
+  await page.getByLabel("Your question",{exact:true}).fill("टमाटर की पत्तियां पीली हो रही हैं। क्या जांच करूं?");
+  await expect(page.locator(".answer-language-preview")).toContainText("हिन्दी");
+  await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await expect(page.locator(".answer-copy")).toHaveAttribute("lang","hi-IN"); expect(requests[0].language).toBe("Hindi");
+  await page.getByRole("button",{name:"Explain simply",exact:true}).click();
+  await expect(page.locator(".answer-copy")).toBeVisible(); expect(requests[1].history).toHaveLength(1); expect(requests[1].message).toContain("आसान");
+  await page.getByRole("button",{name:"New question",exact:true}).click(); await expect(page.getByLabel("Answer language")).toHaveValue("Auto");
+  await page.getByRole("group",{name:"Language shortcuts"}).getByRole("button",{name:"ਪੰਜਾਬੀ",exact:true}).click();
+  await expect(page.getByLabel("Answer language")).toHaveValue("Punjabi"); await expect(page.locator(".native-question-heading")).toContainText("ਖੇਤ");
+  await page.setViewportSize({width:390,height:844}); await page.screenshot({path:"test-results/native-composer-mobile.png",fullPage:true,animations:"disabled"});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+test("live tokens appear before completion, Stop discards partials, and only completed answers are saved", async ({page}) => {
+  await page.addInitScript(()=>{
+    const original=window.fetch.bind(window);
+    window.fetch=async (url, init)=> {
+      if (!String(url).includes("/api/farmassist-chat")) return original(url,init);
+      let streamController:ReadableStreamDefaultController<Uint8Array>;
+      const encode=(name:string,data:unknown)=>new TextEncoder().encode(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
+      const stream=new ReadableStream<Uint8Array>({start(controller){
+        streamController=controller;
+        controller.enqueue(encode("status",{provider:"gemini",message:"Receiving answer"}));
+        controller.enqueue(encode("delta",{text:"Inspect the underside of affected leaves."}));
+        init?.signal?.addEventListener("abort",()=>controller.error(new DOMException("Stopped","AbortError")),{once:true});
+      }});
+      (window as unknown as {finishTestAnswer:()=>void}).finishTestAnswer=()=>{
+        streamController.enqueue(encode("complete",{ok:true,source:"gemini",answer:"Inspect the underside of affected leaves. Compare moisture in healthy and affected plants.",model:"test"}));
+        streamController.close();
+      };
+      return new Response(stream,{headers:{"content-type":"text/event-stream"}});
+    };
+  });
+  await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling");
+  await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await expect(page.locator(".streaming-copy")).toContainText("Inspect the underside"); await expect(page.locator(".history-item")).toHaveCount(0);
+  await page.getByRole("button",{name:"Stop",exact:true}).click(); await expect(page.getByRole("alert")).toContainText("No unfinished answer was saved");
+  await expect(page.locator(".streaming-answer")).toHaveCount(0); await expect(page.locator(".history-item")).toHaveCount(0);
+  await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click(); await expect(page.locator(".streaming-copy")).toBeVisible();
+  await page.evaluate(()=>(window as unknown as {finishTestAnswer:()=>void}).finishTestAnswer());
+  await expect(page.locator(".advisory-result")).toContainText("Live AI: Gemini"); await expect(page.locator(".history-item")).toHaveCount(1);
+  await expect(page.locator(".streaming-answer")).toHaveCount(0);
+});
 test("read-aloud uses a matching voice, stops on navigation, and missing voices are explicit", async ({page}) => {
   await page.addInitScript(()=>{
     const state=window as unknown as {speechTest:{utterances:SpeechSynthesisUtterance[]; cancelled:number}};
@@ -179,4 +228,58 @@ test("read-aloud uses a matching voice, stops on navigation, and missing voices 
   await nav(page,"Home"); expect(await page.evaluate(()=>(window as unknown as {speechTest:{cancelled:number}}).speechTest.cancelled)).toBeGreaterThanOrEqual(2);
   await nav(page,"Ask"); await page.getByLabel("Answer language").selectOption("Punjabi"); await page.getByLabel("Your question",{exact:true}).fill("Wheat irrigation"); await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
   await page.getByRole("button",{name:"Read answer aloud",exact:true}).click(); await expect(page.getByText(/No Punjabi voice is available/)).toBeVisible();
+});
+test("area, water, and seed calculators produce unit-correct results and invalidate stale values", async ({page}) => {
+  await page.goto("./#/calculators");
+  await page.getByLabel("Field area",{exact:true}).fill("1"); await page.getByLabel("Area unit",{exact:true}).selectOption("Hectares");
+  await page.getByRole("button",{name:"Calculate",exact:true}).click(); await expect(page.locator(".calculation-result")).toContainText("10,000");
+  await page.getByRole("button",{name:"Water",exact:true}).click(); await expect(page.locator(".calculation-result")).toHaveCount(0);
+  await page.getByLabel("Applied water depth (mm)").fill("25"); await page.getByLabel("Pump flow (litres/minute, optional)").fill("500");
+  await page.getByRole("button",{name:"Calculate",exact:true}).click(); await expect(page.locator(".calculation-result")).toContainText("2,50,000"); await expect(page.locator(".calculation-result")).toContainText("8.333");
+  const downloaded=page.waitForEvent("download"); await page.getByRole("button",{name:"Download calculation",exact:true}).click();
+  expect(await readFile((await (await downloaded).path())!,"utf8")).toContain("Applied depth: 25 mm");
+  await page.getByRole("button",{name:"Seed",exact:true}).click(); await page.getByLabel("Locally recommended seed rate").fill("100");
+  await page.getByRole("button",{name:"Calculate",exact:true}).click(); await expect(page.locator(".calculation-result")).toContainText("100");
+  await page.getByLabel("Field area",{exact:true}).fill("0"); await expect(page.locator(".calculation-result")).toHaveCount(0);
+  await page.getByRole("button",{name:"Calculate",exact:true}).click(); expect(await page.getByLabel("Field area",{exact:true}).evaluate((input: HTMLInputElement)=>input.validity.valid)).toBe(false);
+});
+test("ledger saves exact amounts, edits without duplicating, filters, exports and undoes deletion", async ({page}) => {
+  await page.goto("./#/ledger");
+  await page.getByLabel("Amount (INR)").fill("1250.50"); await page.getByLabel("Transaction date").fill("2026-09-01"); await page.getByLabel("Crop",{exact:true}).selectOption("Wheat");
+  await page.getByLabel("Note (optional)").fill("Seed purchase"); await page.getByRole("button",{name:"Save transaction",exact:true}).click();
+  await expect(page.locator(".ledger-totals")).toContainText("1,250.50");
+  await page.getByLabel("Transaction type").selectOption("income"); await page.getByLabel("Amount (INR)").fill("3000"); await page.getByRole("button",{name:"Save transaction",exact:true}).click();
+  await expect(page.locator(".ledger-totals")).toContainText("1,749.50");
+  await page.reload(); await expect(page.locator(".ledger-row")).toHaveCount(2);
+  await page.getByRole("button",{name:"Edit transaction: Seed",exact:true}).click(); await page.getByLabel("Amount (INR)").fill("1500"); await page.getByRole("button",{name:"Update transaction",exact:true}).click(); await expect(page.locator(".ledger-row")).toHaveCount(2);
+  await page.getByLabel("Filter by month").fill("2026-08"); await expect(page.locator(".ledger-row")).toHaveCount(0);
+  await page.getByRole("button",{name:"Clear filters",exact:true}).click(); await page.getByLabel("Filter by crop").selectOption("Wheat");
+  const downloaded=page.waitForEvent("download"); await page.getByRole("button",{name:"Export transactions",exact:true}).click();
+  const report=JSON.parse(await readFile((await (await downloaded).path())!,"utf8")); expect(report.totalsPaise.net).toBe(150000); expect(report.currency).toBe("INR");
+  await page.getByRole("button",{name:"Delete transaction: Seed",exact:true}).click(); await expect(page.locator(".ledger-row")).toHaveCount(1); await page.getByRole("button",{name:"Undo deletion",exact:true}).click(); await expect(page.locator(".ledger-row")).toHaveCount(2);
+  await page.setViewportSize({width:390,height:844}); expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false); await page.evaluate(()=>window.scrollTo(0,0)); await page.screenshot({path:"test-results/ledger-mobile.png",fullPage:true,animations:"disabled"});
+});
+test("AI answer creates a real task, dashboard completes it, and calendar exports it", async ({page}) => {
+  await page.route("**/api/farmassist-chat", route=>route.fulfill({json:{ok:true,source:"gemini",model:"test",answer:advisory}}));
+  await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato yellowing leaves"); await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.getByRole("button",{name:"Create field task",exact:true}).click(); await page.getByLabel("Follow-up task",{exact:true}).fill("Check leaf undersides"); await page.getByLabel("Follow-up due date",{exact:true}).fill("2026-09-01");
+  await page.getByRole("button",{name:"Save field task",exact:true}).click(); await expect(page.getByText("Field task saved.",{exact:false})).toBeVisible();
+  await page.getByRole("link",{name:"FarmAssist home",exact:true}).click(); await expect(page.locator(".dashboard-tasks")).toContainText("Check leaf undersides"); await expect(page.locator(".dashboard-tasks")).toContainText("Overdue");
+  await page.locator(".dashboard-tasks").getByRole("checkbox").click(); await expect(page.locator(".dashboard-tasks .task-row")).toHaveCount(0);
+  await nav(page,"Calendar"); await expect(page.getByRole("checkbox")).toBeChecked();
+  await page.getByRole("button",{name:"Edit task",exact:true}).click(); await page.getByLabel("Task",{exact:true}).fill("Record leaf observations"); await page.getByRole("button",{name:"Update task",exact:true}).click();
+  await expect(page.locator(".task-row")).toHaveCount(1); await expect(page.locator(".task-row")).toContainText("Record leaf observations");
+  const downloaded=page.waitForEvent("download"); await page.getByRole("button",{name:"Export task to calendar",exact:true}).click();
+  const file=await downloaded; expect(file.suggestedFilename()).toBe("farmassist-task.ics"); expect(await readFile((await file.path())!,"utf8")).toContain("DTSTART;VALUE=DATE:20260901");
+  await page.getByLabel("Task status").selectOption("Upcoming"); await expect(page.getByText("No tasks with this status.")).toBeVisible();
+  await page.getByLabel("Task status").selectOption("All"); await page.getByRole("button",{name:"Delete task",exact:true}).click(); await expect(page.locator(".task-row")).toHaveCount(0);
+});
+test("saved records update in another open tab and storage failure never claims success", async ({page, context}) => {
+  await page.goto("./#/ledger"); const other=await context.newPage(); await setup(other); await other.goto("./#/ledger");
+  await page.getByLabel("Amount (INR)").fill("123.45"); await page.getByRole("button",{name:"Save transaction",exact:true}).click();
+  await expect(other.locator(".ledger-row")).toHaveCount(1); await expect(other.locator(".ledger-totals")).toContainText("123.45");
+  await other.getByRole("button",{name:"Delete transaction: Seed",exact:true}).click(); await expect(page.locator(".ledger-row")).toHaveCount(0);
+  await page.reload(); await page.evaluate(()=>{Storage.prototype.setItem=function(){throw new DOMException("Quota exceeded","QuotaExceededError");};});
+  await page.getByLabel("Amount (INR)").fill("50"); await page.getByRole("button",{name:"Save transaction",exact:true}).click();
+  await expect(page.getByRole("alert")).toContainText("Device storage is full or disabled"); await expect(page.locator(".ledger-row")).toHaveCount(0); await expect(page.getByText("Transaction saved on this device.")).toHaveCount(0);
 });

@@ -1,3 +1,5 @@
+import { createParser } from "eventsource-parser";
+
 export async function requestJson<T>(
   url: string,
   options: RequestInit = {},
@@ -46,7 +48,92 @@ export type ChatResult = {
   mode?: string;
   failureReason?: string;
   imageAnalyzed?: boolean;
+  language?: string;
+  responseTimeMs?: number;
 };
+export type ChatProgress =
+  | {
+      type: "status" | "reset";
+      provider: "gemini" | "openrouter";
+      message: string;
+    }
+  | { type: "delta"; text: string };
+
+function checkedChatResult(data: ChatResult): ChatResult {
+  if (
+    !data ||
+    typeof data.answer !== "string" ||
+    !data.answer.trim() ||
+    data.answer.length > 16000 ||
+    !["gemini", "openrouter", "offline_kb"].includes(data.source) ||
+    (data.source !== "offline_kb" && data.ok !== true)
+  )
+    throw new Error("The advisory service returned an invalid answer.");
+  return data;
+}
+
+export async function readChatStream(
+  response: Response,
+  onProgress: (event: ChatProgress) => void,
+): Promise<ChatResult> {
+  if (!response.body) throw new Error("The answer stream is unavailable.");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let result: ChatResult | null = null;
+  let characters = 0;
+  const parser = createParser({
+    maxBufferSize: 128 * 1024,
+    onError(error) {
+      if (error.type === "max-buffer-size-exceeded")
+        throw new Error("The answer stream exceeded its size limit.");
+    },
+    onEvent(event) {
+      let data;
+      try {
+        data = JSON.parse(event.data);
+      } catch {
+        throw new Error("The answer stream was interrupted. Please retry.");
+      }
+      if (event.event === "complete") {
+        result = checkedChatResult(data);
+        return;
+      }
+      if (event.event === "delta" && typeof data.text === "string") {
+        characters += data.text.length;
+        if (characters > 16000)
+          throw new Error("The answer exceeded its size limit.");
+        onProgress({ type: "delta", text: data.text });
+      }
+      if (
+        (event.event === "status" || event.event === "reset") &&
+        ["gemini", "openrouter"].includes(data.provider)
+      ) {
+        if (event.event === "reset") characters = 0;
+        onProgress({
+          type: event.event,
+          provider: data.provider,
+          message: String(data.message || "").slice(0, 200),
+        });
+      }
+    },
+  });
+  try {
+    while (!result) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      parser.feed(decoder.decode(value, { stream: true }));
+    }
+    parser.feed(decoder.decode());
+    if (!result)
+      throw new Error(
+        "The live answer was interrupted before it finished. Please retry.",
+      );
+    return result;
+  } finally {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+}
 export type Health = {
   ok: boolean;
   hasGeminiKey: boolean;
@@ -61,24 +148,57 @@ export async function sendQuestion(
   context: ChatContext,
   imageUrl = "",
   history: { question: string; answer: string }[] = [],
+  onProgress?: (event: ChatProgress) => void,
+  signal?: AbortSignal,
 ) {
   if (!message.trim()) throw new Error("Enter a crop question first.");
   if (message.length > 1000)
     throw new Error("Keep your question within 1000 characters.");
-  return requestJson<ChatResult>(
-    apiUrl("/api/farmassist-chat"),
-    {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (signal?.aborted) abort();
+  else signal?.addEventListener("abort", abort, { once: true });
+  const timer = setTimeout(abort, 30000);
+  try {
+    const response = await fetch(apiUrl("/api/farmassist-chat"), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: onProgress ? "text/event-stream" : "application/json",
+      },
+      signal: controller.signal,
       body: JSON.stringify({
         message: message.trim(),
         ...context,
         imageUrl,
         history: history.slice(-3),
       }),
-    },
-    28000,
-  );
+    });
+    if (
+      response.ok &&
+      response.headers.get("content-type")?.includes("text/event-stream")
+    )
+      return await readChatStream(response, onProgress || (() => {}));
+    const data = await response.json().catch(() => null);
+    if (!response.ok)
+      throw new Error(
+        data?.error ||
+          data?.failureReason ||
+          `Live advisory failed (HTTP ${response.status}).`,
+      );
+    return checkedChatResult(data);
+  } catch (error) {
+    if (signal?.aborted)
+      throw new DOMException("Request stopped", "AbortError");
+    if (controller.signal.aborted)
+      throw new Error(
+        "The live advisory took too long to finish. Please retry.",
+      );
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", abort);
+  }
 }
 export async function cropPhoto(file: File): Promise<string> {
   if (!/^image\/(jpeg|png|webp)$/.test(file.type))

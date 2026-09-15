@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function readStored<T>(key: string, fallback: T): T {
   try {
@@ -27,7 +27,7 @@ export function readStored<T>(key: string, fallback: T): T {
 export function writeStored(key: string, value: unknown): boolean {
   try {
     localStorage.setItem(key, JSON.stringify(value));
-    window.dispatchEvent(new Event("records-changed"));
+    window.dispatchEvent(new CustomEvent("records-changed", { detail: key }));
     return true;
   } catch {
     window.dispatchEvent(
@@ -41,9 +41,25 @@ export function writeStored(key: string, value: unknown): boolean {
 }
 export function useStored<T>(key: string, fallback: T) {
   const [value, setValue] = useState<T>(() => readStored(key, fallback));
+  useEffect(() => {
+    const changed = (event: Event) => {
+      const changedKey =
+        event instanceof StorageEvent
+          ? event.key
+          : (event as CustomEvent<string>).detail;
+      if (!changedKey || changedKey === key)
+        setValue(readStored(key, fallback));
+    };
+    window.addEventListener("storage", changed);
+    window.addEventListener("records-changed", changed);
+    return () => {
+      window.removeEventListener("storage", changed);
+      window.removeEventListener("records-changed", changed);
+    };
+  }, [key]);
   function save(next: T) {
     const saved = writeStored(key, next);
-    setValue(next);
+    if (saved) setValue(next);
     return saved;
   }
   return [value, save] as const;

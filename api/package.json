@@ -1,3 +1,6 @@
 {
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "eventsource-parser": "^3.1.1"
+  }
 }

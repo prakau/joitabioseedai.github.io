@@ -8,7 +8,7 @@ try {
   await page.goto(process.env.FARMASSIST_TEST_URL || "http://localhost:4173/farmassist/");
   await page.evaluate(async () => { await navigator.serviceWorker.ready; await caches.open("unrelated-app-cache"); });
   await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
-  const keys = await page.evaluate(async () => (await (await caches.open("joita-farmassist-v4")).keys()).map(request => new URL(request.url).pathname));
+  const keys = await page.evaluate(async () => (await (await caches.open("joita-farmassist-v5")).keys()).map(request => new URL(request.url).pathname));
   assert(keys.some(key => key.endsWith(".js"))); assert(keys.some(key => key.endsWith(".css"))); assert(!keys.some(key => key.startsWith("/api/")));
   await context.setOffline(true);
   await page.reload();
@@ -25,7 +25,15 @@ try {
   assert.equal(await page.getByLabel("Answer language").inputValue(), "Hindi");
   await page.getByRole("link", {name:"FarmAssist home",exact:true}).click();
   assert.equal(await page.getByRole("link", {name:"JOITA website",exact:true}).isVisible(), true);
+  await page.getByRole("button",{name:"Toggle navigation",exact:true}).click();
+  await page.getByRole("navigation",{name:"FarmAssist modules"}).getByRole("link",{name:"Calculators",exact:true}).click();
+  await page.getByLabel("Field area",{exact:true}).fill("1"); await page.getByLabel("Area unit",{exact:true}).selectOption("Hectares");
+  await page.getByRole("button",{name:"Calculate",exact:true}).click(); assert.match(await page.locator(".calculation-result").innerText(),/10,000/);
+  await page.getByRole("button",{name:"Toggle navigation",exact:true}).click();
+  await page.getByRole("navigation",{name:"FarmAssist modules"}).getByRole("link",{name:"Income & Costs",exact:true}).click();
+  await page.getByLabel("Amount (INR)").fill("250.75"); await page.getByRole("button",{name:"Save transaction",exact:true}).click();
+  await page.reload(); assert.match(await page.locator(".ledger-totals").innerText(),/250.75/);
   const savedCaches = await page.evaluate(() => caches.keys()); assert(savedCaches.includes("unrelated-app-cache")); assert.deepEqual(errors, []);
   await page.screenshot({path:"test-results/offline-mobile.png",fullPage:true,animations:"disabled"});
-  console.log(JSON.stringify({offlineReload:true, offlineQuestion:true, savedAnswerAfterReload:true, assetsCached:keys.length, apiNeverCached:true, unrelatedCachePreserved:true, browserErrors:errors}));
+  console.log(JSON.stringify({offlineReload:true, offlineQuestion:true, offlineCalculators:true, offlineLedger:true, savedAnswerAfterReload:true, assetsCached:keys.length, apiNeverCached:true, unrelatedCachePreserved:true, browserErrors:errors}));
 } finally { await browser.close(); }
