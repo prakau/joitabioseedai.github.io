@@ -68,6 +68,7 @@ export function Advisory({
   onLanguage,
   diagnose = false,
   cloudSpeech = false,
+  initialQuestion = "",
   onResult,
 }: {
   location: string;
@@ -75,6 +76,7 @@ export function Advisory({
   onLanguage: (language: string) => void;
   diagnose?: boolean;
   cloudSpeech?: boolean;
+  initialQuestion?: string;
   onResult: (result: ChatResult) => void;
 }) {
   const [history, saveHistory] = useStored<Record[]>("joita-fa-questions", []);
@@ -85,7 +87,7 @@ export function Advisory({
     language: preferredLanguage,
     problemType: diagnose ? "disease" : "general",
   });
-  const [question, setQuestion] = useState("");
+  const [question, setQuestion] = useState(initialQuestion);
   const [result, setResult] = useState<ChatResult | null>(null);
   const [activeRecord, setActiveRecord] = useState<Record | null>(null);
   const [deletedRecord, setDeletedRecord] = useState<Record | null>(null);

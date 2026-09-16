@@ -1,0 +1,58 @@
+name: Android test APK
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: farmassist-src/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install dependencies
+        run: npm ci --prefix farmassist-src
+      - name: Bundle offline Android app
+        working-directory: farmassist-src
+        run: npm run build:android
+      - name: Build test APK
+        working-directory: farmassist-src/android
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --no-daemon
+      - name: Verify APK signature
+        run: $ANDROID_HOME/build-tools/36.0.0/apksigner verify --verbose farmassist-src/android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Test installed Android app
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          working-directory: farmassist-src/android
+          script: |
+            ./gradlew connectedDebugAndroidTest --no-daemon
+            adb pull /sdcard/Android/data/com.joitabioseedai.farmassist/files/qa ../test-results/android
+      - name: Upload APK and test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: JOITA-FarmAssist-Android-test
+          retention-days: 14
+          path: |
+            farmassist-src/android/app/build/outputs/apk/debug/app-debug.apk
+            farmassist-src/android/app/build/reports/androidTests/
+            farmassist-src/android/app/build/outputs/androidTest-results/
+            farmassist-src/test-results/android/

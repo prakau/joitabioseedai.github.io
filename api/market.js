@@ -1,5 +1,9 @@
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
+  if (req.headers?.origin === "https://localhost") {
+    res.setHeader("Access-Control-Allow-Origin", "https://localhost");
+    res.setHeader("Vary", "Origin");
+  }
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
   if (!process.env.DATAGOV_API_KEY) return res.status(200).json({ status: "unavailable", source: "AGMARKNET / Data.gov.in", records: [], message: "Live mandi prices are not connected. Use the official market portal below; no sample prices are shown." });
   const url = new URL("https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070");

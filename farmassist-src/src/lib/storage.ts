@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { nativeApp, exportNativeFile, reportPlatformError } from "./platform";
 
 export function readStored<T>(key: string, fallback: T): T {
   try {
@@ -72,6 +73,10 @@ export function downloadText(
   text: string,
   type = "text/plain;charset=utf-8",
 ) {
+  if (nativeApp) {
+    void exportNativeFile(name, text).catch(() => reportPlatformError("The export could not be saved or shared. Your records remain on this device."));
+    return;
+  }
   const url = URL.createObjectURL(new Blob([text], { type }));
   const link = document.createElement("a");
   link.href = url;

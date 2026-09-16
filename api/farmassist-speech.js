@@ -34,6 +34,7 @@ export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   const origin = req.headers?.origin;
   const origins = new Set([
+    "https://localhost",
     "https://www.joitabioseedai.com", "https://joitabioseedai.com",
     "http://localhost:5173", "http://127.0.0.1:5173",
     ...[process.env.VERCEL_URL, process.env.VERCEL_PROJECT_PRODUCTION_URL].filter(Boolean).map(host => `https://${host}`),

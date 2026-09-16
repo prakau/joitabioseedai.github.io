@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { App as NativeApp } from "@capacitor/app";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
@@ -18,7 +19,6 @@ import {
   RefreshCw,
   Save,
   Settings as SettingsIcon,
-  Sprout,
   Store,
   TestTube2,
   Wifi,
@@ -49,6 +49,9 @@ import {
   useStored,
 } from "./lib/storage";
 import { cropGuides } from "./data/agriculture";
+import { DashboardStart } from "./components/DashboardStart";
+import { nativeApp, backendUrl } from "./lib/platform";
+
 
 const modules = [
   { id: "home", label: "Home", icon: Home },
@@ -109,6 +112,15 @@ export default function App() {
   const [lastAnswer, setLastAnswer] = useState<ChatResult | null>(null);
   const [storageWarning, setStorageWarning] = useState("");
   const [storageRevision, setStorageRevision] = useState(0);
+  useEffect(() => {
+    if (!nativeApp) return;
+    const listener = NativeApp.addListener("backButton", () => {
+      if (menu) setMenu(false);
+      else if (active !== "home") window.location.hash = "#/";
+      else void NativeApp.minimizeApp();
+    });
+    return () => { void listener.then(handle => handle.remove()); };
+  }, [active, menu]);
   useEffect(() => {
     const on = () => setOnline(true),
       off = () => setOnline(false);
@@ -187,7 +199,7 @@ export default function App() {
           </span>
           <span>
             <strong>JOITA FarmAssist</strong>
-            <small>Practical support for your farm</small>
+            <small>By JOITA Bioseed AI</small>
           </span>
         </NavLink>
         <div className="header-status">
@@ -268,7 +280,7 @@ export default function App() {
             {active === "home" && (
               <>
                 <Title
-                  title={`Good farming starts with a clear next step.`}
+                  title="Good farming. Clear next steps."
                   description={new Date().toLocaleDateString("en-IN", {
                     weekday: "long",
                     day: "numeric",
@@ -276,21 +288,7 @@ export default function App() {
                     year: "numeric",
                   })}
                 />
-                <section className="dashboard-advisory">
-                  <div>
-                    <span className="eyebrow">YOUR FIELD ADVISORY</span>
-                    <h3>What is happening in your crop?</h3>
-                    <p>
-                      Ask a question or add a crop photo. Keep the answer with
-                      your field records.
-                    </p>
-                    <NavLink className="primary-link" to="/ask">
-                      Ask FarmAssist
-                      <ArrowUpRight size={20} />
-                    </NavLink>
-                  </div>
-                  <Sprout className="dashboard-sprout" aria-hidden size={100} />
-                </section>
+                <DashboardStart />
                 <div className="metrics">
                   <div>
                     <strong>
@@ -407,6 +405,7 @@ export default function App() {
                 onLanguage={setLanguage}
                 diagnose={active === "diagnose"}
                 cloudSpeech={online && Boolean(health.data?.hasSpeechKey)}
+                initialQuestion={new URLSearchParams(location.search).get("question")?.slice(0, 1000) || ""}
                 onResult={setLastAnswer}
               />
             )}
@@ -522,6 +521,16 @@ export default function App() {
           </div>
         </main>
       </div>
+      <nav className="mobile-dock" aria-label="Quick access">
+        {modules.filter(item => ["home", "ask", "diagnose", "market"].includes(item.id)).map(({id, label, icon: Icon}) => (
+          <NavLink key={id} to={id === "home" ? "/" : `/${id}`} end onClick={() => setMenu(false)}>
+            <Icon size={21} /><span>{label}</span>
+          </NavLink>
+        ))}
+        <button aria-label="All farm tools" aria-expanded={menu} onClick={() => {
+          setMenu(!menu); window.scrollTo({top: 0, behavior: "instant"});
+        }}><Menu size={21} /><span>More</span></button>
+      </nav>
     </div>
   );
 }
@@ -667,7 +676,7 @@ function SettingsPanel({
           <summary>Connection diagnostics</summary>
           <dl>
             <dt>Backend URL</dt>
-            <dd>{window.location.origin}/api/farmassist-chat</dd>
+            <dd>{new URL(backendUrl("/api/farmassist-chat"), window.location.origin).href}</dd>
             <dt>Current hostname</dt>
             <dd>{window.location.hostname}</dd>
             <dt>Health checked</dt>

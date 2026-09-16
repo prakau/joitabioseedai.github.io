@@ -2,6 +2,7 @@ import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { fetchWeather } from "../src/lib/weather";
 import { fetchGbifContext, fetchMandiPrices } from "../src/services/publicApis";
+import { backendUrl } from "../src/lib/platform";
 const originalFetch = globalThis.fetch;
 const store = new Map<string, string>();
 beforeEach(() => {
@@ -10,6 +11,12 @@ beforeEach(() => {
   Object.defineProperty(globalThis, "window", { configurable: true, value: { dispatchEvent: () => true } });
 });
 afterEach(() => { globalThis.fetch = originalFetch; });
+test("Android calls only the production backend while web keeps relative API routes", () => {
+  assert.equal(backendUrl("/api/health", true), "https://www.joitabioseedai.com/api/health");
+  assert.equal(backendUrl("/api/market?state=Haryana", true), "https://www.joitabioseedai.com/api/market?state=Haryana");
+  assert.equal(backendUrl("/api/farmassist-chat", false), "/api/farmassist-chat");
+  assert.equal(backendUrl("https://api.open-meteo.com/v1/forecast", true), "https://api.open-meteo.com/v1/forecast");
+});
 test("cached weather retains its original observation time and coordinates", async () => {
   globalThis.fetch = async () => new Response(JSON.stringify({ current: { temperature_2m: 27, time: "2026-09-14T07:00" } }));
   const live = await fetchWeather(29, 76); assert.equal(live.status, "live");

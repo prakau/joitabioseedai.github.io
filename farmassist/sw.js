@@ -17,7 +17,6 @@ self.addEventListener("install", (event) => {
         ...new Set([
           ...assets,
           `${ROOT}manifest.webmanifest`,
-            `${ROOT}icon.svg`,
             `${ROOT}logo.png`,
         ]),
       ]);

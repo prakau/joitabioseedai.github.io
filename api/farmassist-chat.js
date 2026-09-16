@@ -68,6 +68,7 @@ Distinguish plausible causes from confirmed diagnoses. Do not prescribe fertiliz
 function setCors(req, res) {
   const origin = req.headers.origin;
   const allowedOrigins = new Set([
+    "https://localhost",
     "https://joitabioseedai.com",
     "https://www.joitabioseedai.com",
     "http://localhost:5173",

@@ -25,6 +25,36 @@ function silentAudio() {
   return buffer.toString("base64");
 }
 test.beforeEach(async ({page}) => { await setup(page); });
+test("JOITA branding and field-desk question carry into Ask without auto-submitting", async ({page}) => {
+  let sent=0;
+  await page.route("**/api/farmassist-chat",async route=>{sent++;await route.fulfill({json:{ok:true,source:"gemini",answer:advisory,model:"test"}});});
+  await page.goto("./");
+  await expect(page.getByRole("img",{name:"JOITA Bioseed AI",exact:true})).toBeVisible();
+  await expect(page.locator(".dashboard-sprout")).toHaveCount(0);
+  await page.getByLabel("What would you like to check today?").fill("Tomato leaves are curling");
+  await page.getByRole("button",{name:"Ask JOITA",exact:true}).click();
+  await expect(page.getByLabel("Your question",{exact:true})).toHaveValue("Tomato leaves are curling");
+  expect(sent).toBe(0);
+  await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await expect(page.locator(".answer-copy")).toContainText(advisory);
+  expect(sent).toBe(1);
+});
+test("mobile dock opens tools, avoids overflow and respects reduced motion", async ({page}) => {
+  await page.setViewportSize({width:390,height:844}); await page.emulateMedia({reducedMotion:"reduce"});
+  await page.goto("./");
+  const dock=page.getByRole("navigation",{name:"Quick access",exact:true});
+  await expect(dock).toBeVisible();
+  await dock.getByRole("link",{name:"Market",exact:true}).click();
+  await expect(page.locator(".page-title h2")).toHaveText("Mandi market prices");
+  await dock.getByRole("button",{name:"All farm tools",exact:true}).click();
+  await expect(page.getByRole("navigation",{name:"FarmAssist modules"})).toBeVisible();
+  await page.getByRole("navigation",{name:"FarmAssist modules"}).getByRole("link",{name:"Home",exact:true}).click();
+  expect(await page.locator(".field-line").evaluate(el=>getComputedStyle(el).animationName)).toBe("none");
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.evaluate(()=>window.scrollTo(0,0));
+  await page.screenshot({path:"test-results/joita-home-mobile.png",fullPage:false,animations:"disabled"});
+  await page.setViewportSize({width:1440,height:1000}); await page.screenshot({path:"test-results/joita-home-desktop.png",fullPage:false,animations:"disabled"});
+});
 test("dashboard has no invented measurements and all pages navigate", async ({page}) => {
   const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
   await page.goto("./"); await expect(page.getByText("No recording measured yet")).toBeVisible();

@@ -1,4 +1,5 @@
 import { createParser } from "eventsource-parser";
+import { backendUrl } from "./platform";
 
 export async function requestJson<T>(
   url: string,
@@ -8,7 +9,7 @@ export async function requestJson<T>(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(url, {
+    const response = await fetch(apiUrl(url), {
       ...options,
       signal: controller.signal,
     });
@@ -31,7 +32,7 @@ export async function requestJson<T>(
   }
 }
 export function apiUrl(path: string) {
-  return path;
+  return backendUrl(path);
 }
 export type ChatContext = {
   crop: string;

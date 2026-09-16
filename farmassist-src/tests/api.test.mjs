@@ -138,6 +138,17 @@ test("health reports speech availability without credential values", async () =>
   const res=response(); await health({method:"GET",headers:{}},res);
   assert.equal(res.data.hasSpeechKey,true); assert.doesNotMatch(JSON.stringify(res.data),/test-speech-secret/);
 });
+test("native Android origin can reach health, chat, speech and market without wildcard CORS", async () => {
+  const headers={origin:"https://localhost","content-type":"application/json"};
+  const healthRes=response(); await health({method:"GET",headers},healthRes);
+  assert.equal(healthRes.headers["Access-Control-Allow-Origin"],headers.origin);
+  const marketRes=response(); await market({method:"GET",headers,query:{}},marketRes);
+  assert.equal(marketRes.headers["Access-Control-Allow-Origin"],headers.origin);
+  const speechRes=await speak(undefined,{method:"OPTIONS",headers});
+  assert.equal(speechRes.statusCode,204); assert.equal(speechRes.headers["Access-Control-Allow-Origin"],headers.origin);
+  const chatRes=await run(question,"OPTIONS",headers);
+  assert.equal(chatRes.statusCode,204); assert.equal(chatRes.headers["Access-Control-Allow-Origin"],headers.origin);
+});
 
 function eventResponse(events) {
   const bytes = new TextEncoder().encode(": keepalive\n\n" + events.map(event => `data: ${JSON.stringify(event)}\n\n`).join(""));

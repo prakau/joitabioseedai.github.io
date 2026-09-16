@@ -15,6 +15,7 @@ import { requestSpeech, type ChatResult } from "../lib/network";
 import { Answer, safetyNotice } from "./workspace";
 import { Button } from "./ui/button";
 import { AdvisoryTask } from "./FieldTasks";
+import { copyText, shareText } from "../lib/platform";
 
 export function AdvisoryAnswer({
   result,
@@ -103,7 +104,7 @@ export function AdvisoryAnswer({
   }
   async function copy() {
     try {
-      await navigator.clipboard.writeText(answerDocument());
+      await copyText(answerDocument());
       setFeedback("Answer copied.");
     } catch {
       setFeedback(
@@ -112,15 +113,8 @@ export function AdvisoryAnswer({
     }
   }
   async function share() {
-    if (!navigator.share) {
-      await copy();
-      return;
-    }
     try {
-      await navigator.share({
-        title: "JOITA FarmAssist advisory",
-        text: answerDocument(),
-      });
+      if (!await shareText("JOITA FarmAssist advisory", answerDocument())) { await copy(); return; }
       setFeedback("Share request completed.");
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") return;

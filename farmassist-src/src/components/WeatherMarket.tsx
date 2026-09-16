@@ -16,6 +16,7 @@ import { displayDate } from "../lib/storage";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Busy, Empty, Field, Notice, Title } from "./workspace";
+import { currentPosition } from "../lib/platform";
 export function LocationPicker({
   place,
   onChange,
@@ -48,28 +49,19 @@ export function LocationPicker({
   function locate() {
     setBusy(true);
     setMessage("");
-    if (!navigator.geolocation) {
-      setMessage("Location access is unavailable. Search for a town.");
-      setBusy(false);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
+    void currentPosition().then((pos) => {
         onChange({
           lat: pos.coords.latitude,
           lon: pos.coords.longitude,
           label: `Device location (${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)})`,
         });
         setBusy(false);
-      },
-      () => {
+      }).catch(() => {
         setMessage(
           "Location permission was denied or timed out. Search for your town instead.",
         );
         setBusy(false);
-      },
-      { timeout: 8000 },
-    );
+      });
   }
   return (
     <div className="location-picker">

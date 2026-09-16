@@ -26,3 +26,14 @@ farmassist-src/playwright-report/
 !farmassist-src/postcss.config.js
 .vercel
 .env*
+farmassist-src/dist-android/
+farmassist-src/android/.gradle/
+farmassist-src/android/local.properties
+farmassist-src/android/**/build/
+farmassist-src/android/app/src/main/assets/public/
+farmassist-src/android/app/src/main/assets/capacitor*.json
+farmassist-src/android/capacitor-cordova-android-plugins/
+*.keystore
+*.jks
+*.apk
+*.aab
