@@ -28,3 +28,17 @@ test("market errors cannot fall back to fabricated prices", async () => {
   const result = await fetchMandiPrices({ commodity: "Onion", state: "Haryana", district: "", market: "", date: "" });
   assert.equal(result.status, "unavailable"); assert.deepEqual(result.records, []);
 });
+test("market caches actual records and original publication dates for the same filters only", async () => {
+  const filters={commodity:"Banana - Green",state:"Tripura",district:"Dhalai",market:"Kulai APMC",date:"2026-09-16"};
+  const records=[{commodity:filters.commodity,state:filters.state,district:filters.district,market:filters.market,arrival_date:"16/09/2026",min_price:1500,modal_price:1800,max_price:2000}];
+  globalThis.fetch=async(url)=>{
+    const query=new URL(String(url),"https://www.joitabioseedai.com").searchParams;
+    assert.equal(query.get("arrival_date"),"16/09/2026"); assert.equal(query.has("api-key"),false);
+    return new Response(JSON.stringify({status:"live",source:"AGMARKNET / Data.gov.in",records,total:1,retrievedAt:"2026-09-16T08:00:00Z",sourceUpdatedAt:"2026-09-16T00:00:28Z"}));
+  };
+  const live=await fetchMandiPrices(filters); assert.deepEqual(live.records,records);
+  globalThis.fetch=async()=>{throw new Error("Offline");};
+  const cached=await fetchMandiPrices(filters);
+  assert.equal(cached.status,"cached"); assert.equal(cached.sourceUpdatedAt,live.sourceUpdatedAt); assert.deepEqual(cached.records,records);
+  assert.equal((await fetchMandiPrices({...filters,state:"Haryana"})).status,"unavailable");
+});

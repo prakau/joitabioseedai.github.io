@@ -7,10 +7,11 @@ import {
   Square,
   Volume2,
   Lightbulb,
+  LoaderCircle,
 } from "lucide-react";
 import { answerLanguage, matchingVoice, speechChunks } from "../lib/languages";
 import { downloadText, displayDate } from "../lib/storage";
-import type { ChatResult } from "../lib/network";
+import { requestSpeech, type ChatResult } from "../lib/network";
 import { Answer, safetyNotice } from "./workspace";
 import { Button } from "./ui/button";
 import { AdvisoryTask } from "./FieldTasks";
@@ -24,6 +25,7 @@ export function AdvisoryAnswer({
   onFollowUp,
   onSimplify,
   disabled,
+  cloudSpeech = false,
 }: {
   result: ChatResult;
   language: string;
@@ -33,11 +35,17 @@ export function AdvisoryAnswer({
   onFollowUp: () => void;
   onSimplify: () => void;
   disabled: boolean;
+  cloudSpeech?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const speech = useRef<SpeechSynthesisUtterance | null>(null);
+  const audio = useRef<HTMLAudioElement>(null);
+  const cloudRequest = useRef<AbortController | null>(null);
   const playback = useRef(0);
   const [speaking, setSpeaking] = useState(false);
+  const [loadingAudio, setLoadingAudio] = useState(false);
+  const [audioParts, setAudioParts] = useState<string[]>([]);
+  const [audioIndex, setAudioIndex] = useState(0);
   const [feedback, setFeedback] = useState("");
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const actualLanguage = answerLanguage(
@@ -53,13 +61,33 @@ export function AdvisoryAnswer({
     synth.addEventListener("voiceschanged", refresh);
     return () => {
       synth.removeEventListener("voiceschanged", refresh);
-      playback.current += 1;
       if (speech.current) synth.cancel();
     };
   }, []);
 
+  useEffect(() => () => {
+    playback.current += 1;
+    cloudRequest.current?.abort();
+  }, []);
+
+  useEffect(() => {
+    const player = audio.current;
+    if (!player || !audioParts.length) return;
+    const session = playback.current;
+    void player.play().catch(() => {
+      if (session === playback.current)
+        setFeedback("Google audio is ready. Press play in the audio controls.");
+    });
+    return () => player.pause();
+  }, [audioParts, audioIndex]);
+
   function stop() {
     playback.current += 1;
+    cloudRequest.current?.abort();
+    cloudRequest.current = null;
+    audio.current?.pause();
+    setAudioParts([]);
+    setLoadingAudio(false);
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     speech.current = null;
     setSpeaking(false);
@@ -101,26 +129,21 @@ export function AdvisoryAnswer({
       );
     }
   }
-  function readAloud() {
-    if (speaking) {
-      stop();
-      setFeedback("Reading stopped.");
-      return;
-    }
+  function readOnDevice(prefix = "") {
+    stop();
     if (!voice || !("SpeechSynthesisUtterance" in window)) {
       setFeedback(
-        `No ${actualLanguage.name} voice is available on this device. The written answer is still available.`,
+        `${prefix}No ${actualLanguage.name} voice is available on this device. The written answer is still available.`,
       );
       return;
     }
-    stop();
     const session = playback.current;
     const chunks = speechChunks(plainAnswer());
     setSpeaking(true);
     setFeedback(
-      actualLanguage.name === "Haryanvi"
+      prefix + (actualLanguage.name === "Haryanvi"
         ? "Reading with the device's Hindi voice."
-        : `Reading in ${actualLanguage.name}.`,
+        : `Reading in ${actualLanguage.name} with a device voice.`),
     );
     function next(index: number) {
       if (session !== playback.current) return;
@@ -151,6 +174,38 @@ export function AdvisoryAnswer({
       }
     }
     next(0);
+  }
+
+  async function readAloud() {
+    if (speaking) {
+      stop();
+      setFeedback("Reading stopped.");
+      return;
+    }
+    if (!cloudSpeech || !navigator.onLine) {
+      readOnDevice();
+      return;
+    }
+    stop();
+    const session = playback.current;
+    const controller = new AbortController();
+    cloudRequest.current = controller;
+    setSpeaking(true);
+    setLoadingAudio(true);
+    setFeedback("Creating Google speech audio...");
+    try {
+      const parts = await requestSpeech(plainAnswer(), actualLanguage.name, controller.signal);
+      if (session !== playback.current) return;
+      setLoadingAudio(false);
+      setAudioIndex(0);
+      setAudioParts(parts);
+      setFeedback(actualLanguage.name === "Haryanvi"
+        ? "Google speech: Hindi voice for the Haryanvi answer."
+        : `Google speech: ${actualLanguage.name}.`);
+    } catch (error) {
+      if (session !== playback.current) return;
+      readOnDevice(`${error instanceof Error && error.name !== "AbortError" ? error.message : "Google speech timed out."} `);
+    }
   }
 
   return (
@@ -209,9 +264,9 @@ export function AdvisoryAnswer({
             title={speaking ? "Stop reading" : "Read answer aloud"}
             aria-label={speaking ? "Stop reading" : "Read answer aloud"}
             aria-pressed={speaking}
-            onClick={readAloud}
+            onClick={() => void readAloud()}
           >
-            {speaking ? <Square size={18} /> : <Volume2 size={21} />}
+            {loadingAudio ? <LoaderCircle size={18} className="animate-spin motion-reduce:animate-none" /> : speaking ? <Square size={18} /> : <Volume2 size={21} />}
           </button>
         </div>
         <Button
@@ -237,9 +292,31 @@ export function AdvisoryAnswer({
           Ask a follow-up
         </Button>
       </div>
+      {!!audioParts.length && (
+        <div className="cloud-audio">
+          <audio
+            ref={audio}
+            controls
+            preload="metadata"
+            aria-label={`Google speech in ${actualLanguage.name}`}
+            src={`data:audio/mpeg;base64,${audioParts[audioIndex]}`}
+            onEnded={() => {
+              if (audioIndex + 1 < audioParts.length) setAudioIndex(audioIndex + 1);
+              else {
+                stop();
+                setFeedback("Finished reading with Google speech.");
+              }
+            }}
+            onError={() => readOnDevice("Google audio could not play. ")}
+          />
+          <span>Google speech{audioParts.length > 1 ? ` / part ${audioIndex + 1} of ${audioParts.length}` : ""}</span>
+        </div>
+      )}
       <p className="answer-feedback" role="status">
         {feedback ||
-          (!voice
+          (cloudSpeech && navigator.onLine
+            ? "Read-aloud sends this answer to Google for speech."
+            : !voice
             ? `Read-aloud voice for ${actualLanguage.name} is not available on this device.`
             : "")}
       </p>

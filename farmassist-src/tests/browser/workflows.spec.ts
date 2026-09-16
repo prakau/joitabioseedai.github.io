@@ -14,6 +14,16 @@ async function nav(page: Page, label: string) {
   if (await page.getByRole("button", { name: "Toggle navigation" }).isVisible()) await page.getByRole("button", { name: "Toggle navigation" }).click();
   await page.getByRole("navigation", { name: "FarmAssist modules" }).getByRole("link", { name: label, exact: true }).click();
 }
+function silentAudio() {
+  // A real PCM fixture exercises browser decoding without a provider call.
+  const length=8000*2*5;
+  const buffer=Buffer.alloc(44+length);
+  buffer.write("RIFF",0); buffer.writeUInt32LE(36+length,4); buffer.write("WAVEfmt ",8);
+  buffer.writeUInt32LE(16,16); buffer.writeUInt16LE(1,20); buffer.writeUInt16LE(1,22);
+  buffer.writeUInt32LE(8000,24); buffer.writeUInt32LE(16000,28); buffer.writeUInt16LE(2,32);
+  buffer.writeUInt16LE(16,34); buffer.write("data",36); buffer.writeUInt32LE(length,40);
+  return buffer.toString("base64");
+}
 test.beforeEach(async ({page}) => { await setup(page); });
 test("dashboard has no invented measurements and all pages navigate", async ({page}) => {
   const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
@@ -72,6 +82,86 @@ test("audio upload analyzes measurements and microphone denial is handled", asyn
 test("weather location selection and market empty state are honest", async ({page}) => {
   await page.route("**/geocoding-api.open-meteo.com/**", route=>route.fulfill({json:{results:[{name:"Hisar",admin1:"Haryana",latitude:29.15,longitude:75.72}]}}));
   await page.goto("./#/weather"); await page.getByLabel("Search Indian town / district").fill("Hisar"); await page.getByRole("button",{name:"Search",exact:true}).click(); await page.getByRole("button",{name:"Hisar, Haryana",exact:true}).click(); await expect(page.locator(".location-picker")).toContainText("Selected location: Hisar, Haryana"); await expect(page.locator(".metrics")).toContainText("28 C"); await nav(page,"Market"); await expect(page.getByText(/No verified price records/)).toBeVisible(); await expect(page.locator("tbody tr")).toHaveCount(0);
+});
+test("market clears empty regional filters, shows dated prices, searches, and caches", async ({page}) => {
+  const records=[{commodity:"Banana - Green",variety:"Banana - Green",state:"Tripura",district:"Dhalai",market:"Kulai APMC",arrival_date:"16/09/2026",min_price:1500,modal_price:1800,max_price:2000}];
+  const queries: URLSearchParams[]=[];
+  await page.route("**/api/market?*",route=>{
+    const params=new URL(route.request().url()).searchParams; queries.push(params);
+    const rows=params.get("state")==="Haryana"?[]:records;
+    return route.fulfill({json:{status:"live",source:"AGMARKNET / Data.gov.in",records:rows,total:rows.length,retrievedAt:"2026-09-16T08:00:00Z",sourceUpdatedAt:"2026-09-16T00:00:28Z"}});
+  });
+  await page.goto("./#/market");
+  await expect(page.getByText(/No published prices match Haryana/)).toBeVisible();
+  await page.getByRole("button",{name:"Show all markets",exact:true}).click();
+  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(page.locator("tbody")).toContainText("1500 / 1800 / 2000");
+  await expect(page.getByText(/Feed updated/)).toBeVisible();
+  await expect(page.getByLabel("State",{exact:true})).toBeEmpty();
+  await page.getByLabel("State",{exact:true}).fill("Tripura");
+  await page.getByLabel("Commodity",{exact:true}).fill("Banana - Green");
+  await page.getByLabel("Arrival date (optional)").fill("2026-09-16");
+  await page.getByRole("button",{name:"Search prices",exact:true}).click();
+  await expect.poll(()=>queries.at(-1)?.get("arrival_date")).toBe("16/09/2026");
+  expect(queries.every(query=>!query.has("api-key"))).toBe(true);
+  await page.route("**/api/market?*",route=>route.abort("failed"));
+  await page.getByRole("button",{name:"Search prices",exact:true}).click();
+  await expect(page.getByText(/Saved prices for these filters/)).toBeVisible();
+  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await page.setViewportSize({width:390,height:844});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+test("cloud read-aloud plays audio parts and stops on navigation without device voices", async ({page}) => {
+  await page.route("**/api/health",route=>route.fulfill({json:{ok:true,hasGeminiKey:true,hasSpeechKey:true}}));
+  await page.route("**/api/farmassist-chat",route=>route.fulfill({json:{ok:true,source:"gemini",answer:advisory,model:"test"}}));
+  let request: {text:string;language:string}|null=null;
+  await page.route("**/api/farmassist-speech",route=>{
+    request=route.request().postDataJSON();
+    return route.fulfill({json:{ok:true,source:"google_tts",contentType:"audio/mpeg",audioParts:[silentAudio(),silentAudio()]}});
+  });
+  await page.goto("./#/ask");
+  await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling");
+  await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await expect(page.getByText("Read-aloud sends this answer to Google for speech.")).toBeVisible();
+  await page.getByRole("button",{name:"Read answer aloud",exact:true}).click();
+  await expect(page.locator("audio")).toBeVisible();
+  await expect.poll(()=>page.locator("audio").evaluate((el:HTMLAudioElement)=>el.currentTime)).toBeGreaterThan(0);
+  expect(request).toEqual({text:advisory,language:"English"});
+  await page.locator("audio").dispatchEvent("ended");
+  await expect(page.getByText("Google speech / part 2 of 2")).toBeVisible();
+  await page.evaluate(()=>{(window as unknown as {testPlayer:HTMLAudioElement}).testPlayer=document.querySelector("audio")!;});
+  await nav(page,"Home");
+  expect(await page.evaluate(()=>(window as unknown as {testPlayer:HTMLAudioElement}).testPlayer.paused)).toBe(true);
+});
+test("speech cancellation cannot start audio after the user has stopped", async ({page}) => {
+  await page.route("**/api/health",route=>route.fulfill({json:{ok:true,hasGeminiKey:true,hasSpeechKey:true}}));
+  await page.route("**/api/farmassist-chat",route=>route.fulfill({json:{ok:true,source:"gemini",answer:advisory,model:"test"}}));
+  let release:()=>void=()=>{};
+  const delayed=new Promise<void>(resolve=>{release=resolve;});
+  await page.route("**/api/farmassist-speech",async route=>{
+    await delayed;
+    await route.fulfill({json:{ok:true,source:"google_tts",contentType:"audio/mpeg",audioParts:[silentAudio()]}}).catch(()=>{});
+  });
+  await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling");
+  await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.getByRole("button",{name:"Read answer aloud",exact:true}).click();
+  await expect(page.getByText("Creating Google speech audio...")).toBeVisible();
+  await page.getByRole("button",{name:"Stop reading",exact:true}).click(); release();
+  await expect(page.getByText("Reading stopped.")).toBeVisible();
+  await expect(page.locator("audio")).toHaveCount(0);
+  await expect(page.getByRole("button",{name:"Read answer aloud",exact:true})).toBeVisible();
+});
+test("speech provider failure leaves an explicit message and the answer intact", async ({page}) => {
+  await page.addInitScript(()=>Object.defineProperty(window,"speechSynthesis",{value:{getVoices:()=>[],addEventListener:()=>{},removeEventListener:()=>{},cancel:()=>{}}}));
+  await page.route("**/api/health",route=>route.fulfill({json:{ok:true,hasGeminiKey:true,hasSpeechKey:true}}));
+  await page.route("**/api/farmassist-chat",route=>route.fulfill({json:{ok:true,source:"gemini",answer:advisory,model:"test"}}));
+  await page.route("**/api/farmassist-speech",route=>route.fulfill({status:502,json:{ok:false,error:"Google speech is temporarily unavailable. Use device read-aloud."}}));
+  await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling");
+  await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.getByRole("button",{name:"Read answer aloud",exact:true}).click();
+  await expect(page.locator(".answer-feedback")).toContainText("Google speech is temporarily unavailable");
+  await expect(page.locator(".answer-feedback")).toContainText("No English voice is available");
+  await expect(page.locator(".answer-copy")).toContainText(advisory);
 });
 test("mobile navigation, keyboard focus, and layout fit", async ({page}) => {
   await page.setViewportSize({width:390,height:844}); await page.goto("./");

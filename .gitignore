@@ -24,3 +24,5 @@ node_modules
 farmassist-src/test-results/
 farmassist-src/playwright-report/
 !farmassist-src/postcss.config.js
+.vercel
+.env*

@@ -15,8 +15,16 @@ export default async function handler(req, res) {
   try {
     const response = await fetch(url, { signal: controller.signal });
     const data = await response.json();
-    if (!response.ok || !Array.isArray(data.records)) throw new Error("Market service unavailable");
-    return res.status(200).json({ status: "live", source: "AGMARKNET / Data.gov.in", records: data.records, retrievedAt: new Date().toISOString(), total: data.total });
+    if (!response.ok || data.status !== "ok" || !Array.isArray(data.records)) throw new Error("Market service unavailable");
+    const updated = new Date(data.updated_date);
+    return res.status(200).json({
+      status: "live",
+      source: "AGMARKNET / Data.gov.in",
+      records: data.records,
+      retrievedAt: new Date().toISOString(),
+      sourceUpdatedAt: Number.isNaN(updated.getTime()) ? undefined : updated.toISOString(),
+      total: data.total,
+    });
   } catch {
     return res.status(502).json({ error: "The mandi service did not return data. Please retry or check the official portal." });
   } finally { clearTimeout(timer); }

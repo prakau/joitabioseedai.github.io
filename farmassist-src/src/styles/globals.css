@@ -852,6 +852,19 @@ input[type="checkbox"] {
   background: #dcebef;
   color: #1b5b6c;
 }
+
+.cloud-audio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-block: 12px;
+}
+.cloud-audio audio {
+  width: 100%;
+  max-width: 420px;
+  min-width: 0;
+}
 .answer-feedback {
   min-height: 24px;
   font-size: 13px;

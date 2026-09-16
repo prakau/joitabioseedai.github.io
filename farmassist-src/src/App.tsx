@@ -406,6 +406,7 @@ export default function App() {
                 preferredLanguage={preferredLanguage}
                 onLanguage={setLanguage}
                 diagnose={active === "diagnose"}
+                cloudSpeech={online && Boolean(health.data?.hasSpeechKey)}
                 onResult={setLastAnswer}
               />
             )}
@@ -472,8 +473,9 @@ export default function App() {
                     <p>
                       Choose from 14 answer languages in Ask or Settings. Live
                       AI can answer in your selected language; built-in offline
-                      guides are in English. Read-aloud availability depends on
-                      your device's voices. App navigation is currently in
+                      guides are in English. Read-aloud uses Google speech when
+                      available, with matching device voices as a fallback.
+                      App navigation is currently in
                       English.
                     </p>
                   </div>
@@ -589,8 +591,9 @@ function SettingsPanel({
           onChange={onLanguage}
         />
         <p className="muted">
-          Live AI: 14 answer languages. Offline guides: English. Device voice
-          support varies.
+          Live AI: 14 answer languages. Offline guides: English. Cloud speech
+          supports 11 languages, plus Haryanvi with a Hindi voice. Odia and
+          Assamese need matching device voices.
         </p>
       </div>
       <form
@@ -650,6 +653,7 @@ function SettingsPanel({
         </Button>
         <p>
           Market feed: {health?.hasMarketKey ? "Configured" : "Not connected"}.
+          {" "}Google speech: {health?.hasSpeechKey ? "Configured" : "Not connected"}.
           Community posts: on this device only. Sound analysis: digital signal
           measurements, without species recognition.
         </p>

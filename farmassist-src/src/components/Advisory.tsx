@@ -67,12 +67,14 @@ export function Advisory({
   preferredLanguage,
   onLanguage,
   diagnose = false,
+  cloudSpeech = false,
   onResult,
 }: {
   location: string;
   preferredLanguage: string;
   onLanguage: (language: string) => void;
   diagnose?: boolean;
+  cloudSpeech?: boolean;
   onResult: (result: ChatResult) => void;
 }) {
   const [history, saveHistory] = useStored<Record[]>("joita-fa-questions", []);
@@ -584,6 +586,7 @@ export function Advisory({
                   language={activeRecord.context?.language || "English"}
                   date={activeRecord.date}
                   disabled={busy || imageBusy}
+                  cloudSpeech={cloudSpeech}
                   onSimplify={() =>
                     void submit(
                       false,

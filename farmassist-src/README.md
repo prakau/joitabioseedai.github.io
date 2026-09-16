@@ -21,7 +21,7 @@ Install a Playwright Chromium browser with `npx playwright install chromium`, or
 
 ## What works
 
-- Ask: streamed Gemini primary, OpenRouter fallback, honest local knowledge fallback; 14 answer languages, automatic script matching, native-language examples, short conversation context, simpler-explanation follow-ups, saved answers, searchable history and export. Stop cancels a request without saving unfinished text. Read-aloud uses matching voices installed on the device; voice availability is not guaranteed.
+- Ask: streamed Gemini primary, OpenRouter fallback, honest local knowledge fallback; 14 answer languages, automatic script matching, native-language examples, short conversation context, simpler-explanation follow-ups, saved answers, searchable history and export. Stop cancels a request without saving unfinished text. Read-aloud uses server-side Google speech with matching device voices as an explicit fallback. Native audio controls support pause and seeking; Stop and navigation cancel playback.
 - Diagnose: real JPEG/PNG/WebP bytes sent to the provider, with text symptoms and explicit photo-analysis status. Uploads limited to 4 MB and resized before base64 transport. Images are not included in saved history.
 - Plot: actual Three.js field geometry driven by dimensions and row count, camera controls, irrigation overlays, input validation, saved layout loading, deletion and export. A 2D plan remains available when WebGL is unsupported.
 - Weather: manual town search/geolocation; current Open-Meteo estimates and seven-day forecast, coordinate-specific cache with original observation time, and separately labeled NASA POWER historical climatology. No fabricated weather observations or numerical disease-risk scores.
@@ -35,7 +35,13 @@ Install a Playwright Chromium browser with `npx playwright install chromium`, or
 
 ## External services and limits
 
-Vercel runs `/api/health`, `/api/farmassist-chat`, and `/api/market`. `GEMINI_API_KEY` and `OPENROUTER_API_KEY` belong only in Vercel environment settings. Never commit keys or `.env` files. Optional `DATAGOV_API_KEY` enables the AGMARKNET adapter. Without it, Market shows an unavailable state and official market links, never demonstration prices. The simple chat limiter is per warm server instance, not a distributed global quota.
+Vercel runs `/api/health`, `/api/farmassist-chat`, `/api/farmassist-speech`, and `/api/market`. `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, `DATAGOV_API_KEY`, and `GOOGLE_TTS_API_KEY` belong only in Vercel secret environment settings. Never commit keys or `.env` files. Environment changes require a new production deployment.
+
+`DATAGOV_API_KEY` enables the AGMARKNET adapter. Market distinguishes feed publication time, retrieval time, and each record's arrival date. An empty state filter means no matching publication, not a zero price or a broken connection. Show all markets clears filters; up to 200 records are returned. The daily resource is not a historical archive. Without a key, Market shows an unavailable state and official market links, never demonstration prices. Offline caches preserve original records and dates for identical filters only.
+
+`GOOGLE_TTS_API_KEY` must allow the Google Cloud Text-to-Speech API. Google Standard-A voices support English (India), Hindi, Punjabi, Marathi, Gujarati, Bengali, Tamil, Telugu, Kannada, Malayalam and Urdu. Haryanvi uses a clearly labeled Hindi voice. Odia and Assamese fall back to a matching device voice, if present. Only clicking read-aloud sends the completed answer text to Google; audio is not persisted in local storage. Native text is split below Google's per-request byte limit; one app request accepts up to 18,000 UTF-8 bytes. Unsupported languages, provider failures, missing device voices, autoplay restrictions and cancellations have explicit UI states.
+
+Chat and speech each have a simple limit of 10 requests per IP per hour **per warm server instance**, not a distributed global quota. Configure Google project quotas to cap cross-instance usage and billing alerts to monitor cost. Cloud speech can incur charges beyond the provider allowance; Standard voices are selected explicitly instead of higher-priced premium voices. No billing plan or provider quota is changed by this application.
 
 Chat requests default to JSON for backwards compatibility. `Accept: text/event-stream` enables `status`, `delta`, `reset`, and final `complete` events. Each event contains JSON data. Only a validated `complete` event is a finished answer; a provider switch clears its preceding partial output. Truncated streams are never saved as live answers. Vercel installs the API and frontend dependencies separately. Provider timeouts fit within the 30-second function budget.
 

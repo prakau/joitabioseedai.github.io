@@ -102,9 +102,9 @@ export type MarketRow = {
   district: string;
   market: string;
   arrival_date: string;
-  modal_price: string;
-  min_price: string;
-  max_price: string;
+  modal_price: string | number;
+  min_price: string | number;
+  max_price: string | number;
   variety?: string;
 };
 export type MarketResult = {
@@ -113,13 +113,14 @@ export type MarketResult = {
   records: MarketRow[];
   message?: string;
   retrievedAt?: string;
+  sourceUpdatedAt?: string;
   total?: number;
 };
 export function filterMarketRows(rows: MarketRow[], filters: MarketFilters) {
   return rows.filter(
     (row) =>
       ["commodity", "state", "district", "market"].every((field) =>
-        (row[field as keyof MarketRow] || "")
+        String(row[field as keyof MarketRow] || "")
           .toLowerCase()
           .includes(filters[field as keyof MarketFilters].trim().toLowerCase()),
       ) &&

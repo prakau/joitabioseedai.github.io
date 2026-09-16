@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { LocateFixed, RefreshCw, Search } from "lucide-react";
+import { Globe, LocateFixed, RefreshCw, Search } from "lucide-react";
 import {
   fetchNasaClimatology,
   fetchMandiPrices,
@@ -327,10 +327,27 @@ export function Market() {
             />
           </Field>
         </div>
-        <Button disabled={query.isFetching}>
-          <Search size={18} />
-          Search prices
-        </Button>
+        <div className="actions">
+          <Button disabled={query.isFetching}>
+            <Search size={18} />
+            Search prices
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={query.isFetching}
+            onClick={() => {
+              const allMarkets = { commodity: "", state: "", district: "", market: "", date: "" };
+              setDraft(allMarkets);
+              setFilters(allMarkets);
+              if (Object.values(filters).every((value) => !value))
+                void query.refetch();
+            }}
+          >
+            <Globe size={18} />
+            Show all markets
+          </Button>
+        </div>
       </form>
       {query.isFetching && <Busy label="Checking mandi records" />}
       {query.data && (
@@ -338,6 +355,10 @@ export function Market() {
           {query.data.source}: {query.data.status}.{" "}
           {query.data.message ||
             `Retrieved ${displayDate(query.data.retrievedAt)}.`}
+          {query.data.sourceUpdatedAt &&
+            ` Feed updated ${displayDate(query.data.sourceUpdatedAt)}.`}
+          {query.data.status === "live" &&
+            ` ${query.data.records.length} records shown${query.data.total !== undefined ? ` of ${query.data.total}` : ""}.`}
         </Notice>
       )}
       {!!query.data?.records.length && (
@@ -377,7 +398,7 @@ export function Market() {
       {!query.isFetching && !query.data?.records.length && (
         <Empty>
           {query.data?.status === "live"
-            ? "No prices match these filters. Try another market or date."
+            ? `No published prices match ${filters.state.trim() || "these filters"}. The daily feed may not yet include your market; this is not a zero price.`
             : "No verified price records are available. Check the official market portal; sample values are not used."}
         </Empty>
       )}

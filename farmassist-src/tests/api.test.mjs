@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 import handler from "../../api/farmassist-chat.js";
 import health from "../../api/health.js";
 import market from "../../api/market.js";
+import speech, { splitSpeechText } from "../../api/farmassist-speech.js";
 const originalFetch = globalThis.fetch;
-const originalEnv = { gemini: process.env.GEMINI_API_KEY, router: process.env.OPENROUTER_API_KEY, node: process.env.NODE_ENV, market: process.env.DATAGOV_API_KEY };
-beforeEach(() => { globalThis.__joitaFarmAssistRateLimit.clear(); process.env.GEMINI_API_KEY = "test-gemini-token"; process.env.OPENROUTER_API_KEY = "test-router-token"; process.env.NODE_ENV = "production"; delete process.env.DATAGOV_API_KEY; });
-afterEach(() => { globalThis.fetch = originalFetch; for (const [key, value] of Object.entries({ GEMINI_API_KEY: originalEnv.gemini, OPENROUTER_API_KEY: originalEnv.router, NODE_ENV: originalEnv.node, DATAGOV_API_KEY: originalEnv.market })) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } });
+const originalEnv = { gemini: process.env.GEMINI_API_KEY, router: process.env.OPENROUTER_API_KEY, node: process.env.NODE_ENV, market: process.env.DATAGOV_API_KEY, speech: process.env.GOOGLE_TTS_API_KEY };
+beforeEach(() => { globalThis.__joitaFarmAssistRateLimit.clear(); globalThis.__joitaSpeechRateLimit.clear(); process.env.GEMINI_API_KEY = "test-gemini-token"; process.env.OPENROUTER_API_KEY = "test-router-token"; process.env.NODE_ENV = "production"; delete process.env.DATAGOV_API_KEY; delete process.env.GOOGLE_TTS_API_KEY; });
+afterEach(() => { globalThis.fetch = originalFetch; for (const [key, value] of Object.entries({ GEMINI_API_KEY: originalEnv.gemini, OPENROUTER_API_KEY: originalEnv.router, NODE_ENV: originalEnv.node, DATAGOV_API_KEY: originalEnv.market, GOOGLE_TTS_API_KEY: originalEnv.speech })) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } });
 const question = { message: "Tomato leaves are yellowing and curling. What should I check?", crop: "Mustard", location: "Haryana", stage: "flowering", language: "English", problemType: "disease" };
 function response() { return { statusCode: 200, headers: {}, data: null, stream: "", headersSent: false, setHeader(k, v) { this.headers[k] = v; }, flushHeaders() { this.headersSent = true; }, write(chunk) { this.stream += chunk; }, status(n) { this.statusCode = n; return this; }, json(data) { this.data = data; return this; }, end() { this.writableEnded = true; return this; } }; }
 async function run(body, method = "POST", headers = {}) { const res = response(); await handler({ method, body, headers, socket: { remoteAddress: "test-ip" } }, res); return res; }
@@ -56,6 +57,86 @@ test("health reports configuration without exposing credentials", async () => {
 });
 test("unconfigured market does not return demonstration prices", async () => {
   const res = response(); await market({ method: "GET", query: {} }, res); assert.equal(res.data.status, "unavailable"); assert.deepEqual(res.data.records, []);
+});
+test("live market passes filters, preserves dates, and never returns the key", async () => {
+  process.env.DATAGOV_API_KEY = "test-market-secret";
+  const records = [{ state: "Tripura", district: "Dhalai", market: "Kulai APMC", commodity: "Banana - Green", arrival_date: "16/09/2026", min_price: 1500, modal_price: 1800, max_price: 2000 }];
+  globalThis.fetch = async (url) => {
+    assert.equal(url.origin, "https://api.data.gov.in");
+    assert.equal(url.searchParams.get("api-key"), "test-market-secret");
+    assert.equal(url.searchParams.get("filters[state]"), "Tripura");
+    assert.equal(url.searchParams.get("filters[arrival_date]"), "16/09/2026");
+    return new Response(JSON.stringify({ status: "ok", records, total: 1, updated_date: "2026-09-16T00:00:28Z" }));
+  };
+  const res = response(); await market({method:"GET",query:{state:" Tripura ",arrival_date:"16/09/2026"}},res);
+  assert.equal(res.data.status,"live"); assert.deepEqual(res.data.records,records);
+  assert.equal(res.data.sourceUpdatedAt,"2026-09-16T00:00:28.000Z"); assert.doesNotMatch(JSON.stringify(res.data), /test-market-secret/);
+});
+test("market provider errors including HTTP-200 errors are not labeled live", async () => {
+  process.env.DATAGOV_API_KEY = "test-market-secret";
+  for (const status of [200,403,429,503]) {
+    globalThis.fetch = async () => new Response(JSON.stringify({status:"error",records:[],message:"test-market-secret"}),{status});
+    const res=response(); await market({method:"GET",query:{}},res);
+    assert.equal(res.statusCode,502); assert.doesNotMatch(JSON.stringify(res.data), /test-market-secret/);
+  }
+});
+test("healthy market with no regional publications is empty, not an error", async () => {
+  process.env.DATAGOV_API_KEY = "test-market-secret";
+  globalThis.fetch=async()=>new Response(JSON.stringify({status:"ok",records:[],total:0}));
+  const res=response(); await market({method:"GET",query:{state:"Haryana"}},res);
+  assert.equal(res.data.status,"live"); assert.equal(res.data.total,0); assert.deepEqual(res.data.records,[]);
+});
+
+async function speak(body={text:"Hello farmer.",language:"English"}, options={}) {
+  const res=response(); await speech({method:"POST",headers:{"content-type":"application/json"},body,socket:{remoteAddress:"speech-test"},...options},res); return res;
+}
+test("cloud speech uses server-only credentials and exact language voice", async () => {
+  process.env.GOOGLE_TTS_API_KEY="test-speech-secret";
+  globalThis.fetch=async(url,options)=>{
+    assert.equal(url,"https://texttospeech.googleapis.com/v1/text:synthesize");
+    assert.equal(options.headers["X-Goog-Api-Key"],"test-speech-secret");
+    const body=JSON.parse(options.body);
+    assert.equal(body.voice.name,"hi-IN-Standard-A"); assert.equal(body.input.text,"नमस्ते किसान।");
+    assert.equal(body.audioConfig.audioEncoding,"MP3");
+    return new Response(JSON.stringify({audioContent:"YXVkaW8="}));
+  };
+  const res=await speak({text:"नमस्ते किसान।",language:"Hindi"});
+  assert.equal(res.data.source,"google_tts"); assert.equal(res.data.voice,"hi-IN-Standard-A");
+  assert.deepEqual(res.data.audioParts,["YXVkaW8="]); assert.doesNotMatch(JSON.stringify(res.data),/test-speech-secret/);
+});
+test("speech byte chunking preserves native text without exceeding Google limits", async () => {
+  const text="मिट्टी की नमी जांचें। ".repeat(180).trim();
+  const chunks=splitSpeechText(text);
+  assert.ok(chunks.length>1); assert.equal(chunks.join(""),text);
+  for (const chunk of chunks) { assert.ok(Buffer.byteLength(chunk)<=4500); assert.doesNotMatch(chunk,/\uFFFD/); }
+  process.env.GOOGLE_TTS_API_KEY="test-speech-secret";
+  const seen=[]; globalThis.fetch=async(_,options)=>{seen.push(JSON.parse(options.body).input.text);return new Response(JSON.stringify({audioContent:"YXVkaW8="}));};
+  const res=await speak({text,language:"Hindi"}); assert.equal(res.statusCode,200);
+  assert.equal(seen.join(""),text); assert.equal(res.data.audioParts.length,chunks.length);
+});
+test("speech rejects invalid bodies, unsupported languages, and cross-origin requests", async () => {
+  globalThis.fetch=async()=>{throw new Error("Must not call provider");};
+  assert.equal((await speak()).statusCode,503);
+  assert.equal((await speak({text:"Hi",language:"Odia"})).statusCode,422);
+  assert.equal((await speak({text:"Hi",language:"__proto__"})).statusCode,422);
+  for(const body of [null,"not JSON",{text:"",language:"English"},{text:[],language:"Hindi"}]) assert.equal((await speak(body)).statusCode,400);
+  assert.equal((await speak({text:"क".repeat(6001),language:"Hindi"})).statusCode,413);
+  assert.equal((await speak(undefined,{method:"GET"})).statusCode,405);
+  assert.equal((await speak(undefined,{headers:{"content-type":"text/plain"}})).statusCode,415);
+  assert.equal((await speak(undefined,{headers:{origin:"https://not-joita.example","content-type":"application/json"}})).statusCode,403);
+});
+test("speech failures are safe and request eleven is limited", async () => {
+  process.env.GOOGLE_TTS_API_KEY="test-speech-secret";
+  globalThis.fetch=async()=>new Response(JSON.stringify({error:{message:"test-speech-secret"}}),{status:403});
+  const failed=await speak(); assert.equal(failed.statusCode,502); assert.equal(failed.data.providerStatus,403); assert.doesNotMatch(JSON.stringify(failed.data),/test-speech-secret/);
+  globalThis.fetch=async()=>new Response(JSON.stringify({audioContent:"YXVkaW8="}));
+  for(let i=1;i<10;i++) assert.equal((await speak()).statusCode,200);
+  const limited=await speak(); assert.equal(limited.statusCode,429); assert.ok(limited.headers["Retry-After"]);
+});
+test("health reports speech availability without credential values", async () => {
+  process.env.GOOGLE_TTS_API_KEY="test-speech-secret";
+  const res=response(); await health({method:"GET",headers:{}},res);
+  assert.equal(res.data.hasSpeechKey,true); assert.doesNotMatch(JSON.stringify(res.data),/test-speech-secret/);
 });
 
 function eventResponse(events) {

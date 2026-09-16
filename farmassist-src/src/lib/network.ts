@@ -142,7 +142,34 @@ export type Health = {
   timestamp: string;
   environment: string;
   hasMarketKey?: boolean;
+  hasSpeechKey?: boolean;
 };
+export async function requestSpeech(text: string, language: string, signal: AbortSignal) {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (signal.aborted) abort();
+  else signal.addEventListener("abort", abort, { once: true });
+  const timeout = setTimeout(abort, 25000);
+  try {
+    const response = await fetch(apiUrl("/api/farmassist-speech"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, language }),
+      signal: controller.signal,
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data?.ok)
+      throw new Error(data?.error || "Google speech is temporarily unavailable.");
+    if (data.source !== "google_tts" || data.contentType !== "audio/mpeg" ||
+        !Array.isArray(data.audioParts) || !data.audioParts.length || data.audioParts.length > 6 ||
+        !data.audioParts.every((part: unknown) => typeof part === "string" && part.length < 2000000 && /^[A-Za-z0-9+/]+={0,2}$/.test(part)))
+      throw new Error("Google speech returned unreadable audio.");
+    return data.audioParts as string[];
+  } finally {
+    clearTimeout(timeout);
+    signal.removeEventListener("abort", abort);
+  }
+}
 export async function sendQuestion(
   message: string,
   context: ChatContext,
