@@ -118,7 +118,7 @@ export async function readChatStream(
     },
   });
   try {
-    while (!result) {
+    while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       parser.feed(decoder.decode(value, { stream: true }));

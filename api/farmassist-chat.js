@@ -10,6 +10,22 @@ const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+const LANGUAGE_SCRIPTS = {
+  English: /[A-Za-z]/u,
+  Hindi: /\p{Script=Devanagari}/u,
+  Haryanvi: /\p{Script=Devanagari}/u,
+  Marathi: /\p{Script=Devanagari}/u,
+  Punjabi: /\p{Script=Gurmukhi}/u,
+  Gujarati: /\p{Script=Gujarati}/u,
+  Bengali: /\p{Script=Bengali}/u,
+  Assamese: /\p{Script=Bengali}/u,
+  Tamil: /\p{Script=Tamil}/u,
+  Telugu: /\p{Script=Telugu}/u,
+  Kannada: /\p{Script=Kannada}/u,
+  Malayalam: /\p{Script=Malayalam}/u,
+  Odia: /\p{Script=Oriya}/u,
+  Urdu: /\p{Script=Arabic}/u
+};
 const GEMINI_TIMEOUT_MS = 12500;
 const OPENROUTER_TIMEOUT_MS = 13000;
 const DEFAULT_MESSAGE = "Hi. Please give quick practical crop checks for my farm.";
@@ -233,6 +249,18 @@ function isCompleteAnswer(answer) {
   return true;
 }
 
+function languageInstruction(language) {
+  return `MANDATORY RESPONSE LANGUAGE: ${language}. This applies even to greetings. Write the entire reply in ${language}, in its native script, except for standard abbreviations such as KVK, NPK and units. Do not assume that a farmer in India wants Hindi. For English, use English throughout (for example, "Hello! Which crop would you like help with?"). Do not announce or explain your language choice.`;
+}
+
+function checkAnswerLanguage(answer, language, provider) {
+  const letters = [...answer].filter(char => /\p{L}/u.test(char));
+  const matching = letters.filter(char => LANGUAGE_SCRIPTS[language].test(char)).length;
+  if (!letters.length || matching / letters.length < (language === "English" ? 0.8 : 0.35))
+    throw providerError(provider, 502, `answer did not match requested ${language} script`);
+  return answer;
+}
+
 async function readProviderStream(response, provider, onDelta) {
   if (!response.body) throw providerError(provider, 502, "response stream missing");
   const reader = response.body.getReader();
@@ -278,7 +306,7 @@ async function readProviderStream(response, provider, onDelta) {
   }
 }
 
-async function callGemini({ apiKey, prompt, imageUrl, onDelta, signal }) {
+async function callGemini({ apiKey, prompt, imageUrl, onDelta, signal, language }) {
   if (!apiKey) throw providerError("gemini", null, "GEMINI_API_KEY not configured");
   const timeout = withTimeout(GEMINI_TIMEOUT_MS, signal);
   try {
@@ -288,7 +316,7 @@ async function callGemini({ apiKey, prompt, imageUrl, onDelta, signal }) {
       signal: timeout.signal,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
+        systemInstruction: { parts: [{ text: `${systemPrompt}\n\n${languageInstruction(language)}` }] },
         contents: [
           {
             role: "user",
@@ -304,7 +332,7 @@ async function callGemini({ apiKey, prompt, imageUrl, onDelta, signal }) {
         }
       })
     });
-    if (response.ok && onDelta) return await readProviderStream(response, "gemini", onDelta);
+    if (response.ok && onDelta) return checkAnswerLanguage(await readProviderStream(response, "gemini", onDelta), language, "gemini");
     const payload = await readJsonResponse(response);
     if (!response.ok) {
       throw providerError("gemini", response.status, payload?.error?.message || payload?.message || response.statusText);
@@ -319,7 +347,7 @@ async function callGemini({ apiKey, prompt, imageUrl, onDelta, signal }) {
       throw providerError("gemini", 502, `finish reason ${finishReason}`);
     }
     if (!isCompleteAnswer(answer)) throw providerError("gemini", 502, "incomplete answer");
-    return answer;
+    return checkAnswerLanguage(answer, language, "gemini");
   } catch (error) {
     if (error?.name === "AbortError") throw providerError("gemini", 504, "request timed out");
     throw error;
@@ -328,7 +356,7 @@ async function callGemini({ apiKey, prompt, imageUrl, onDelta, signal }) {
   }
 }
 
-async function callOpenRouter({ apiKey, prompt, imageUrl, onDelta, signal }) {
+async function callOpenRouter({ apiKey, prompt, imageUrl, onDelta, signal, language }) {
   if (!apiKey) throw providerError("openrouter", null, "OPENROUTER_API_KEY not configured");
   const timeout = withTimeout(OPENROUTER_TIMEOUT_MS, signal);
   try {
@@ -344,7 +372,7 @@ async function callOpenRouter({ apiKey, prompt, imageUrl, onDelta, signal }) {
       body: JSON.stringify({
         model: OPENROUTER_MODEL,
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: `${systemPrompt}\n\n${languageInstruction(language)}` },
           { role: "user", content: imageUrl ? [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: imageUrl } }] : prompt }
         ],
         temperature: 0.3,
@@ -352,7 +380,7 @@ async function callOpenRouter({ apiKey, prompt, imageUrl, onDelta, signal }) {
         ...(onDelta ? { stream: true } : {})
       })
     });
-    if (response.ok && onDelta) return await readProviderStream(response, "openrouter", onDelta);
+    if (response.ok && onDelta) return checkAnswerLanguage(await readProviderStream(response, "openrouter", onDelta), language, "openrouter");
     const payload = await readJsonResponse(response);
     if (!response.ok) {
       throw providerError("openrouter", response.status, payload?.error?.message || payload?.message || response.statusText);
@@ -362,7 +390,7 @@ async function callOpenRouter({ apiKey, prompt, imageUrl, onDelta, signal }) {
     const cleanAnswer = answer.trim();
     if (payload?.choices?.[0]?.finish_reason === "length") throw providerError("openrouter", 502, "answer was truncated");
     if (!isCompleteAnswer(cleanAnswer)) throw providerError("openrouter", 502, "incomplete answer");
-    return cleanAnswer;
+    return checkAnswerLanguage(cleanAnswer, language, "openrouter");
   } catch (error) {
     if (error?.name === "AbortError") throw providerError("openrouter", 504, "request timed out");
     throw error;
@@ -449,6 +477,7 @@ async function handleFarmAssistChat(req, res, signal) {
   const rawMessage = typeof message === "string" ? message : "";
   if (!rawMessage.trim()) return res.status(400).json({ ok: false, error: "Enter a crop question first.", source: "validation" });
   if ([crop, location, stage, language, problemType].some(value => typeof value !== "string" || value.length > 160)) return res.status(400).json({ ok: false, error: "Invalid farm context.", source: "validation" });
+  if (!Object.hasOwn(LANGUAGE_SCRIPTS, language)) return res.status(400).json({ ok: false, error: "Choose a supported answer language.", source: "validation" });
   if (rawMessage.length > MAX_MESSAGE_LENGTH) {
     return res.status(400).json({
       ok: false,
@@ -512,7 +541,7 @@ Live AI is limited to 10 requests per IP per hour, so this answer came from the 
   }
 
   try {
-    const answer = await callGemini({ apiKey: process.env.GEMINI_API_KEY, prompt, imageUrl, onDelta, signal });
+    const answer = await callGemini({ apiKey: process.env.GEMINI_API_KEY, prompt, imageUrl, onDelta, signal, language });
     logSafeEvent({ crop: effectiveCrop, location, problemType, model: GEMINI_MODEL, source: "gemini" });
     return complete({
       ok: true,
@@ -532,7 +561,7 @@ Live AI is limited to 10 requests per IP per hour, so this answer came from the 
   if (streaming) streamEvent(res, "reset", { provider: "openrouter", message: "Gemini could not finish. Trying OpenRouter." });
 
   try {
-    const answer = await callOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY, prompt, imageUrl, onDelta, signal });
+    const answer = await callOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY, prompt, imageUrl, onDelta, signal, language });
     logSafeEvent({ crop: effectiveCrop, location, problemType, model: OPENROUTER_MODEL, source: "openrouter" });
     return complete({
       ok: true,
