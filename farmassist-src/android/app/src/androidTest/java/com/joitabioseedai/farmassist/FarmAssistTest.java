@@ -66,6 +66,15 @@ public class FarmAssistTest {
             ready(scenario);
             assertEquals("\"persisted\"", js(scenario, "localStorage.getItem('joita-native-test')"));
             screenshot("android-offline-home");
+            js(scenario, "document.querySelector('.interface-options button[lang=hi]').click()");
+            until(scenario, "document.documentElement.lang === 'hi' && document.body.innerText.includes('बेहतर खेती। सही अगला कदम।')");
+            assertEquals("true", js(scenario, "document.documentElement.scrollWidth <= innerWidth"));
+            scenario.onActivity(activity -> activity.getBridge().getWebView().reload());
+            ready(scenario);
+            until(scenario, "document.documentElement.lang === 'hi'");
+            screenshot("android-hindi-dashboard");
+            js(scenario, "document.querySelector('.interface-options button[lang=en]').click()");
+            until(scenario, "document.documentElement.lang === 'en'");
             scenario.onActivity(activity -> {
                 activity.getBridge().getWebView().getSettings().setBlockNetworkLoads(false);
                 activity.getBridge().getWebView().setNetworkAvailable(true);

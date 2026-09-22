@@ -28,6 +28,7 @@ import {
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Empty, Field, Notice } from "./workspace";
+import { useInterface } from "../lib/interface";
 
 export function TaskList({
   plans,
@@ -40,6 +41,7 @@ export function TaskList({
   onEdit?: (plan: Plan) => void;
   compact?: boolean;
 }) {
+  const { t } = useInterface();
   const [error, setError] = useState("");
   return (
     <>
@@ -53,17 +55,17 @@ export function TaskList({
               onChange={() => onChange(plan, "toggle")}
             />
             <span className={plan.done ? "completed" : ""}>
-              {plan.crop || "Farm"}: {plan.task}
+              {plan.crop || t("Farm")}: {plan.task}
               <small>
-                Due {plan.due}
-                {plan.sowing ? ` / planted ${plan.sowing}` : ""}
+                {t("Due")} {plan.due}
+                {plan.sowing ? ` / ${t("planted")} ${plan.sowing}` : ""}
               </small>
             </span>
           </label>
           <span
             className={`task-status status-${planStatus(plan).toLowerCase()}`}
           >
-            {planStatus(plan)}
+            {t(planStatus(plan))}
           </span>
           {!compact && (
             <div className="task-actions">
@@ -113,6 +115,7 @@ export function TaskList({
 }
 
 export function UpcomingTasks() {
+  const { t, language } = useInterface();
   const [plans, savePlans] = useStored<Plan[]>(PLAN_KEY, []);
   const upcoming = upcomingPlans(plans);
   const overdue = upcoming.filter(
@@ -121,21 +124,20 @@ export function UpcomingTasks() {
   return (
     <section className="dashboard-tasks">
       <div className="section-row">
-        <h3>Your next field tasks</h3>
+        <h3>{t("Your next field tasks")}</h3>
         <NavLink className="text-link" to="/calendar">
-          Calendar
+          {t("Calendar")}
           <ArrowUpRight size={17} />
         </NavLink>
       </div>
       {overdue > 0 && (
         <p className="overdue-note">
-          {overdue} overdue {overdue === 1 ? "task" : "tasks"}
+          {overdue} {language === "hi" ? t("overdue tasks") : `overdue ${overdue === 1 ? "task" : "tasks"}`}
         </p>
       )}
       {!upcoming.length && (
         <Empty>
-          No open tasks. Your next field check can be planned from an advisory
-          answer or the calendar.
+          {t("No open tasks. Your next field check can be planned from an advisory answer or the calendar.")}
         </Empty>
       )}
       <TaskList
@@ -151,7 +153,7 @@ export function UpcomingTasks() {
       />
       {upcoming.length > 5 && (
         <NavLink className="text-link" to="/calendar">
-          View all {upcoming.length} open tasks
+          {t("View all open tasks")} ({upcoming.length})
         </NavLink>
       )}
     </section>

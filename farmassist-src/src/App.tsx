@@ -51,6 +51,8 @@ import {
 import { cropGuides } from "./data/agriculture";
 import { DashboardStart } from "./components/DashboardStart";
 import { nativeApp, backendUrl } from "./lib/platform";
+import { useInterface } from "./lib/interface";
+import { InterfaceLanguage } from "./components/InterfaceLanguage";
 
 
 const modules = [
@@ -91,6 +93,7 @@ function exportRecords() {
   });
 }
 export default function App() {
+  const { language: interfaceLanguage, t } = useInterface();
   const location = useLocation();
   const active = location.pathname.replace(/^\//, "") || "home";
   const [place, savePlace] = useStored<Place>(
@@ -141,8 +144,11 @@ export default function App() {
   useEffect(() => {
     setMenu(false);
     window.scrollTo({ top: 0, behavior: "instant" });
-    document.title = `${modules.find((m) => m.id === active)?.label || "Home"} | JOITA FarmAssist`;
   }, [active]);
+  useEffect(() => {
+    document.documentElement.lang = interfaceLanguage;
+    document.title = `${t(modules.find((m) => m.id === active)?.label || "Home")} | JOITA FarmAssist`;
+  }, [active, interfaceLanguage]);
   const health = useQuery({
     queryKey: ["farmassist-health-v3", online],
     queryFn: () =>
@@ -199,19 +205,19 @@ export default function App() {
           </span>
           <span>
             <strong>JOITA FarmAssist</strong>
-            <small>By JOITA Bioseed AI</small>
+            <small>{t("By JOITA Bioseed AI")}</small>
           </span>
         </NavLink>
         <div className="header-status">
           <span>
             {online ? <Wifi size={16} /> : <WifiOff size={16} />}
-            {online ? "Device online" : "Device offline"}
+            {t(online ? "Device online" : "Device offline")}
           </span>
           <span role="status">
             <i
               className={connected ? "status-light connected" : "status-light"}
             />
-            {status}
+            {t(status)}
           </span>
         </div>
         <nav className="header-links" aria-label="Home links">
@@ -222,17 +228,17 @@ export default function App() {
             onClick={() => setMenu(false)}
           >
             <Home size={18} />
-            FarmAssist home
+            {t("FarmAssist home")}
           </NavLink>
           <a className="website-link" href="https://www.joitabioseedai.com/">
-            JOITA website
+            {t("JOITA website")}
             <ArrowUpRight size={17} />
           </a>
         </nav>
         <button
           className="menu-toggle"
-          title="Toggle navigation"
-          aria-label="Toggle navigation"
+          title={t("Toggle navigation")}
+          aria-label={t("Toggle navigation")}
           aria-expanded={menu}
           aria-controls="farm-navigation"
           onClick={() => setMenu(!menu)}
@@ -246,8 +252,8 @@ export default function App() {
           className={`app-sidebar ${menu ? "is-open" : ""}`}
         >
           <div className="farm-profile">
-            <small>YOUR WORKSPACE</small>
-            <strong>{profile.farmName}</strong>
+            <small>{t("YOUR WORKSPACE")}</small>
+            <strong>{profile.farmName === "My farm" ? t("My farm") : profile.farmName}</strong>
             <span>{place.label}</span>
           </div>
           <nav aria-label="FarmAssist modules">
@@ -259,29 +265,29 @@ export default function App() {
                 onClick={() => setMenu(false)}
               >
                 <Icon size={19} />
-                {label}
+                {t(label)}
               </NavLink>
             ))}
           </nav>
           <div className="sidebar-footer">
             <span>JOITA Bioseed AI</span>
-            <a href="mailto:contact@joitabioseedai.com">Contact our team</a>
+            <a href="mailto:contact@joitabioseedai.com">{t("Contact our team")}</a>
           </div>
         </aside>
         <main className="app-main" id="main-content">
+          <InterfaceLanguage />
           {storageWarning && <Notice error>{storageWarning}</Notice>}
           {!online && (
             <Notice>
-              Device offline. Crop guides and saved records remain available.
-              Live services will need a connection.
+              {t("Device offline. Crop guides and saved records remain available. Live services will need a connection.")}
             </Notice>
           )}
           <div className="module-view" key={active}>
             {active === "home" && (
               <>
                 <Title
-                  title="Good farming. Clear next steps."
-                  description={new Date().toLocaleDateString("en-IN", {
+                  title={t("Good farming. Clear next steps.")}
+                  description={new Date().toLocaleDateString(interfaceLanguage === "hi" ? "hi-IN" : "en-IN", {
                     weekday: "long",
                     day: "numeric",
                     month: "long",
@@ -297,37 +303,36 @@ export default function App() {
                         : "--"}
                     </strong>
                     <span>
-                      {weather.data?.status === "live"
-                        ? "Live"
+                      {t(weather.data?.status === "live"
+                        ? "Live weather"
                         : weather.data?.status === "cached"
-                          ? "Cached"
-                          : "No current"}{" "}
-                      weather
+                          ? "Cached weather"
+                          : "No current weather")}
                     </span>
                     <small>{place.label}</small>
                   </div>
                   <div>
                     <strong>{sound ? `${sound.activity}%` : "--"}</strong>
-                    <span>Latest sound activity</span>
+                    <span>{t("Latest sound activity")}</span>
                     <small>
-                      {sound
+                      {t(sound
                         ? "Recorded signal, not ecosystem health"
-                        : "No recording measured yet"}
+                        : "No recording measured yet")}
                     </small>
                   </div>
                   <div>
                     <strong>{savedCount}</strong>
-                    <span>Saved records</span>
-                    <small>Stored on this device</small>
+                    <span>{t("Saved records")}</span>
+                    <small>{t("Stored on this device")}</small>
                   </div>
                   <div>
                     <strong>{cropGuides.length}</strong>
-                    <span>Crop guides</span>
-                    <small>North India reference windows</small>
+                    <span>{t("Crop guides")}</span>
+                    <small>{t("North India reference windows")}</small>
                   </div>
                 </div>
                 <UpcomingTasks />
-                <h3 className="section-heading">Your farm tools</h3>
+                <h3 className="section-heading">{t("Your farm tools")}</h3>
                 <div className="tool-grid">
                   {[
                     {
@@ -340,7 +345,7 @@ export default function App() {
                       id: "visualizer",
                       icon: Map,
                       title: "Plan your field",
-                      text: `${recordCount("joita-fa-layouts")} layouts saved. Dimensions, rows, and irrigation.`,
+                      text: `${recordCount("joita-fa-layouts")} ${t("layouts saved. Dimensions, rows, and irrigation.")}`,
                     },
                     {
                       id: "weather",
@@ -385,15 +390,14 @@ export default function App() {
                       to={`/${tool.id}`}
                     >
                       <tool.icon size={24} />
-                      <h4>{tool.title}</h4>
-                      <p>{tool.text}</p>
+                      <h4>{t(tool.title)}</h4>
+                      <p>{t(tool.text)}</p>
                       <ArrowUpRight className="tool-arrow" size={20} />
                     </NavLink>
                   ))}
                 </div>
                 <p className="pilot-note">
-                  FarmAssist is in pilot mode. Responses are AI-assisted and
-                  should be confirmed with local expert recommendations.
+                  {t("FarmAssist is in pilot mode. Responses are AI-assisted and should be confirmed with local expert recommendations.")}
                 </p>
               </>
             )}
@@ -474,8 +478,8 @@ export default function App() {
                       AI can answer in your selected language; built-in offline
                       guides are in English. Read-aloud uses Google speech when
                       available, with matching device voices as a fallback.
-                      App navigation is currently in
-                      English.
+                      Dashboard and navigation are available in English and Hindi.
+                      Detailed tool forms and offline crop guides currently use English.
                     </p>
                   </div>
                   <div>
@@ -524,12 +528,12 @@ export default function App() {
       <nav className="mobile-dock" aria-label="Quick access">
         {modules.filter(item => ["home", "ask", "diagnose", "market"].includes(item.id)).map(({id, label, icon: Icon}) => (
           <NavLink key={id} to={id === "home" ? "/" : `/${id}`} end onClick={() => setMenu(false)}>
-            <Icon size={21} /><span>{label}</span>
+            <Icon size={21} /><span>{t(label)}</span>
           </NavLink>
         ))}
-        <button aria-label="All farm tools" aria-expanded={menu} onClick={() => {
+        <button aria-label={t("All farm tools")} aria-expanded={menu} onClick={() => {
           setMenu(!menu); window.scrollTo({top: 0, behavior: "instant"});
-        }}><Menu size={21} /><span>More</span></button>
+        }}><Menu size={21} /><span>{t("More")}</span></button>
       </nav>
     </div>
   );
@@ -559,6 +563,7 @@ function SettingsPanel({
   lastAnswer: ChatResult | null;
   refresh: () => void;
 }) {
+  const { t } = useInterface();
   const [draft, setDraft] = useState(profile);
   const [message, setMessage] = useState("");
   const [offlineStatus, setOfflineStatus] = useState(
@@ -567,6 +572,10 @@ function SettingsPanel({
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      if (nativeApp) {
+        setOfflineStatus("App tools are bundled on this Android device. Live AI, weather, prices and cloud speech require internet.");
+        return;
+      }
       try {
         const keys = await caches.keys();
         const ready = keys.some((key) => key === "joita-farmassist-v5");
@@ -590,12 +599,12 @@ function SettingsPanel({
   return (
     <>
       <Title
-        title="Settings & offline data"
-        description="Your farm profile, location, saved records, and service status."
+        title={t("Settings & offline data")}
+        description={t("Your farm profile, location, saved records, and service status.")}
       />
       <div className="language-preference">
         <LanguageSelect
-          label="Default answer language"
+          label={t("Default answer language")}
           value={preferredLanguage}
           onChange={onLanguage}
         />
@@ -608,11 +617,11 @@ function SettingsPanel({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (saveProfile(draft)) setMessage("Farm profile saved.");
+          if (saveProfile(draft)) setMessage(t("Farm profile saved."));
         }}
       >
         <div className="fields fields-2">
-          <Field label="Farm name">
+          <Field label={t("Farm name")}>
             <Input
               required
               maxLength={80}

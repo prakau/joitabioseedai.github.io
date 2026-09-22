@@ -12,6 +12,7 @@ Live AI, cloud speech, weather and mandi prices need internet. The HTML, JavaScr
 
 - Same Ask, Diagnose, Weather, Market, Calendar, Soil, Sound, 3D Plot, Calculators, Income & Costs, Community notes and Settings views as the website.
 - Same 14 AI answer languages; Google speech uses supported voices, with device voices as a fallback when available. Language coverage is stated in Settings.
+- English/Hindi dashboard and navigation. Use the language switch above the page title; it is saved on the device and works offline. AI answer language is a separate preference. Detailed tool forms and offline crop guides are still in English.
 - Native Android location permission and GPS lookup, clipboard, share sheet and file export. Record exports open the system save/share chooser.
 - Crop photos use Android's file/camera chooser. Microphone access is requested only when starting a field recording. Location is requested only when choosing device location.
 - Android Back closes the tools menu, returns a module to Home, then minimizes the app from Home.
@@ -27,7 +28,7 @@ Use Node 24, JDK 21, Android SDK 36 and the generated Gradle wrapper:
 npm ci
 npm run build:android
 cd android
-./gradlew assembleDebug connectedDebugAndroidTest
+./gradlew :app:assembleDebug :app:connectedDebugAndroidTest
 ```
 
 `npm run build` still writes the website to `../farmassist`; Android uses `dist-android` and `android/app/src/main/assets/public`. Do not commit generated bundles under the Android project, signing keys, `.env` files or APKs. Test APKs are distributed as release assets.
