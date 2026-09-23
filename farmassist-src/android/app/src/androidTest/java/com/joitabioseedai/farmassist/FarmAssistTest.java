@@ -3,6 +3,7 @@ package com.joitabioseedai.farmassist;
 import static org.junit.Assert.*;
 import android.graphics.Bitmap;
 import android.os.SystemClock;
+import android.util.Base64;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -34,9 +35,15 @@ public class FarmAssistTest {
         fail("Timed out: " + expression + "\n" + js(scenario, "document.body.innerText.slice(-3000)"));
     }
     private void ready(ActivityScenario<MainActivity> scenario) throws Exception {
-        until(scenario, "Boolean(document.querySelector('.app-brand'))");
+        until(scenario, "Boolean(document.querySelector('.app-brand')) && Boolean(window.Capacitor?.isNativePlatform())");
         assertEquals("true", js(scenario, "window.Capacitor.isNativePlatform()"));
         assertEquals("\"https://localhost\"", js(scenario, "location.origin"));
+    }
+    private void reload(ActivityScenario<MainActivity> scenario) throws Exception {
+        js(scenario, "window.reloadMarker=true");
+        scenario.onActivity(activity -> activity.getBridge().getWebView().reload());
+        until(scenario, "!window.reloadMarker && Boolean(document.querySelector('.app-brand')) && Boolean(window.Capacitor?.isNativePlatform())");
+        ready(scenario);
     }
     private void screenshot(String name) throws Exception {
         File dir = new File(InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null), "qa");
@@ -62,15 +69,13 @@ public class FarmAssistTest {
                 until(scenario, "Boolean(document.querySelector('.app-sidebar a.active[href=\"#/" + (route.equals("home") ? "" : route) + "\"]'))");
                 assertEquals("true", js(scenario, "document.documentElement.scrollWidth <= innerWidth"));
             }
-            scenario.onActivity(activity -> activity.getBridge().getWebView().reload());
-            ready(scenario);
+            reload(scenario);
             assertEquals("\"persisted\"", js(scenario, "localStorage.getItem('joita-native-test')"));
             screenshot("android-offline-home");
             js(scenario, "document.querySelector('.interface-options button[lang=hi]').click()");
             until(scenario, "document.documentElement.lang === 'hi' && document.body.innerText.includes('बेहतर खेती। सही अगला कदम।')");
             assertEquals("true", js(scenario, "document.documentElement.scrollWidth <= innerWidth"));
-            scenario.onActivity(activity -> activity.getBridge().getWebView().reload());
-            ready(scenario);
+            reload(scenario);
             until(scenario, "document.documentElement.lang === 'hi'");
             screenshot("android-hindi-dashboard");
             js(scenario, "document.querySelector('.interface-options button[lang=en]').click()");
@@ -91,7 +96,7 @@ public class FarmAssistTest {
             until(scenario, "Boolean(document.querySelector('.advisory-form textarea'))");
             js(scenario, "Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='Ask FarmAssist').click()");
             until(scenario, "Boolean(document.querySelector('.advisory-result'))");
-            assertEquals("true", js(scenario, "/Live AI: (Gemini|OpenRouter)/.test(document.querySelector('.advisory-result').innerText)"));
+            assertEquals("true", js(scenario, "document.querySelector('.advisory-result').innerText.includes('JOITA Live AI')"));
             js(scenario, "document.querySelector('[aria-label=\"Read answer aloud\"]').click()");
             until(scenario, "Boolean(document.querySelector('audio')) && document.querySelector('audio').duration > 0");
             screenshot("android-live-advisory");
@@ -99,6 +104,25 @@ public class FarmAssistTest {
             until(scenario, "Boolean(document.querySelector('tbody tr')) || document.body.innerText.includes('No published prices')");
             assertEquals("true", js(scenario, "document.body.innerText.includes('AGMARKNET / Data.gov.in: live')"));
             screenshot("android-market");
+        }
+    }
+    @Test public void photoAdvisoryAndHindiSafetyRules() throws Exception {
+        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+            ready(scenario);
+            js(scenario, "location.hash='#/diagnose'");
+            until(scenario, "Boolean(document.querySelector('input[aria-label=\"Crop photo (optional)\"]'))");
+            byte[] bytes = InstrumentationRegistry.getInstrumentation().getContext().getAssets().open("tomato-leaf.jpg").readAllBytes();
+            String data = Base64.encodeToString(bytes, Base64.NO_WRAP);
+            js(scenario, "(()=>{const file=new File([Uint8Array.from(atob('" + data + "'),c=>c.charCodeAt(0))],'tomato.jpg',{type:'image/jpeg'});const transfer=new DataTransfer();transfer.items.add(file);const input=document.querySelector('input[aria-label=\"Crop photo (optional)\"]');input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));})()");
+            until(scenario, "Boolean(document.querySelector('.photo-preview img'))");
+            js(scenario, "Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='Analyze crop').click()");
+            until(scenario, "Boolean(document.querySelector('.advisory-result'))");
+            assertEquals("true", js(scenario, "document.querySelector('.advisory-result').innerText.includes('JOITA Live AI') && document.querySelector('.answer-copy').lang === 'hi-IN' && document.querySelector('.advisory-result').innerText.includes('फोटो पर आधारित')"));
+            assertEquals("false", js(scenario, "document.body.innerText.includes('Gemini')"));
+            screenshot("android-hindi-photo-advisory");
+            js(scenario, "window.policyCheck=null;fetch('https://www.joitabioseedai.com/api/farmassist-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'कीटनाशक की कितनी मात्रा मिलाएं?',language:'Hindi'})}).then(r=>r.json()).then(d=>window.policyCheck=d)");
+            until(scenario, "Boolean(window.policyCheck)");
+            assertEquals("true", js(scenario, "window.policyCheck.source==='joita_rules' && window.policyCheck.language==='Hindi'"));
         }
     }
 }

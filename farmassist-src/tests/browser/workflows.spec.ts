@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { answerLanguages } from "../../src/lib/languages";
 const advisory = "Inspect the undersides of your tomato leaves for whiteflies and mites. Compare new and older leaves, check soil moisture, and note when curling started. Confirm the cause with your local KVK before choosing any input.";
 async function setup(page: Page) {
+  await page.addInitScript(() => { if (!localStorage.getItem("joita-fa-preferences")) localStorage.setItem("joita-fa-preferences", JSON.stringify({language:"English"})); });
   await page.route("**/api/health", route => route.fulfill({ json: { ok: true, hasGeminiKey: true, hasOpenRouterKey: true, hasMarketKey: false, environment: "test", timestamp: new Date().toISOString() } }));
   await page.route("**/api.open-meteo.com/**", route => route.fulfill({ json: { current: { time: "2026-09-14T09:00", temperature_2m: 28, relative_humidity_2m: 65, wind_speed_10m: 12, precipitation: 0 }, daily: { time: ["2026-09-14"], temperature_2m_max: [31], temperature_2m_min: [23], precipitation_probability_max: [15], precipitation_sum: [0] } } }));
   await page.route("**/power.larc.nasa.gov/**", route => route.fulfill({ json: { properties: { parameter: { T2M: { SEP: 27 }, PRECTOTCORR: { SEP: 3 } } } } }));
@@ -68,7 +69,7 @@ test("live answer, saved history, offline failure, and crop search", async ({pag
   await page.route("**/api/farmassist-chat", route => route.fulfill({ json: { ok: true, source: "gemini", model: "test-model", answer: advisory } }));
   await page.goto("./#/ask"); await page.getByLabel("Your question", {exact:true}).fill("Tomato leaves are yellowing and curling. What should I check?");
   await page.getByRole("button", { name: "Ask FarmAssist", exact: true }).click();
-  await expect(page.locator(".advisory-result")).toContainText("Live AI: Gemini");
+  await expect(page.locator(".advisory-result")).toContainText("JOITA Live AI");
   await expect(page.locator(".advisory-result")).toContainText("whiteflies");
   await expect(page.getByLabel("Crop", {exact:true})).toHaveValue("Tomato");
   await page.reload(); await page.locator(".history-item").first().click(); await expect(page.locator(".advisory-result")).toContainText("whiteflies");
@@ -269,7 +270,7 @@ test("answer copy, download, share fallback, and denied permissions are handled"
   await page.route("**/api/farmassist-chat", route=>route.fulfill({json:{ok:true,source:"gemini",model:"test",answer:advisory}}));
   await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling"); await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
   await page.getByRole("button",{name:"Copy answer",exact:true}).click(); await expect(page.getByText("Answer copied.", {exact:true})).toBeVisible();
-  expect(await page.evaluate(()=>navigator.clipboard.readText())).toContain("Source: gemini");
+  expect(await page.evaluate(()=>navigator.clipboard.readText())).toContain("Source: JOITA Live AI");
   const downloaded=page.waitForEvent("download"); await page.getByRole("button",{name:"Download answer",exact:true}).click();
   const file=await downloaded; expect(file.suggestedFilename()).toBe("farmassist-advisory.txt");
   expect(await readFile((await file.path())!, "utf8")).toContain(advisory);
@@ -284,7 +285,7 @@ test("native question automatically selects its language and simplified follow-u
     requests.push(route.request().postDataJSON());
     await route.fulfill({json:{ok:true,source:"gemini",model:"test",answer:"टमाटर की पत्तियों के नीचे कीट देखें। मिट्टी की नमी जांचें।",responseTimeMs:1234}});
   });
-  await page.goto("./#/ask"); await expect(page.getByLabel("Answer language")).toHaveValue("Auto");
+  await page.goto("./#/ask"); await page.getByLabel("Answer language").selectOption("Auto");
   await page.getByLabel("Your question",{exact:true}).fill("टमाटर की पत्तियां पीली हो रही हैं। क्या जांच करूं?");
   await expect(page.locator(".answer-language-preview")).toContainText("हिन्दी");
   await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
@@ -324,7 +325,7 @@ test("live tokens appear before completion, Stop discards partials, and only com
   await expect(page.locator(".streaming-answer")).toHaveCount(0); await expect(page.locator(".history-item")).toHaveCount(0);
   await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click(); await expect(page.locator(".streaming-copy")).toBeVisible();
   await page.evaluate(()=>(window as unknown as {finishTestAnswer:()=>void}).finishTestAnswer());
-  await expect(page.locator(".advisory-result")).toContainText("Live AI: Gemini"); await expect(page.locator(".history-item")).toHaveCount(1);
+  await expect(page.locator(".advisory-result")).toContainText("JOITA Live AI"); await expect(page.locator(".history-item")).toHaveCount(1);
   await expect(page.locator(".streaming-answer")).toHaveCount(0);
 });
 test("read-aloud uses a matching voice, stops on navigation, and missing voices are explicit", async ({page}) => {

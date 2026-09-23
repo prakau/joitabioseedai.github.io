@@ -3,6 +3,17 @@ import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import { Clipboard } from "@capacitor/clipboard";
 import { Geolocation } from "@capacitor/geolocation";
+import { Camera, MediaTypeSelection } from "@capacitor/camera";
+
+export async function nativePhoto(fromCamera: boolean) {
+  const photo = fromCamera
+    ? await Camera.takePhoto({quality: 85, targetWidth: 1600, targetHeight: 1600, saveToGallery: false, correctOrientation: true})
+    : (await Camera.chooseFromGallery({mediaType: MediaTypeSelection.Photo, allowMultipleSelection: false})).results[0];
+  const path = photo?.webPath || (photo?.uri ? Capacitor.convertFileSrc(photo.uri) : "");
+  if (!path) throw new Error("No photo selected. / कोई फोटो नहीं चुनी गई।");
+  const blob = await (await fetch(path)).blob();
+  return new File([blob], "joita-crop.jpg", {type: blob.type || "image/jpeg"});
+}
 
 export const nativeApp = Capacitor.isNativePlatform();
 export const productionApi = "https://www.joitabioseedai.com";

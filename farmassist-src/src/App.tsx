@@ -47,6 +47,7 @@ import {
   downloadJson,
   readStored,
   useStored,
+  writeStored,
 } from "./lib/storage";
 import { cropGuides } from "./data/agriculture";
 import { DashboardStart } from "./components/DashboardStart";
@@ -106,9 +107,15 @@ export default function App() {
   });
   const [online, setOnline] = useState(navigator.onLine);
   const [preferences, savePreferences] = useStored("joita-fa-preferences", {
-    language: "Auto",
+    language: "Hindi",
   });
   const preferredLanguage = languageChoice(preferences.language);
+  useEffect(() => {
+    if (!readStored("joita-fa-hindi-default-v1", false)) {
+      if (preferences.language === "Auto") savePreferences({language: "Hindi"});
+      writeStored("joita-fa-hindi-default-v1", true);
+    }
+  }, []);
   const setLanguage = (language: string) =>
     savePreferences({ language: languageChoice(language) });
   const [menu, setMenu] = useState(false);
@@ -458,8 +465,9 @@ export default function App() {
                 <p>
                   FarmAssist brings crop questions, photographs, local weather,
                   soil reports, and field plans into one workspace. Live
-                  advisory uses a secure JOITA server with Gemini primary and
-                  OpenRouter fallback.
+                  advisory uses a secure JOITA server, farm-specific safety rules
+                  and a backup AI service. This is an advisory tool, not a
+                  replacement for field inspection or a laboratory test.
                 </p>
                 <div className="result-list">
                   <div>
@@ -476,10 +484,10 @@ export default function App() {
                     <p>
                       Choose from 14 answer languages in Ask or Settings. Live
                       AI can answer in your selected language; built-in offline
-                      guides are in English. Read-aloud uses Google speech when
+                      guides are in English and selected Hindi field-check topics. Read-aloud uses Google speech when
                       available, with matching device voices as a fallback.
                       Dashboard and navigation are available in English and Hindi.
-                      Detailed tool forms and offline crop guides currently use English.
+                      Detailed tool forms currently use English. Offline Hindi covers basic field-check topics, not every crop guide.
                     </p>
                   </div>
                   <div>
@@ -609,7 +617,7 @@ function SettingsPanel({
           onChange={onLanguage}
         />
         <p className="muted">
-          Live AI: 14 answer languages. Offline guides: English. Cloud speech
+          Live AI: 14 answer languages. Offline guides: English and selected Hindi field-check topics. Cloud speech
           supports 11 languages, plus Haryanvi with a Hindi voice. Odia and
           Assamese need matching device voices.
         </p>

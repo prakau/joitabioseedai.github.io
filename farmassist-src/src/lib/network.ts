@@ -44,7 +44,7 @@ export type ChatContext = {
 export type ChatResult = {
   ok: boolean;
   answer: string;
-  source: "gemini" | "openrouter" | "offline_kb";
+  source: "gemini" | "openrouter" | "offline_kb" | "joita_rules";
   model: string;
   mode?: string;
   failureReason?: string;
@@ -66,7 +66,7 @@ function checkedChatResult(data: ChatResult): ChatResult {
     typeof data.answer !== "string" ||
     !data.answer.trim() ||
     data.answer.length > 16000 ||
-    !["gemini", "openrouter", "offline_kb"].includes(data.source) ||
+    !["gemini", "openrouter", "offline_kb", "joita_rules"].includes(data.source) ||
     (data.source !== "offline_kb" && data.ok !== true)
   )
     throw new Error("The advisory service returned an invalid answer.");
@@ -186,7 +186,7 @@ export async function sendQuestion(
   const abort = () => controller.abort();
   if (signal?.aborted) abort();
   else signal?.addEventListener("abort", abort, { once: true });
-  const timer = setTimeout(abort, 30000);
+  const timer = setTimeout(abort, 55000);
   try {
     const response = await fetch(apiUrl("/api/farmassist-chat"), {
       method: "POST",
@@ -229,24 +229,38 @@ export async function sendQuestion(
   }
 }
 export async function cropPhoto(file: File): Promise<string> {
-  if (!/^image\/(jpeg|png|webp)$/.test(file.type))
-    throw new Error("Choose a JPEG, PNG, or WebP crop photo.");
-  if (file.size > 4 * 1024 * 1024)
-    throw new Error("Choose a crop photo smaller than 4 MB.");
-  // Keep base64 requests below the hosting limit while preserving the original photo.
-  const bitmap = await createImageBitmap(file);
-  const ratio = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+  if (file.type && !/^image\/(jpeg|png|webp|heic|heif)$/.test(file.type))
+    throw new Error("Choose a crop photo, not a document. / फसल की फोटो चुनें, दस्तावेज़ नहीं।");
+  if (!file.size || file.size > 20 * 1024 * 1024)
+    throw new Error("Choose a photo under 20 MB. / 20 MB से छोटी फोटो चुनें।");
+  const url = URL.createObjectURL(file);
+  const image = new Image();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("This photo could not be opened. Try JPEG/PNG or take a new photo. / फोटो नहीं खुली। JPEG/PNG चुनें या नई फोटो लें।"));
+      image.src = url;
+    });
+  } finally { URL.revokeObjectURL(url); }
+  const ratio = Math.min(1, 1600 / Math.max(image.naturalWidth, image.naturalHeight));
   const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * ratio);
-  canvas.height = Math.round(bitmap.height * ratio);
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
   const ctx = canvas.getContext("2d");
   if (!ctx) {
-    bitmap.close();
     throw new Error("Image preview is unavailable in this browser.");
   }
-  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  return canvas.toDataURL("image/jpeg", 0.85);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  let result = canvas.toDataURL("image/jpeg", 0.85);
+  for (const quality of [0.7, 0.55, 0.4]) {
+    if (result.length < 2 * 1024 * 1024) break;
+    result = canvas.toDataURL("image/jpeg", quality);
+  }
+  if (!result.startsWith("data:image/jpeg;base64,") || result.length >= 2 * 1024 * 1024)
+    throw new Error("Photo is too complex to upload. Take a closer crop photo. / पास से फसल की फोटो लें।");
+  return result;
 }
 export function track(
   event: string,

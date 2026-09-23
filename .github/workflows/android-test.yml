@@ -24,8 +24,13 @@ jobs:
         working-directory: farmassist-src
         run: npm run build:android
       - name: Build test APK
+        # Public PlantVillage reference photo, used only in the test APK, never in the farmer app.
+        # Mohanty, Hughes and Salathe (2016), doi:10.3389/fpls.2016.01419.
         working-directory: farmassist-src/android
-        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest --no-daemon
+        run: |
+          mkdir -p app/src/androidTest/assets
+          curl --fail --location --retry 2 'https://raw.githubusercontent.com/spMohanty/PlantVillage-Dataset/master/raw/color/Tomato___Early_blight/0012b9d2-2130-4a06-a834-b1f3af34f57e___RS_Erly.B%208389.JPG' -o app/src/androidTest/assets/tomato-leaf.jpg
+          ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest --no-daemon
       - name: Verify APK signature
         run: $ANDROID_HOME/build-tools/36.0.0/apksigner verify --verbose farmassist-src/android/app/build/outputs/apk/debug/app-debug.apk
       - name: Enable emulator acceleration

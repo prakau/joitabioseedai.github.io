@@ -19,6 +19,8 @@ import {
 } from "../lib/languages";
 import { LanguageSelect } from "./LanguageSelect";
 import { AdvisoryAnswer } from "./AdvisoryAnswer";
+import { CropPhotoInput } from "./CropPhotoInput";
+import { offlineAdvice } from "../lib/offline-hindi";
 import { Button } from "./ui/button";
 import { Input, Textarea } from "./ui/input";
 import {
@@ -30,6 +32,7 @@ import {
   Select,
   Title,
   privacyNotice,
+  sourceLabel,
 } from "./workspace";
 import {
   cropPhoto,
@@ -38,7 +41,6 @@ import {
   type ChatContext,
   type ChatResult,
 } from "../lib/network";
-import { answerFarmQuestion } from "../lib/farm-ai";
 import { searchCrops, inferCrop } from "../services/semanticSearch";
 import {
   displayDate,
@@ -56,6 +58,7 @@ type Record = {
   source?: ChatResult["source"];
   context?: ChatContext;
   imageAnalyzed?: boolean;
+  answerLanguage?: string;
 };
 const prompts = [
   "Tomato leaves are yellowing and curling. What should I check?",
@@ -164,7 +167,7 @@ export function Advisory({
   }
   async function submit(offline = false, followUp?: string) {
     if (busy) return;
-    if (!question.trim() && !followUp && !(diagnose && photo)) {
+    if (!question.trim() && !followUp && !photo) {
       setError("Describe your question or the symptoms you see.");
       return;
     }
@@ -227,15 +230,10 @@ export function Advisory({
       );
       if (
         !response.answer?.trim() ||
-        !["gemini", "openrouter", "offline_kb"].includes(response.source)
+        !["gemini", "openrouter", "offline_kb", "joita_rules"].includes(response.source)
       )
         throw new Error("The advisory service returned an invalid response.");
-      if (response.source === "offline_kb")
-        response.answer = answerFarmQuestion(
-          message,
-          actualContext.crop,
-          context.stage,
-        );
+      if (response.source === "offline_kb") Object.assign(response, offlineAdvice(message, actualContext.crop, context.stage, actualContext.language));
     } catch (failure) {
       if (controller.signal.aborted) {
         setPartialAnswer("");
@@ -248,7 +246,7 @@ export function Advisory({
         source: "offline_kb",
         model: "joita-crop-guides",
         imageAnalyzed: false,
-        answer: answerFarmQuestion(message, actualContext.crop, context.stage),
+        ...offlineAdvice(message, actualContext.crop, context.stage, actualContext.language),
         failureReason: offline
           ? undefined
           : failure instanceof Error
@@ -258,7 +256,7 @@ export function Advisory({
     }
     if (photo && !followUp && !response.imageAnalyzed)
       response.answer =
-        "**Photo not analyzed.** This result uses only your written symptoms.\n\n" +
+        (response.language === "Hindi" ? "**फोटो की जांच नहीं हुई।** यह केवल लिखे गए लक्षणों पर आधारित सलाह है।\n\n" : "**Photo not analyzed.** This result uses only your written symptoms.\n\n") +
         response.answer;
     setResult(response);
     setPartialAnswer("");
@@ -275,6 +273,7 @@ export function Advisory({
       source: response.source,
       context: actualContext,
       imageAnalyzed: response.imageAnalyzed,
+      answerLanguage: response.language || actualContext.language,
     };
     setActiveRecord(record);
     saveHistory(
@@ -300,6 +299,7 @@ export function Advisory({
   async function upload(file?: File) {
     if (!file) return;
     setImageBusy(true);
+    setPhoto("");
     setError("");
     try {
       setPhoto(await cropPhoto(file));
@@ -392,6 +392,9 @@ export function Advisory({
                 <Languages size={21} />
                 <strong>{languageHelp.heading}</strong>
               </div>
+              {diagnose && <CropPhotoInput upload={upload} disabled={busy || imageBusy} onError={setError} />}
+              {diagnose && imageBusy && <Busy label="Preparing photo / फोटो तैयार हो रही है" />}
+              {diagnose && photo && <div className="photo-preview"><img src={photo} alt="Crop photo to be analyzed" /><Button type="button" variant="ghost" onClick={() => setPhoto("")}><Trash2 size={17}/>Remove photo / फोटो हटाएं</Button></div>}
               {followingUp && activeRecord && (
                 <div className="conversation-context">
                   <small>FOLLOW-UP TO</small>
@@ -518,17 +521,9 @@ export function Advisory({
                     </Select>
                   </Field>
                 </div>
-                <Field label="Crop photo (optional)">
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    disabled={imageBusy || busy}
-                    onChange={(e) => void upload(e.target.files?.[0])}
-                  />
-                </Field>
-                <small className="muted">JPEG, PNG, WebP, up to 4 MB</small>
-                {imageBusy && <Busy label="Preparing photo" />}
-                {photo && (
+                {!diagnose && <CropPhotoInput upload={upload} disabled={busy || imageBusy} onError={setError} />}
+                {!diagnose && imageBusy && <Busy label="Preparing photo / फोटो तैयार हो रही है" />}
+                {!diagnose && photo && (
                   <div className="photo-preview">
                     <img src={photo} alt="Crop photo to be analyzed" />
                     <Button
@@ -706,13 +701,14 @@ export function Advisory({
                       model: "saved-record",
                       answer: item.answer,
                       imageAnalyzed: item.imageAnalyzed,
+                      language: item.answerLanguage || (item.source === "offline_kb" ? "English" : item.context?.language),
                     });
                   }}
                 >
                   <strong>{item.question}</strong>
                   <small>
                     {displayDate(item.date)} /{" "}
-                    {item.source || "saved source not recorded"}
+                    {item.source ? sourceLabel(item.source) : "Saved advisory"}
                   </small>
                 </button>
                 <button

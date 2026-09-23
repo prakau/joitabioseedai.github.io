@@ -18,10 +18,9 @@ try {
   await page.getByRole("button", {name:"Ask FarmAssist",exact:true}).click();
   await page.locator(".advisory-result").waitFor();
   assert.match(await page.locator(".advisory-result").innerText(), /Offline KB/);
-  assert.match(await page.locator(".advisory-result").innerText(), /aphid/);
-  assert.match(await page.locator(".language-notice").innerText(), /Offline crop guides are in English/);
-  assert.equal(await page.locator(".answer-copy").getAttribute("lang"), "en-IN");
-  await page.reload(); await page.locator(".history-item").first().click(); assert.match(await page.locator(".advisory-result").innerText(), /aphid/);
+  assert.match(await page.locator(".advisory-result").innerText(), /कीट/);
+  assert.equal(await page.locator(".answer-copy").getAttribute("lang"), "hi-IN");
+  await page.reload(); await page.locator(".history-item").first().click(); assert.match(await page.locator(".advisory-result").innerText(), /कीट/);
   assert.equal(await page.getByLabel("Answer language").inputValue(), "Hindi");
   await page.getByRole("link", {name:"FarmAssist home",exact:true}).click();
   assert.equal(await page.getByRole("link", {name:"JOITA website",exact:true}).isVisible(), true);

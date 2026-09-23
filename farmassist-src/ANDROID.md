@@ -11,14 +11,18 @@ Live AI, cloud speech, weather and mandi prices need internet. The HTML, JavaScr
 ## Feature parity
 
 - Same Ask, Diagnose, Weather, Market, Calendar, Soil, Sound, 3D Plot, Calculators, Income & Costs, Community notes and Settings views as the website.
-- Same 14 AI answer languages; Google speech uses supported voices, with device voices as a fallback when available. Language coverage is stated in Settings.
-- English/Hindi dashboard and navigation. Use the language switch above the page title; it is saved on the device and works offline. AI answer language is a separate preference. Detailed tool forms and offline crop guides are still in English.
+- Hindi is the default answer language, with 14 selectable AI answer languages. Google speech uses supported voices, with device voices as a fallback when available. Language coverage is stated in Settings.
+- English/Hindi dashboard and navigation. Use the language switch above the page title; it is saved on the device and works offline. AI answer language is a separate preference. Detailed tool forms are still in English; offline guidance includes English crop guides and selected Hindi field-check topics.
 - Native Android location permission and GPS lookup, clipboard, share sheet and file export. Record exports open the system save/share chooser.
-- Crop photos use Android's file/camera chooser. Microphone access is requested only when starting a field recording. Location is requested only when choosing device location.
+- Crop photos use native camera/gallery controls. Phone originals up to 20 MB are resized on-device to a JPEG below 2 MB of base64 text before sending. Unreadable photos are rejected without silently reusing an older image. Microphone access is requested only when starting a field recording. Location is requested only when choosing device location.
 - Android Back closes the tools menu, returns a module to Home, then minimizes the app from Home.
 - Live calls go to `https://www.joitabioseedai.com/api/`. Keys stay on Vercel; none are bundled in the APK. HTTPS only, no remote-webview start URL, no broad storage access, no automatic Android backup.
 
 The same product limits apply on both platforms: photo advisory is not a laboratory diagnosis, sound activity is not validated EHI/species detection, Community is local notes rather than a public social network, and AI recommendations need local expert confirmation.
+
+## Advisory safeguards
+
+The normal answer badge is JOITA Live AI, not a model advertisement. Provider details remain in Settings for honest diagnostics. Server-side checks hold generated text until it finishes and passes language and conservative safety screening. Numerical chemical-dose requests use fixed JOITA safety guidance instead of model-generated rates. This is a rule-based layer, not a guarantee that every incorrect statement can be detected. Approved labels, local agronomy and field inspection remain necessary.
 
 ## Build and verify
 

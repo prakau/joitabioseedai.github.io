@@ -12,7 +12,7 @@ import {
 import { answerLanguage, matchingVoice, speechChunks } from "../lib/languages";
 import { downloadText, displayDate } from "../lib/storage";
 import { requestSpeech, type ChatResult } from "../lib/network";
-import { Answer, safetyNotice } from "./workspace";
+import { Answer, safetyNotice, sourceLabel } from "./workspace";
 import { Button } from "./ui/button";
 import { AdvisoryTask } from "./FieldTasks";
 import { copyText, shareText } from "../lib/platform";
@@ -50,7 +50,7 @@ export function AdvisoryAnswer({
   const [feedback, setFeedback] = useState("");
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const actualLanguage = answerLanguage(
-    result.source === "offline_kb" ? "English" : language,
+    result.language || (result.source === "offline_kb" ? "English" : language),
   );
   const voice = matchingVoice(voices, actualLanguage.speech, !navigator.onLine);
 
@@ -100,7 +100,7 @@ export function AdvisoryAnswer({
     );
   }
   function answerDocument() {
-    return `JOITA FarmAssist\n${displayDate(date)}\nSource: ${result.source}\nAnswer language: ${actualLanguage.name}\n\nQuestion: ${question}\n\n${plainAnswer()}\n\n${safetyNotice}\nhttps://www.joitabioseedai.com/farmassist/`;
+    return `JOITA FarmAssist\n${displayDate(date)}\nSource: ${sourceLabel(result.source)}\nAnswer language: ${actualLanguage.name}\n\nQuestion: ${question}\n\n${plainAnswer()}\n\n${safetyNotice}\nhttps://www.joitabioseedai.com/farmassist/`;
   }
   async function copy() {
     try {
@@ -213,9 +213,9 @@ export function AdvisoryAnswer({
             : ""}
         </span>
       </div>
-      {result.source === "offline_kb" && language !== "English" && (
+      {result.source === "offline_kb" && actualLanguage.name !== language && (
         <p className="language-notice">
-          Offline crop guides are in English. {language} answers require live
+          This offline crop guide is in {actualLanguage.name}. {language} answers require live
           AI.
         </p>
       )}
