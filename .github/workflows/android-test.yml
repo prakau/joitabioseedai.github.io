@@ -48,7 +48,7 @@ jobs:
           disable-animations: true
           working-directory: farmassist-src/android
           script: |
-            ./gradlew :app:connectedDebugAndroidTest --no-daemon
+            ./gradlew :app:connectedDebugAndroidTest --no-daemon -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true
             mkdir -p ../test-results/android
             adb pull /sdcard/Android/data/com.joitabioseedai.farmassist/files/qa ../test-results/android
       - name: Upload APK and test evidence
