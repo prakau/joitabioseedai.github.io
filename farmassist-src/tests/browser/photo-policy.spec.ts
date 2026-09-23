@@ -27,6 +27,8 @@ test("a large phone photo is compressed, image-only advice works, and bad replac
   });
   await page.setViewportSize({width:390,height:844});
   await page.goto("./#/diagnose");
+  await expect(page.getByLabel("Crop photo (optional)")).toBeHidden();
+  await expect(page.getByLabel("Take crop photo",{exact:true})).toBeHidden();
   const png=Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a2ioAAAAASUVORK5CYII=","base64");
   await page.getByLabel("Crop photo (optional)").setInputFiles({name:"phone.png",mimeType:"image/png",buffer:Buffer.concat([png,Buffer.alloc(5*1024*1024)])});
   await expect(page.getByAltText("Crop photo to be analyzed")).toBeVisible();

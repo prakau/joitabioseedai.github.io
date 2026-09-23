@@ -16,8 +16,8 @@ export function CropPhotoInput({upload, disabled, onError}: {upload: (file?: Fil
       <Button type="button" variant="secondary" disabled={disabled} onClick={() => void choose(true)}><Camera size={18}/>Take photo / फोटो लें</Button>
       <Button type="button" variant="secondary" disabled={disabled} onClick={() => void choose(false)}><ImagePlus size={18}/>Choose photo / फोटो चुनें</Button>
     </div>
-    <input ref={camera} hidden type="file" aria-label="Take crop photo" accept="image/*" capture="environment" onChange={event => {const file=event.target.files?.[0]; event.target.value=""; void upload(file);}} />
-    <input ref={gallery} hidden type="file" aria-label="Crop photo (optional)" accept="image/*" onChange={event => {const file=event.target.files?.[0]; event.target.value=""; void upload(file);}} />
+    <input ref={camera} hidden style={{display:"none"}} type="file" aria-label="Take crop photo" accept="image/*" capture="environment" onChange={event => {const file=event.target.files?.[0]; event.target.value=""; void upload(file);}} />
+    <input ref={gallery} hidden style={{display:"none"}} type="file" aria-label="Crop photo (optional)" accept="image/*" onChange={event => {const file=event.target.files?.[0]; event.target.value=""; void upload(file);}} />
     <small>फसल या पत्ते की साफ फोटो लें। व्यक्तिगत दस्तावेज़ नहीं। Up to 20 MB; resized privately on your device before upload.</small>
   </div>;
 }
