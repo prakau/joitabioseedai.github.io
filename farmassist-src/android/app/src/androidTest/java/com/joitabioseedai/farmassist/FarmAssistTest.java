@@ -46,6 +46,8 @@ public class FarmAssistTest {
         ready(scenario);
     }
     private void screenshot(String name) throws Exception {
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+        SystemClock.sleep(500);
         File dir = new File(InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null), "qa");
         dir.mkdirs();
         Bitmap bitmap = InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
@@ -119,6 +121,7 @@ public class FarmAssistTest {
             until(scenario, "Boolean(document.querySelector('.advisory-result'))");
             assertEquals("true", js(scenario, "document.querySelector('.advisory-result').innerText.includes('JOITA Live AI') && document.querySelector('.answer-copy').lang === 'hi-IN' && document.querySelector('.advisory-result').innerText.includes('फोटो पर आधारित')"));
             assertEquals("false", js(scenario, "document.body.innerText.includes('Gemini')"));
+            js(scenario, "document.querySelector('.advisory-result').scrollIntoView({block:'center',behavior:'instant'})");
             screenshot("android-hindi-photo-advisory");
             js(scenario, "window.policyCheck=null;fetch('https://www.joitabioseedai.com/api/farmassist-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'कीटनाशक की कितनी मात्रा मिलाएं?',language:'Hindi'})}).then(r=>r.json()).then(d=>window.policyCheck=d)");
             until(scenario, "Boolean(window.policyCheck)");

@@ -48,6 +48,7 @@ jobs:
           disable-animations: true
           working-directory: farmassist-src/android
           script: |
+            adb shell pm disable-user --user 0 com.google.android.apps.nexuslauncher
             ./gradlew :app:connectedDebugAndroidTest --no-daemon -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true
             mkdir -p ../test-results/android
             adb pull /sdcard/Android/data/com.joitabioseedai.farmassist/files/qa ../test-results/android
