@@ -2,9 +2,14 @@ import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import handler from "../../api/farmassist-chat.js";
 import health from "../../api/health.js";
+import { answerPolicy } from "../../api/_lib/advisory-policy.js";
 import market from "../../api/market.js";
 import speech, { splitSpeechText } from "../../api/farmassist-speech.js";
 const originalFetch = globalThis.fetch;
+test("photo uncertainty is allowed but confirmed diagnosis claims are not", () => {
+  assert.equal(answerPolicy("यह पक्का निदान नहीं है। स्थानीय विशेषज्ञ से जांच कराएं।"), null);
+  assert.equal(answerPolicy("यह पक्का निदान है।"), "unsupported_claim");
+});
 const originalEnv = { gemini: process.env.GEMINI_API_KEY, router: process.env.OPENROUTER_API_KEY, node: process.env.NODE_ENV, market: process.env.DATAGOV_API_KEY, speech: process.env.GOOGLE_TTS_API_KEY };
 beforeEach(() => { globalThis.__joitaFarmAssistRateLimit.clear(); globalThis.__joitaSpeechRateLimit.clear(); process.env.GEMINI_API_KEY = "test-gemini-token"; process.env.OPENROUTER_API_KEY = "test-router-token"; process.env.NODE_ENV = "production"; delete process.env.DATAGOV_API_KEY; delete process.env.GOOGLE_TTS_API_KEY; });
 afterEach(() => { globalThis.fetch = originalFetch; for (const [key, value] of Object.entries({ GEMINI_API_KEY: originalEnv.gemini, OPENROUTER_API_KEY: originalEnv.router, NODE_ENV: originalEnv.node, DATAGOV_API_KEY: originalEnv.market, GOOGLE_TTS_API_KEY: originalEnv.speech })) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } });

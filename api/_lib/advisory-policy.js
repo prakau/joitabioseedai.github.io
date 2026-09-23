@@ -12,7 +12,8 @@ export function answerPolicy(answer) {
   for (const sentence of answer.split(/\n|।|[.!?](?=\s|$)/u)) {
     if (chemical.test(sentence) && quantity.test(sentence)) return "chemical_safety";
   }
-  if (/guarantee(?:d|s)? (?:a |the )?(?:yield|pest|disease)|100\s*%\s*(?:safe|effective|cure)|definitely (?:has|is) (?:blight|virus)|पक्का निदान|उपज की गारंटी/iu.test(answer)) return "unsupported_claim";
+  const claims = answer.replace(/(?:यह\s+)?पक्का निदान\s+नहीं(?:\s+है)?/gu, "");
+  if (/guarantee(?:d|s)? (?:a |the )?(?:yield|pest|disease)|100\s*%\s*(?:safe|effective|cure)|definitely (?:has|is) (?:blight|virus)|पक्का निदान|उपज की गारंटी/iu.test(claims)) return "unsupported_claim";
   return null;
 }
 
