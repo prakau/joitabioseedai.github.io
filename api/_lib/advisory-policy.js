@@ -11,6 +11,7 @@ export function requestPolicy(message) {
 export function answerPolicy(answer) {
   for (const sentence of answer.split(/\n|।|[.!?](?=\s|$)/u)) {
     if (chemical.test(sentence) && quantity.test(sentence)) return "chemical_safety";
+    if (!/नहीं|cannot|not reliable|does not/iu.test(sentence) && /(?:ऊपर|नीचे).{0,35}(?:मुड़|मुड).{0,100}(?:वायरस|कीट|कमी|होता|संकेत)|(?:upward|downward).{0,35}curl.{0,100}(?:virus|deficien|indicat|caused|means)/iu.test(sentence)) return "diagnosis_limit";
   }
   const claims = answer.replace(/(?:यह\s+)?पक्का निदान\s+नहीं(?:\s+है)?/gu, "");
   if (/guarantee(?:d|s)? (?:a |the )?(?:yield|pest|disease)|100\s*%\s*(?:safe|effective|cure)|definitely (?:has|is) (?:blight|virus)|पक्का निदान|उपज की गारंटी/iu.test(claims)) return "unsupported_claim";
@@ -19,6 +20,9 @@ export function answerPolicy(answer) {
 
 export function policyReply(reason, language) {
   const hi = ["Hindi", "Haryanvi"].includes(language);
+  if (reason === "diagnosis_limit") return hi
+    ? "**पत्ती मुड़ने की दिशा से अकेले कारण तय नहीं होता।**\n\nआज प्रभावित और स्वस्थ पौधों की तुलना करें। पत्तियों के नीचे छोटे कीट या अंडे देखें, जड़ों के पास मिट्टी की नमी और जल निकासी जांचें, और नोट करें कि लक्षण पुरानी पत्तियों पर हैं या नई पत्तियों पर। हाल में किए गए छिड़काव और सिंचाई का रिकॉर्ड रखें।\n\nबिना कारण की पुष्टि के दवा या खाद न डालें। यदि लक्षण तेजी से फैल रहे हों, पूरा पौधा मुरझाए या नई बढ़वार रुक रही हो, तो फोटो और खेत के रिकॉर्ड के साथ स्थानीय KVK या कृषि विशेषज्ञ से जांच कराएं।\n\nलक्षण कब शुरू हुए और लगभग कितने पौधे प्रभावित हैं?"
+    : "Leaf-curl direction alone cannot establish the cause. Compare affected and healthy plants, inspect leaf undersides for insects or eggs, check root-zone moisture and drainage, and note whether old or new leaves are affected. Record recent irrigation and sprays. Do not add pesticides or fertilizer before confirming the cause. Seek local KVK advice if symptoms spread quickly, whole plants wilt or new growth stops. When did symptoms start, and how many plants are affected?";
   if (reason === "farm_scope") return hi
     ? "मैं JOITA का खेती सहायक हूं। फसल, मिट्टी, सिंचाई, मौसम, मंडी या खेत के हिसाब से जुड़ा सवाल पूछें। आप किस फसल पर काम कर रहे हैं?"
     : "I am JOITA's farming assistant. I can help with crops, soil, irrigation, weather, mandi records and farm calculations. Which crop or field question would you like help with?";

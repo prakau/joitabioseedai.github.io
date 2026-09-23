@@ -10,6 +10,10 @@ test("photo uncertainty is allowed but confirmed diagnosis claims are not", () =
   assert.equal(answerPolicy("यह पक्का निदान नहीं है। स्थानीय विशेषज्ञ से जांच कराएं।"), null);
   assert.equal(answerPolicy("यह पक्का निदान है।"), "unsupported_claim");
 });
+test("leaf-curl direction shortcuts are withheld but uncertainty is allowed", () => {
+  assert.equal(answerPolicy("नीचे की ओर मुड़ना कुछ वायरस या कीटों का संकेत हो सकता है।"), "diagnosis_limit");
+  assert.equal(answerPolicy("ऊपर की ओर मुड़ने से वायरस तय नहीं होता।"), null);
+});
 const originalEnv = { gemini: process.env.GEMINI_API_KEY, router: process.env.OPENROUTER_API_KEY, node: process.env.NODE_ENV, market: process.env.DATAGOV_API_KEY, speech: process.env.GOOGLE_TTS_API_KEY };
 beforeEach(() => { globalThis.__joitaFarmAssistRateLimit.clear(); globalThis.__joitaSpeechRateLimit.clear(); process.env.GEMINI_API_KEY = "test-gemini-token"; process.env.OPENROUTER_API_KEY = "test-router-token"; process.env.NODE_ENV = "production"; delete process.env.DATAGOV_API_KEY; delete process.env.GOOGLE_TTS_API_KEY; });
 afterEach(() => { globalThis.fetch = originalFetch; for (const [key, value] of Object.entries({ GEMINI_API_KEY: originalEnv.gemini, OPENROUTER_API_KEY: originalEnv.router, NODE_ENV: originalEnv.node, DATAGOV_API_KEY: originalEnv.market, GOOGLE_TTS_API_KEY: originalEnv.speech })) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } });
