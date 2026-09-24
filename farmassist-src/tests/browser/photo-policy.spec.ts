@@ -9,7 +9,7 @@ test("new users get Hindi answers and provider branding stays in diagnostics", a
   await page.goto("./#/ask");
   await expect(page.getByLabel("Answer language")).toHaveValue("Hindi");
   await page.getByLabel("Your question",{exact:true}).fill("Tomato leaf curl");
-  await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
   await expect(page.locator(".advisory-result")).toContainText("JOITA Live AI");
   await expect(page.locator(".answer-copy")).toHaveAttribute("lang","hi-IN");
   await expect(page.locator("body")).not.toContainText("Gemini");

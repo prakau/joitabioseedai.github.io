@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { App as NativeApp } from "@capacitor/app";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -96,6 +96,8 @@ function exportRecords() {
 export default function App() {
   const { language: interfaceLanguage, t } = useInterface();
   const location = useLocation();
+  const navigate = useNavigate();
+  const submittedQuestion = typeof location.state?.submittedQuestion === "string" ? location.state.submittedQuestion.slice(0, 1000) : "";
   const active = location.pathname.replace(/^\//, "") || "home";
   const [place, savePlace] = useStored<Place>(
     "joita-fa-location-v3",
@@ -154,7 +156,7 @@ export default function App() {
   }, [active]);
   useEffect(() => {
     document.documentElement.lang = interfaceLanguage;
-    document.title = `${t(modules.find((m) => m.id === active)?.label || "Home")} | JOITA FarmAssist`;
+    document.title = `${t(modules.find((m) => m.id === active)?.label || "Home")} | JOITAFA`;
   }, [active, interfaceLanguage]);
   const health = useQuery({
     queryKey: ["farmassist-health-v3", online],
@@ -211,7 +213,7 @@ export default function App() {
             />
           </span>
           <span>
-            <strong>JOITA FarmAssist</strong>
+            <strong>JOITAFA</strong>
             <small>{t("By JOITA Bioseed AI")}</small>
           </span>
         </NavLink>
@@ -235,7 +237,7 @@ export default function App() {
             onClick={() => setMenu(false)}
           >
             <Home size={18} />
-            {t("FarmAssist home")}
+            {t("JOITAFA home")}
           </NavLink>
           <a className="website-link" href="https://www.joitabioseedai.com/">
             {t("JOITA website")}
@@ -263,7 +265,7 @@ export default function App() {
             <strong>{profile.farmName === "My farm" ? t("My farm") : profile.farmName}</strong>
             <span>{place.label}</span>
           </div>
-          <nav aria-label="FarmAssist modules">
+          <nav aria-label="JOITAFA modules">
             {modules.map(({ id, label, icon: Icon }) => (
               <NavLink
                 key={id}
@@ -408,7 +410,7 @@ export default function App() {
                   ))}
                 </div>
                 <p className="pilot-note">
-                  {t("FarmAssist is in pilot mode. Responses are AI-assisted and should be confirmed with local expert recommendations.")}
+                  {t("JOITAFA is in pilot mode. Responses are AI-assisted and should be confirmed with local expert recommendations.")}
                 </p>
               </>
             )}
@@ -420,7 +422,9 @@ export default function App() {
                 onLanguage={setLanguage}
                 diagnose={active === "diagnose"}
                 cloudSpeech={online && Boolean(health.data?.hasSpeechKey)}
-                initialQuestion={new URLSearchParams(location.search).get("question")?.slice(0, 1000) || ""}
+                initialQuestion={submittedQuestion || new URLSearchParams(location.search).get("question")?.slice(0, 1000) || ""}
+                autoSubmitId={submittedQuestion ? location.state?.submissionId : undefined}
+                onAutoSubmitConsumed={() => navigate(`${location.pathname}${location.search}`, { replace: true, state: null })}
                 onResult={setLastAnswer}
               />
             )}
@@ -463,11 +467,11 @@ export default function App() {
             {active === "about" && (
               <>
                 <Title
-                  title="JOITA FarmAssist"
+                  title="JOITAFA"
                   description="AI-powered, offline-first farm advisory for Indian farmers."
                 />
                 <p>
-                  FarmAssist brings crop questions, photographs, local weather,
+                  JOITAFA brings crop questions, photographs, local weather,
                   soil reports, and field plans into one workspace. Live
                   advisory uses a secure JOITA server, farm-specific safety rules
                   and a backup AI service. This is an advisory tool, not a

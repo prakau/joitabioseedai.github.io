@@ -19,13 +19,14 @@ test("Hindi dashboard persists independently of the answer language", async ({ p
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("joita-fa-preferences")!).language)).toBe("Punjabi");
   await page.locator(".app-sidebar").getByRole("link", { name: "पूछें", exact: true }).click();
   await expect(page.getByLabel("Answer language")).toHaveValue("Punjabi");
-  await page.getByRole("link", { name: "FarmAssist होम", exact: true }).click();
+  await page.getByRole("link", { name: "JOITAFA होम", exact: true }).click();
   await page.getByRole("button", { name: "English", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.getByRole("heading", { name: "Good farming. Clear next steps." })).toBeVisible();
 });
 
 test("Hindi dashboard fits small screens and opens the prepared question", async ({ page }) => {
+  await page.route("**/api/farmassist-chat", route => route.abort());
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto("./");
   await page.getByRole("button", { name: "हिन्दी", exact: true }).click();
@@ -33,11 +34,10 @@ test("Hindi dashboard fits small screens and opens the prepared question", async
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: "test-results/hindi-dashboard-mobile.png", fullPage: true, animations: "disabled" });
   await page.getByLabel("आज आप क्या जानना चाहते हैं?").fill("टमाटर की पत्तियां मुड़ रही हैं");
-  await page.getByRole("button", { name: "JOITA से पूछें", exact: true }).click();
+  await page.getByRole("button", { name: "JOITAFA से पूछें", exact: true }).click();
   await expect(page.getByLabel("Your question", { exact: true })).toHaveValue("टमाटर की पत्तियां मुड़ रही हैं");
-  await page.getByRole("button", { name: "Use offline knowledge", exact: true }).click();
   await expect(page.locator(".advisory-result")).toContainText("Offline KB");
-  await page.getByRole("link", { name: "FarmAssist होम", exact: true }).click();
+  await page.getByRole("link", { name: "JOITAFA होम", exact: true }).click();
   await page.setViewportSize({ width: 1440, height: 1000 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: "test-results/hindi-dashboard-desktop.png", fullPage: true, animations: "disabled" });

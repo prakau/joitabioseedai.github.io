@@ -5,12 +5,13 @@ test.beforeEach(async ({page}) => {
 });
 
 test("dashboard question starters focus the composer and preserve the question", async ({page}) => {
+  await page.route("**/api/farmassist-chat", route => route.abort());
   await page.goto("./");
   await page.getByRole("button",{name:"Irrigation",exact:true}).click();
   const composer=page.locator("#field-question");
   await expect(composer).toBeFocused();
   await expect(composer).toHaveValue("What should I check before irrigating my crop?");
-  await page.getByRole("button",{name:"Ask JOITA",exact:true}).click();
+  await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
   await expect(page.getByLabel("Your question",{exact:true})).toHaveValue("What should I check before irrigating my crop?");
 });
 

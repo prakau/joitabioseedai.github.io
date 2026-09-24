@@ -412,7 +412,7 @@ export function Calendar() {
               </Button>
             </div>
             <p className="muted">
-              Calendar file export only. FarmAssist does not send background
+              Calendar file export only. JOITAFA does not send background
               notifications.
             </p>
             {!plans.some(
@@ -493,10 +493,10 @@ export function Community() {
       .includes(search.toLowerCase()),
   );
   async function share(post: Post) {
-    const text = `${post.crop}: ${post.text}\n${post.village}\nShared from JOITA FarmAssist`;
+    const text = `${post.crop}: ${post.text}\n${post.village}\nShared from JOITAFA`;
     try {
       if (navigator.share)
-        await navigator.share({ title: "FarmAssist field note", text });
+        await navigator.share({ title: "JOITAFA field note", text });
       else {
         await navigator.clipboard.writeText(text);
         setMessage("Field note copied. You can share it in your farmer group.");
@@ -606,7 +606,7 @@ export function Community() {
             </Button>
             <a
               className="text-link"
-              href={`mailto:contact@joitabioseedai.com?subject=FarmAssist%20field%20question&body=${encodeURIComponent(post.text)}`}
+              href={`mailto:contact@joitabioseedai.com?subject=JOITAFA%20field%20question&body=${encodeURIComponent(post.text)}`}
             >
               <Mail size={17} />
               Email JOITA

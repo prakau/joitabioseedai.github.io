@@ -17,7 +17,8 @@ export function DashboardStart() {
         <h3>{t("One question. A clearer next step.")}</h3>
         <form onSubmit={event => {
           event.preventDefault();
-          navigate(`/ask${question.trim() ? `?question=${encodeURIComponent(question.trim())}` : ""}`);
+          if (!question.trim()) { desk.current?.querySelector("textarea")?.focus(); return; }
+          navigate("/ask", { state: { submittedQuestion: question.trim(), submissionId: crypto.randomUUID() } });
         }}>
           <label htmlFor="field-question">{t("What would you like to check today?")}</label>
           <Textarea id="field-question" value={question} maxLength={1000} rows={3}
@@ -25,7 +26,7 @@ export function DashboardStart() {
             onChange={event => setQuestion(event.target.value)} />
           <div className="field-question-actions">
             <span>{t("Crop advisory support only")}</span>
-            <Button type="submit"><Send size={18} />{t("Ask JOITA")}</Button>
+            <Button type="submit"><Send size={18} />{t("Ask JOITAFA")}</Button>
           </div>
         </form>
         <div className="question-starters" aria-label={t("Start a question")}>

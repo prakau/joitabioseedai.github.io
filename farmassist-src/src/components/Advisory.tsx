@@ -72,6 +72,8 @@ export function Advisory({
   diagnose = false,
   cloudSpeech = false,
   initialQuestion = "",
+  autoSubmitId,
+  onAutoSubmitConsumed,
   onResult,
 }: {
   location: string;
@@ -80,6 +82,8 @@ export function Advisory({
   diagnose?: boolean;
   cloudSpeech?: boolean;
   initialQuestion?: string;
+  autoSubmitId?: string;
+  onAutoSubmitConsumed?: () => void;
   onResult: (result: ChatResult) => void;
 }) {
   const [history, saveHistory] = useStored<Record[]>("joita-fa-questions", []);
@@ -115,6 +119,17 @@ export function Advisory({
     [],
   );
   useEffect(() => () => request.current?.abort(), []);
+  const consumedSubmission = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!autoSubmitId || consumedSubmission.current === autoSubmitId) return;
+    // Defer until StrictMode's mount/cleanup probe has completed.
+    const timer = window.setTimeout(() => {
+      consumedSubmission.current = autoSubmitId;
+      void submit();
+      onAutoSubmitConsumed?.();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [autoSubmitId]);
   useEffect(() => {
     if (!busy) return;
     const start = Date.now();
@@ -201,7 +216,7 @@ export function Advisory({
       setQuestion(followUp);
       setPhoto("");
     }
-    track("FarmAssist question submitted", {
+    track("JOITAFA question submitted", {
       crop: actualContext.crop,
       location: context.location,
       problemType: context.problemType,
@@ -325,7 +340,7 @@ export function Advisory({
   return (
     <>
       <Title
-        title={diagnose ? "Crop photo & symptom check" : "Ask FarmAssist"}
+        title={diagnose ? "Crop photo & symptom check" : "Ask JOITAFA"}
         description={
           diagnose
             ? "Add a clear crop photo and describe what changed in the field."
@@ -444,7 +459,7 @@ export function Advisory({
               <div className="actions question-actions">
                 <Button disabled={busy || imageBusy} type="submit">
                   {diagnose ? <Camera size={18} /> : <Send size={18} />}
-                  {diagnose ? "Analyze crop" : "Ask FarmAssist"}
+                  {diagnose ? "Analyze crop" : "Ask JOITAFA"}
                 </Button>
                 <Button
                   type="button"
@@ -620,7 +635,7 @@ export function Advisory({
                 </Field>
                 <a
                   className="text-link"
-                  href={`mailto:contact@joitabioseedai.com?subject=FarmAssist%20expert%20follow-up&body=${encodeURIComponent(body)}`}
+                  href={`mailto:contact@joitabioseedai.com?subject=JOITAFA%20expert%20follow-up&body=${encodeURIComponent(body)}`}
                 >
                   <Mail size={17} />
                   Compose email to JOITA

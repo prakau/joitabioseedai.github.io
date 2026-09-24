@@ -6,7 +6,15 @@ import { analyzeSoil, emptySoil } from "../src/lib/soil";
 import { validateLayout, defaultLayout } from "../src/lib/plot";
 import { analyzeAudio } from "../src/lib/audio";
 import { filterMarketRows } from "../src/services/publicApis";
-import { answerLanguages, answerLanguage, matchingVoice, speechChunks } from "../src/lib/languages";
+import { answerLanguages, answerLanguage, matchingVoice, speechChunks, resolveAnswerLanguage } from "../src/lib/languages";
+test("Roman Hindi overrides a stale English preference without changing other languages", () => {
+  for (const question of ["tamatar ke patte peele ho rahe hain kya karu", "pani kab dena chahiye", "hindi me batao"]) {
+    assert.equal(resolveAnswerLanguage("English", question), "Hindi");
+  }
+  assert.equal(resolveAnswerLanguage("English", "When should I water tomatoes?"), "English");
+  assert.equal(resolveAnswerLanguage("Punjabi", "pani kab dena chahiye"), "Punjabi");
+  assert.equal(resolveAnswerLanguage("Hindi", "Please reply in English"), "English");
+});
 import { areaInMetres, calculateWater, calculateSeed, parseMoney, ledgerTotals } from "../src/lib/farm-tools";
 import { calendarFile, isDay, localDay, planStatus, upcomingPlans, validatePlan, type Plan } from "../src/lib/planning";
 import ICAL from "ical.js";

@@ -218,7 +218,7 @@ export function FarmCalculators() {
             onClick={() =>
               downloadText(
                 "farmassist-calculation.txt",
-                `JOITA FarmAssist calculation\n${inputs}\n\n${result.map((item) => `${item.label}: ${item.value}`).join("\n")}\n\nArithmetic estimate only. Not a crop prescription.`,
+                `JOITAFA calculation\n${inputs}\n\n${result.map((item) => `${item.label}: ${item.value}`).join("\n")}\n\nArithmetic estimate only. Not a crop prescription.`,
               )
             }
           >

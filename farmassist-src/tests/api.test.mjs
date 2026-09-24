@@ -170,7 +170,8 @@ test("streamed Gemini preserves native text and completes only after the provide
   const chunks = ["टमाटर की पत्तियों के नीचे कीट देखें। ", "मिट्टी की नमी जांचें। स्थानीय विशेषज्ञ से कारण की पुष्टि करें।"];
   globalThis.fetch = async (url, options) => {
     assert.match(url, /:streamGenerateContent\?alt=sse/);
-    assert.equal(JSON.parse(options.body).generationConfig.maxOutputTokens, 1600);
+    assert.equal(JSON.parse(options.body).generationConfig.maxOutputTokens, 3072);
+    assert.equal(JSON.parse(options.body).generationConfig.thinkingConfig.thinkingBudget, 512);
     return eventResponse([{candidates:[{content:{parts:[{text:"hidden reasoning",thought:true}]}}]}, ...chunks.map(text => ({candidates:[{content:{parts:[{text}]}}]})), {candidates:[{finishReason:"STOP"}]}]);
   };
   const res = await run({...question, language:"Hindi"}, "POST", {accept:"text/event-stream"});

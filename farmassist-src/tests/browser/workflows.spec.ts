@@ -13,7 +13,7 @@ async function setup(page: Page) {
 }
 async function nav(page: Page, label: string) {
   if (await page.getByRole("button", { name: "Toggle navigation" }).isVisible()) await page.getByRole("button", { name: "Toggle navigation" }).click();
-  await page.getByRole("navigation", { name: "FarmAssist modules" }).getByRole("link", { name: label, exact: true }).click();
+  await page.getByRole("navigation", { name: "JOITAFA modules" }).getByRole("link", { name: label, exact: true }).click();
 }
 function silentAudio() {
   // A real PCM fixture exercises browser decoding without a provider call.
@@ -26,18 +26,52 @@ function silentAudio() {
   return buffer.toString("base64");
 }
 test.beforeEach(async ({page}) => { await setup(page); });
-test("JOITA branding and field-desk question carry into Ask without auto-submitting", async ({page}) => {
+test("Roman Hindi from dashboard sends Hindi once with an old English preference", async ({page}) => {
+  let languages:string[]=[];
+  await page.route("**/api/farmassist-chat", async route => {
+    languages.push(route.request().postDataJSON().language);
+    await route.fulfill({json:{ok:true,source:"gemini",language:"Hindi",answer:"पत्तियों के नीचे कीट देखें। मिट्टी की नमी जांचें।"}});
+  });
+  await page.goto("./");
+  await page.getByLabel("What would you like to check today?").fill("tamatar ke patte peele ho rahe hain kya karu");
+  await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
+  await expect(page.locator(".answer-copy")).toContainText("मिट्टी की नमी");
+  expect(languages).toEqual(["Hindi"]);
+});
+test("blocked autoplay offers a Listen retry without another speech request", async ({page}) => {
+  let requests=0;
+  await page.addInitScript(() => {
+    let plays=0;
+    HTMLMediaElement.prototype.play = function() {
+      plays++;
+      return plays===1 ? Promise.reject(new DOMException("Blocked", "NotAllowedError")) : Promise.resolve();
+    };
+  });
+  await page.route("**/api/health", route=>route.fulfill({json:{ok:true,hasGeminiKey:true,hasSpeechKey:true}}));
+  await page.route("**/api/farmassist-chat", route=>route.fulfill({json:{ok:true,source:"gemini",answer:advisory}}));
+  await page.route("**/api/farmassist-speech", route=>{requests++;return route.fulfill({json:{ok:true,source:"google_tts",contentType:"audio/mpeg",audioParts:[silentAudio()]}});});
+  await page.goto("./#/ask");
+  await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling");
+  await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
+  await page.getByRole("button",{name:"Read answer aloud",exact:true}).click();
+  await expect(page.getByRole("status").filter({hasText:"Audio ready"})).toBeVisible();
+  await page.getByRole("button",{name:"Read answer aloud",exact:true}).click();
+  await expect(page.getByRole("button",{name:"Stop reading",exact:true})).toBeVisible();
+  expect(requests).toBe(1);
+});
+test("dashboard submits once and reload does not repeat the request", async ({page}) => {
   let sent=0;
   await page.route("**/api/farmassist-chat",async route=>{sent++;await route.fulfill({json:{ok:true,source:"gemini",answer:advisory,model:"test"}});});
   await page.goto("./");
   await expect(page.getByRole("img",{name:"JOITA Bioseed AI",exact:true})).toBeVisible();
   await expect(page.locator(".dashboard-sprout")).toHaveCount(0);
   await page.getByLabel("What would you like to check today?").fill("Tomato leaves are curling");
-  await page.getByRole("button",{name:"Ask JOITA",exact:true}).click();
+  await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
   await expect(page.getByLabel("Your question",{exact:true})).toHaveValue("Tomato leaves are curling");
-  expect(sent).toBe(0);
-  await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
   await expect(page.locator(".answer-copy")).toContainText(advisory);
+  expect(sent).toBe(1);
+  await page.reload();
+  await expect(page.getByLabel("Your question",{exact:true})).toBeVisible();
   expect(sent).toBe(1);
 });
 test("mobile dock opens tools, avoids overflow and respects reduced motion", async ({page}) => {
@@ -48,8 +82,8 @@ test("mobile dock opens tools, avoids overflow and respects reduced motion", asy
   await dock.getByRole("link",{name:"Market",exact:true}).click();
   await expect(page.locator(".page-title h2")).toHaveText("Mandi market prices");
   await dock.getByRole("button",{name:"All farm tools",exact:true}).click();
-  await expect(page.getByRole("navigation",{name:"FarmAssist modules"})).toBeVisible();
-  await page.getByRole("navigation",{name:"FarmAssist modules"}).getByRole("link",{name:"Home",exact:true}).click();
+  await expect(page.getByRole("navigation",{name:"JOITAFA modules"})).toBeVisible();
+  await page.getByRole("navigation",{name:"JOITAFA modules"}).getByRole("link",{name:"Home",exact:true}).click();
   expect(await page.locator(".field-line").evaluate(el=>getComputedStyle(el).animationName)).toBe("none");
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.evaluate(()=>window.scrollTo(0,0));
@@ -68,13 +102,13 @@ test("dashboard has no invented measurements and all pages navigate", async ({pa
 test("live answer, saved history, offline failure, and crop search", async ({page}) => {
   await page.route("**/api/farmassist-chat", route => route.fulfill({ json: { ok: true, source: "gemini", model: "test-model", answer: advisory } }));
   await page.goto("./#/ask"); await page.getByLabel("Your question", {exact:true}).fill("Tomato leaves are yellowing and curling. What should I check?");
-  await page.getByRole("button", { name: "Ask FarmAssist", exact: true }).click();
+  await page.getByRole("button", { name: "Ask JOITAFA", exact: true }).click();
   await expect(page.locator(".advisory-result")).toContainText("JOITA Live AI");
   await expect(page.locator(".advisory-result")).toContainText("whiteflies");
   await expect(page.getByLabel("Crop", {exact:true})).toHaveValue("Tomato");
   await page.reload(); await page.locator(".history-item").first().click(); await expect(page.locator(".advisory-result")).toContainText("whiteflies");
   await page.route("**/api/farmassist-chat", route => route.abort("failed"));
-  await page.getByLabel("Your question", {exact:true}).fill("How should I irrigate wheat?"); await page.getByRole("button", { name: "Ask FarmAssist", exact:true }).click();
+  await page.getByLabel("Your question", {exact:true}).fill("How should I irrigate wheat?"); await page.getByRole("button", { name: "Ask JOITAFA", exact:true }).click();
   await expect(page.locator(".advisory-result")).toContainText("Offline KB"); await expect(page.locator(".advisory-result")).toContainText("crown root");
   await page.getByLabel("Search crop or topic", {exact:true}).fill("sarson"); await expect(page.locator(".knowledge-search summary").first()).toHaveText("Mustard");
 });
@@ -152,7 +186,7 @@ test("cloud read-aloud plays audio parts and stops on navigation without device 
   });
   await page.goto("./#/ask");
   await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling");
-  await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
   await expect(page.getByText("Read-aloud sends this answer to Google for speech.")).toBeVisible();
   await page.getByRole("button",{name:"Read answer aloud",exact:true}).click();
   await expect(page.locator("audio")).toBeVisible();
@@ -174,7 +208,7 @@ test("speech cancellation cannot start audio after the user has stopped", async 
     await route.fulfill({json:{ok:true,source:"google_tts",contentType:"audio/mpeg",audioParts:[silentAudio()]}}).catch(()=>{});
   });
   await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling");
-  await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
   await page.getByRole("button",{name:"Read answer aloud",exact:true}).click();
   await expect(page.getByText("Creating Google speech audio...")).toBeVisible();
   await page.getByRole("button",{name:"Stop reading",exact:true}).click(); release();
@@ -188,7 +222,7 @@ test("speech provider failure leaves an explicit message and the answer intact",
   await page.route("**/api/farmassist-chat",route=>route.fulfill({json:{ok:true,source:"gemini",answer:advisory,model:"test"}}));
   await page.route("**/api/farmassist-speech",route=>route.fulfill({status:502,json:{ok:false,error:"Google speech is temporarily unavailable. Use device read-aloud."}}));
   await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling");
-  await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
   await page.getByRole("button",{name:"Read answer aloud",exact:true}).click();
   await expect(page.locator(".answer-feedback")).toContainText("Google speech is temporarily unavailable");
   await expect(page.locator(".answer-feedback")).toContainText("No English voice is available");
@@ -203,7 +237,7 @@ test("both home destinations stay visible without opening the menu", async ({pag
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({width, height:900});
     await page.goto("./#/ask");
-    const home = page.getByRole("link", {name:"FarmAssist home",exact:true});
+    const home = page.getByRole("link", {name:"JOITAFA home",exact:true});
     const website = page.getByRole("link", {name:"JOITA website",exact:true});
     await expect(home).toBeVisible(); await expect(website).toBeVisible();
     await expect(website).toHaveAttribute("href", "https://www.joitabioseedai.com/");
@@ -214,7 +248,7 @@ test("both home destinations stay visible without opening the menu", async ({pag
   }
   await page.setViewportSize({width:390,height:844});
   await page.getByRole("button",{name:"Toggle navigation",exact:true}).click();
-  await page.getByRole("link",{name:"FarmAssist home",exact:true}).click();
+  await page.getByRole("link",{name:"JOITAFA home",exact:true}).click();
   await expect(page.getByRole("button",{name:"Toggle navigation",exact:true})).toHaveAttribute("aria-expanded","false");
   await page.route("https://www.joitabioseedai.com/", route => route.fulfill({contentType:"text/html",body:"<h1>JOITA main website</h1>"}));
   await page.getByRole("link", {name:"JOITA website",exact:true}).click();
@@ -230,7 +264,7 @@ test("all answer languages are submitted, saved, and shared between Ask, Diagnos
   for (const language of answerLanguages) {
     await page.getByLabel("Answer language").selectOption(language.name);
     await page.getByLabel("Your question", {exact:true}).fill("Tomato curling leaves");
-    await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+    await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
     await expect(page.locator(".answer-copy")).toHaveAttribute("lang", language.locale);
     await expect(page.locator(".answer-copy")).toHaveAttribute("dir", language.name === "Urdu" ? "rtl" : "ltr");
   }
@@ -252,13 +286,13 @@ test("all answer languages are submitted, saved, and shared between Ask, Diagnos
 test("follow-ups carry context, new questions reset it, and history deletion can be undone", async ({page}) => {
   const requests: {message:string; history:unknown[]}[]=[];
   await page.route("**/api/farmassist-chat", async route=>{requests.push(route.request().postDataJSON()); await route.fulfill({json:{ok:true,source:"gemini",model:"test",answer:advisory}});});
-  await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling"); await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling"); await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
   await page.getByRole("button",{name:"Ask a follow-up",exact:true}).click();
   await expect(page.getByLabel("Your question",{exact:true})).toBeEmpty(); await expect(page.locator(".conversation-context")).toContainText("Tomato leaves curling");
-  await page.getByLabel("Your question",{exact:true}).fill("What if I see insects underneath?"); await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.getByLabel("Your question",{exact:true}).fill("What if I see insects underneath?"); await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
   await expect(page.locator(".answer-copy")).toBeVisible(); expect(requests[1].history).toHaveLength(1);
   await page.getByRole("button",{name:"New question",exact:true}).click(); await expect(page.locator(".advisory-result")).toHaveCount(0); await expect(page.getByLabel("Crop",{exact:true})).toHaveValue("");
-  await page.getByLabel("Your question",{exact:true}).fill("Wheat irrigation timing"); await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.getByLabel("Your question",{exact:true}).fill("Wheat irrigation timing"); await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
   await expect(page.locator(".answer-copy")).toBeVisible(); expect(requests[2].history).toHaveLength(0);
   await page.getByRole("button",{name:"Delete saved answer: Wheat irrigation timing",exact:true}).click(); await expect(page.locator(".history-item")).toHaveCount(2);
   await page.getByRole("button",{name:"Undo",exact:true}).click(); await expect(page.locator(".history-item")).toHaveCount(3);
@@ -268,7 +302,7 @@ test("follow-ups carry context, new questions reset it, and history deletion can
 test("answer copy, download, share fallback, and denied permissions are handled", async ({page, context}) => {
   await context.grantPermissions(["clipboard-read","clipboard-write"]);
   await page.route("**/api/farmassist-chat", route=>route.fulfill({json:{ok:true,source:"gemini",model:"test",answer:advisory}}));
-  await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling"); await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling"); await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
   await page.getByRole("button",{name:"Copy answer",exact:true}).click(); await expect(page.getByText("Answer copied.", {exact:true})).toBeVisible();
   expect(await page.evaluate(()=>navigator.clipboard.readText())).toContain("Source: JOITA Live AI");
   const downloaded=page.waitForEvent("download"); await page.getByRole("button",{name:"Download answer",exact:true}).click();
@@ -288,7 +322,7 @@ test("native question automatically selects its language and simplified follow-u
   await page.goto("./#/ask"); await page.getByLabel("Answer language").selectOption("Auto");
   await page.getByLabel("Your question",{exact:true}).fill("टमाटर की पत्तियां पीली हो रही हैं। क्या जांच करूं?");
   await expect(page.locator(".answer-language-preview")).toContainText("हिन्दी");
-  await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
   await expect(page.locator(".answer-copy")).toHaveAttribute("lang","hi-IN"); expect(requests[0].language).toBe("Hindi");
   await page.getByRole("button",{name:"Explain simply",exact:true}).click();
   await expect(page.locator(".answer-copy")).toBeVisible(); expect(requests[1].history).toHaveLength(1); expect(requests[1].message).toContain("आसान");
@@ -319,11 +353,11 @@ test("live tokens appear before completion, Stop discards partials, and only com
     };
   });
   await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling");
-  await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
   await expect(page.locator(".streaming-copy")).toContainText("Inspect the underside"); await expect(page.locator(".history-item")).toHaveCount(0);
   await page.getByRole("button",{name:"Stop",exact:true}).click(); await expect(page.getByRole("alert")).toContainText("No unfinished answer was saved");
   await expect(page.locator(".streaming-answer")).toHaveCount(0); await expect(page.locator(".history-item")).toHaveCount(0);
-  await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click(); await expect(page.locator(".streaming-copy")).toBeVisible();
+  await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click(); await expect(page.locator(".streaming-copy")).toBeVisible();
   await page.evaluate(()=>(window as unknown as {finishTestAnswer:()=>void}).finishTestAnswer());
   await expect(page.locator(".advisory-result")).toContainText("JOITA Live AI"); await expect(page.locator(".history-item")).toHaveCount(1);
   await expect(page.locator(".streaming-answer")).toHaveCount(0);
@@ -343,11 +377,11 @@ test("read-aloud uses a matching voice, stops on navigation, and missing voices 
     Object.defineProperty(window,"SpeechSynthesisUtterance",{configurable:true,value:class{ constructor(public text:string){} }});
   });
   await page.route("**/api/farmassist-chat", route=>route.fulfill({json:{ok:true,source:"gemini",model:"test",answer:advisory}}));
-  await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling"); await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling"); await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
   await page.getByRole("button",{name:"Read answer aloud",exact:true}).click(); await expect(page.getByRole("button",{name:"Stop reading",exact:true})).toBeVisible();
   expect(await page.evaluate(()=>(window as unknown as {speechTest:{utterances:{lang:string}[]}}).speechTest.utterances[0].lang)).toBe("en-IN");
   await nav(page,"Home"); expect(await page.evaluate(()=>(window as unknown as {speechTest:{cancelled:number}}).speechTest.cancelled)).toBeGreaterThanOrEqual(2);
-  await nav(page,"Ask"); await page.getByLabel("Answer language").selectOption("Punjabi"); await page.getByLabel("Your question",{exact:true}).fill("Wheat irrigation"); await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await nav(page,"Ask"); await page.getByLabel("Answer language").selectOption("Punjabi"); await page.getByLabel("Your question",{exact:true}).fill("Wheat irrigation"); await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
   await page.getByRole("button",{name:"Read answer aloud",exact:true}).click(); await expect(page.getByText(/No Punjabi voice is available/)).toBeVisible();
 });
 test("area, water, and seed calculators produce unit-correct results and invalidate stale values", async ({page}) => {
@@ -382,10 +416,10 @@ test("ledger saves exact amounts, edits without duplicating, filters, exports an
 });
 test("AI answer creates a real task, dashboard completes it, and calendar exports it", async ({page}) => {
   await page.route("**/api/farmassist-chat", route=>route.fulfill({json:{ok:true,source:"gemini",model:"test",answer:advisory}}));
-  await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato yellowing leaves"); await page.getByRole("button",{name:"Ask FarmAssist",exact:true}).click();
+  await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato yellowing leaves"); await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
   await page.getByRole("button",{name:"Create field task",exact:true}).click(); await page.getByLabel("Follow-up task",{exact:true}).fill("Check leaf undersides"); await page.getByLabel("Follow-up due date",{exact:true}).fill("2026-09-01");
   await page.getByRole("button",{name:"Save field task",exact:true}).click(); await expect(page.getByText("Field task saved.",{exact:false})).toBeVisible();
-  await page.getByRole("link",{name:"FarmAssist home",exact:true}).click(); await expect(page.locator(".dashboard-tasks")).toContainText("Check leaf undersides"); await expect(page.locator(".dashboard-tasks")).toContainText("Overdue");
+  await page.getByRole("link",{name:"JOITAFA home",exact:true}).click(); await expect(page.locator(".dashboard-tasks")).toContainText("Check leaf undersides"); await expect(page.locator(".dashboard-tasks")).toContainText("Overdue");
   await page.locator(".dashboard-tasks").getByRole("checkbox").click(); await expect(page.locator(".dashboard-tasks .task-row")).toHaveCount(0);
   await nav(page,"Calendar"); await expect(page.getByRole("checkbox")).toBeChecked();
   await page.getByRole("button",{name:"Edit task",exact:true}).click(); await page.getByLabel("Task",{exact:true}).fill("Record leaf observations"); await page.getByRole("button",{name:"Update task",exact:true}).click();

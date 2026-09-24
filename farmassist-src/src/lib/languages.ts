@@ -31,6 +31,10 @@ export function resolveAnswerLanguage(
   question: string,
   previous = "English",
 ) {
+  if (/\b(?:reply|answer|respond|explain)\s+in\s+english\b/i.test(question)) return "English";
+  if (/\b(?:hindi\s+(?:me|mein)|(?:reply|answer|respond)\s+in\s+hindi)\b|हिंदी\s*में|हिन्दी\s*में/i.test(question)) return "Hindi";
+  const romanHindiWords = question.toLowerCase().match(/\b(?:meri|mera|mere|gehun|sarson|fasal|patte|patti|kya|kaise|sinchai|kheti|pani|kab|dena|chahiye|karu|kare|tamatar|peele|rahe|hain|batao)\b/g) || [];
+  if ((choice === "English" || choice === "Auto") && new Set(romanHindiWords).size >= 2) return "Hindi";
   if (choice !== "Auto") return answerLanguage(choice).name;
   // Shared scripts cannot reliably distinguish dialects; an explicit choice always wins.
   const scripts: [RegExp, string][] = [

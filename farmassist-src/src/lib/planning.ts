@@ -52,11 +52,11 @@ export function calendarFile(plans: Plan[]) {
       start: [year, month, day],
       end: [next.getUTCFullYear(), next.getUTCMonth() + 1, next.getUTCDate()],
       title: `${plan.crop || "Farm"}: ${plan.task}`,
-      description: `JOITA FarmAssist field task. ${plan.sowing ? `Sowing date: ${plan.sowing}. ` : ""}Confirm crop treatment decisions with your local agriculture expert.`,
+      description: `JOITAFA field task. ${plan.sowing ? `Sowing date: ${plan.sowing}. ` : ""}Confirm crop treatment decisions with your local agriculture expert.`,
       classification: "PRIVATE",
       status: "CONFIRMED",
       transp: "TRANSPARENT",
-      productId: "JOITA FarmAssist",
+      productId: "JOITAFA",
     };
   });
   const { error, value } = createEvents(events);

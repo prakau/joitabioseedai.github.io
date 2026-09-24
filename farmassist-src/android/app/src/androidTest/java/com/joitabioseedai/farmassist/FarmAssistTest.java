@@ -94,11 +94,13 @@ public class FarmAssistTest {
             js(scenario, "window.nativeCheck=null;fetch('https://www.joitabioseedai.com/api/health').then(r=>r.json()).then(d=>window.nativeCheck=d).catch(e=>window.nativeCheck={error:String(e)})");
             until(scenario, "Boolean(window.nativeCheck)");
             assertEquals("true", js(scenario, "window.nativeCheck.ok && window.nativeCheck.hasGeminiKey && window.nativeCheck.hasMarketKey && window.nativeCheck.hasSpeechKey"));
-            js(scenario, "location.hash='#/ask?question=Hi'");
-            until(scenario, "Boolean(document.querySelector('.advisory-form textarea'))");
-            js(scenario, "Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='Ask FarmAssist').click()");
+            js(scenario, "location.hash='#/'");
+            until(scenario, "Boolean(document.querySelector('#field-question'))");
+            js(scenario, "(()=>{const input=document.querySelector('#field-question');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(input,'tamatar ke patte peele ho rahe hain kya karu');input.dispatchEvent(new Event('input',{bubbles:true}));})()");
+            js(scenario, "document.querySelector('#field-question').form.requestSubmit()");
             until(scenario, "Boolean(document.querySelector('.advisory-result'))");
             assertEquals("true", js(scenario, "document.querySelector('.advisory-result').innerText.includes('JOITA Live AI')"));
+            assertEquals("true", js(scenario, "document.querySelector('.answer-copy').lang === 'hi-IN'"));
             js(scenario, "document.querySelector('[aria-label=\"Read answer aloud\"]').click()");
             until(scenario, "Boolean(document.querySelector('audio')) && document.querySelector('audio').duration > 0");
             screenshot("android-live-advisory");

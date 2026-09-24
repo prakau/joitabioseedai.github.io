@@ -13,7 +13,7 @@ import type { ChatResult } from "../lib/network";
 export const safetyNotice =
   "AI-assisted advisory. Confirm pesticide/fertilizer use with local label, KVK, or agriculture expert.";
 export const privacyNotice =
-  "Do not upload personal documents or private information. FarmAssist is for crop advisory support only.";
+  "Do not upload personal documents or private information. JOITAFA is for crop advisory support only.";
 export function Title({
   title,
   description,

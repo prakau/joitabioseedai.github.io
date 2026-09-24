@@ -76,8 +76,10 @@ export function AdvisoryAnswer({
     if (!player || !audioParts.length) return;
     const session = playback.current;
     void player.play().catch(() => {
-      if (session === playback.current)
-        setFeedback("Google audio is ready. Press play in the audio controls.");
+      if (session === playback.current) {
+        setSpeaking(false);
+        setFeedback("Audio ready. Tap Listen to play. आवाज़ तैयार है। सुनें दबाएं।");
+      }
     });
     return () => player.pause();
   }, [audioParts, audioIndex]);
@@ -100,7 +102,7 @@ export function AdvisoryAnswer({
     );
   }
   function answerDocument() {
-    return `JOITA FarmAssist\n${displayDate(date)}\nSource: ${sourceLabel(result.source)}\nAnswer language: ${actualLanguage.name}\n\nQuestion: ${question}\n\n${plainAnswer()}\n\n${safetyNotice}\nhttps://www.joitabioseedai.com/farmassist/`;
+    return `JOITAFA\n${displayDate(date)}\nSource: ${sourceLabel(result.source)}\nAnswer language: ${actualLanguage.name}\n\nQuestion: ${question}\n\n${plainAnswer()}\n\n${safetyNotice}\nhttps://www.joitabioseedai.com/farmassist/`;
   }
   async function copy() {
     try {
@@ -114,7 +116,7 @@ export function AdvisoryAnswer({
   }
   async function share() {
     try {
-      if (!await shareText("JOITA FarmAssist advisory", answerDocument())) { await copy(); return; }
+      if (!await shareText("JOITAFA advisory", answerDocument())) { await copy(); return; }
       setFeedback("Share request completed.");
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") return;
@@ -176,6 +178,17 @@ export function AdvisoryAnswer({
       setFeedback("Reading stopped.");
       return;
     }
+    if (audioParts.length && audio.current) {
+      setSpeaking(true);
+      try {
+        await audio.current.play();
+        setFeedback("Reading aloud. जवाब सुनाया जा रहा है।");
+      } catch {
+        setSpeaking(false);
+        setFeedback("Tap play in the audio controls. नीचे ऑडियो का प्ले बटन दबाएं।");
+      }
+      return;
+    }
     if (!cloudSpeech || !navigator.onLine) {
       readOnDevice();
       return;
@@ -203,7 +216,7 @@ export function AdvisoryAnswer({
   }
 
   return (
-    <section className="answer-panel" ref={root} aria-label="FarmAssist answer">
+    <section className="answer-panel" ref={root} aria-label="JOITAFA answer">
       <div className="answer-meta">
         <strong>{actualLanguage.native}</strong>
         <span>
@@ -254,13 +267,14 @@ export function AdvisoryAnswer({
             <Share2 size={20} />
           </button>
           <button
-            className={`icon-action ${speaking ? "is-speaking" : ""}`}
+            className={`icon-action !w-auto !px-3 gap-2 ${speaking ? "is-speaking" : ""}`}
             title={speaking ? "Stop reading" : "Read answer aloud"}
             aria-label={speaking ? "Stop reading" : "Read answer aloud"}
             aria-pressed={speaking}
             onClick={() => void readAloud()}
           >
             {loadingAudio ? <LoaderCircle size={18} className="animate-spin motion-reduce:animate-none" /> : speaking ? <Square size={18} /> : <Volume2 size={21} />}
+            <span>{loadingAudio ? "Preparing / तैयार हो रहा है" : speaking ? "Stop / रोकें" : "Listen / सुनें"}</span>
           </button>
         </div>
         <Button
