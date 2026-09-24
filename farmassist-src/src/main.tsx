@@ -5,6 +5,7 @@ import { HashRouter } from "react-router-dom";
 import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import "./styles/globals.css";
+import "./styles/workspace.css";
 import { nativeApp } from "./lib/platform";
 
 const queryClient = new QueryClient({

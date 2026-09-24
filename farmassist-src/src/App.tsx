@@ -281,7 +281,7 @@ export default function App() {
             <a href="mailto:contact@joitabioseedai.com">{t("Contact our team")}</a>
           </div>
         </aside>
-        <main className="app-main" id="main-content">
+        <main className={`app-main ${active === "home" ? "home-workspace" : ""}`} id="main-content">
           <InterfaceLanguage />
           {storageWarning && <Notice error>{storageWarning}</Notice>}
           {!online && (
@@ -302,8 +302,9 @@ export default function App() {
                   })}
                 />
                 <DashboardStart />
-                <div className="metrics">
+                <div className="metrics dashboard-metrics">
                   <div>
+                    <CloudSun className="metric-icon" size={20} aria-hidden="true" />
                     <strong>
                       {weather.data?.temperature !== undefined
                         ? `${weather.data.temperature} C`
@@ -319,6 +320,7 @@ export default function App() {
                     <small>{place.label}</small>
                   </div>
                   <div>
+                    <Activity className="metric-icon" size={20} aria-hidden="true" />
                     <strong>{sound ? `${sound.activity}%` : "--"}</strong>
                     <span>{t("Latest sound activity")}</span>
                     <small>
@@ -328,11 +330,13 @@ export default function App() {
                     </small>
                   </div>
                   <div>
+                    <Wallet className="metric-icon" size={20} aria-hidden="true" />
                     <strong>{savedCount}</strong>
                     <span>{t("Saved records")}</span>
                     <small>{t("Stored on this device")}</small>
                   </div>
                   <div>
+                    <CalendarDays className="metric-icon" size={20} aria-hidden="true" />
                     <strong>{cropGuides.length}</strong>
                     <span>{t("Crop guides")}</span>
                     <small>{t("North India reference windows")}</small>

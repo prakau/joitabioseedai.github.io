@@ -2,6 +2,9 @@ import { useStored } from "./storage";
 
 export type InterfaceLanguage = "en" | "hi";
 const hindi: Record<string, string> = {
+  "Start a question": "सवाल शुरू करें", "Leaf symptoms": "पत्तियों के लक्षण", "Irrigation": "सिंचाई", "Crop planning": "फसल की योजना",
+  "What should I check before irrigating my crop?": "फसल की सिंचाई से पहले मुझे क्या जांचना चाहिए?",
+  "What information do you need to help me plan my next crop?": "अगली फसल की योजना बनाने के लिए आपको कौन सी जानकारी चाहिए?",
   Home: "होम", Ask: "पूछें", Diagnose: "फसल जांच", "EHI / Sound": "खेत की आवाज़",
   Weather: "मौसम", Calendar: "कैलेंडर", Calculators: "कैलकुलेटर", "Income & Costs": "आय और खर्च",
   "3D Plot": "3D खेत", Soil: "मिट्टी", Market: "मंडी", Community: "समुदाय", About: "परिचय", Settings: "सेटिंग्स", More: "और",
