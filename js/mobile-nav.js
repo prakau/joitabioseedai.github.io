@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // Create a floating button for FarmAssist AI on mobile
+        // Create a floating button for JOITAFA on mobile
         const assistantLink = document.getElementById('nav-assistant');
         if (assistantLink) {
             // Ensure the link is visible and styled properly
@@ -120,8 +120,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const assistantButton = document.createElement('a');
                 assistantButton.className = 'mobile-assistant-button';
                 assistantButton.href = assistantLink.href;
-                assistantButton.innerHTML = 'FarmAssist AI';
-                assistantButton.setAttribute('aria-label', 'Open FarmAssist AI');
+                assistantButton.innerHTML = 'JOITAFA';
+                assistantButton.setAttribute('aria-label', 'Open JOITAFA');
 
                 // Add touch feedback
                 assistantButton.addEventListener('touchstart', function() {

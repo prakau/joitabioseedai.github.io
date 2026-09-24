@@ -66,8 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const floatingFarmAssist = document.createElement('a');
     floatingFarmAssist.className = 'floating-farmassist';
     floatingFarmAssist.href = '/farmassist/';
-    floatingFarmAssist.textContent = 'Ask FarmAssist';
-    floatingFarmAssist.setAttribute('aria-label', 'Open JOITA FarmAssist AI');
+    floatingFarmAssist.textContent = 'Ask JOITAFA';
+    floatingFarmAssist.setAttribute('aria-label', 'Open JOITAFA');
     document.body.appendChild(floatingFarmAssist);
     window.setTimeout(() => floatingFarmAssist.classList.add('is-visible'), 700);
   }

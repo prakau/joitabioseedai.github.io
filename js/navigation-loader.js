@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     [
         { id: 'nav-home', text: 'Home', href: '/' },
         { id: 'nav-products', text: 'Products', href: '/products.html' },
-        { id: 'nav-assistant', text: 'FarmAssist AI', href: '/farmassist-ai.html' },
+        { id: 'nav-assistant', text: 'JOITAFA', href: '/farmassist-ai.html' },
         { id: 'nav-data', text: 'Data & Field Validation', href: '/data-validation.html' },
         { id: 'nav-farmers', text: 'Farmers & FPOs', href: '/farmers-fpos.html' },
         { id: 'nav-investors', text: 'Investors & Partners', href: '/investors-partners.html' },
