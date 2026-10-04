@@ -32,7 +32,26 @@ try {
   await page.getByRole("navigation",{name:"JOITAFA modules"}).getByRole("link",{name:"Income & Costs",exact:true}).click();
   await page.getByLabel("Amount (INR)").fill("250.75"); await page.getByRole("button",{name:"Save transaction",exact:true}).click();
   await page.reload(); assert.match(await page.locator(".ledger-totals").innerText(),/250.75/);
+  await page.evaluate(()=>{location.hash="#/diary";});
+  await page.getByLabel("Crop name",{exact:true}).fill("Tomato");
+  await page.getByLabel("Plot name",{exact:true}).fill("Offline north field");
+  await page.getByLabel("Symptoms observed",{exact:true}).fill("Yellow lower leaves");
+  await page.getByRole("button",{name:"Save observation",exact:true}).click();
+  await page.reload(); assert.match(await page.locator(".observation-row").innerText(),/Offline north field/);
+  await page.evaluate(()=>{location.hash="#/sales";});
+  await page.getByLabel("Crop / produce",{exact:true}).fill("Wheat");
+  await page.getByLabel("Quantity to sell (kg)",{exact:true}).fill("100");
+  for (const [index,name,price] of [[0,"Local","2000"],[1,"Distant","2100"]]) {
+    const offer=page.locator(".buyer-offer").nth(index);
+    await offer.getByLabel("Buyer / mandi name").fill(name);
+    await offer.getByLabel("Quoted price (INR)").fill(price);
+  }
+  await page.getByRole("button",{name:"Compare net proceeds",exact:true}).click();
+  assert.match(await page.locator("tbody tr").first().innerText(),/Distant/);
+  await page.getByRole("button",{name:"Save comparison",exact:true}).click();
+  await page.reload(); await page.getByRole("button",{name:/Wheat · 100 kg/}).click();
+  assert.match(await page.locator("tbody tr").first().innerText(),/2,100/);
   const savedCaches = await page.evaluate(() => caches.keys()); assert(savedCaches.includes("unrelated-app-cache")); assert.deepEqual(errors, []);
   await page.screenshot({path:"test-results/offline-mobile.png",fullPage:true,animations:"disabled"});
-  console.log(JSON.stringify({offlineReload:true, offlineQuestion:true, offlineCalculators:true, offlineLedger:true, savedAnswerAfterReload:true, assetsCached:keys.length, apiNeverCached:true, unrelatedCachePreserved:true, browserErrors:errors}));
+  console.log(JSON.stringify({offlineReload:true, offlineQuestion:true, offlineCalculators:true, offlineLedger:true, offlineDiary:true, offlineSalePlanner:true, savedAnswerAfterReload:true, assetsCached:keys.length, apiNeverCached:true, unrelatedCachePreserved:true, browserErrors:errors}));
 } finally { await browser.close(); }

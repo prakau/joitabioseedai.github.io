@@ -18,6 +18,33 @@ test("Roman Hindi overrides a stale English preference without changing other la
 import { areaInMetres, calculateWater, calculateSeed, parseMoney, ledgerTotals } from "../src/lib/farm-tools";
 import { calendarFile, isDay, localDay, planStatus, upcomingPlans, validatePlan, type Plan } from "../src/lib/planning";
 import ICAL from "ical.js";
+import { validateObservation, incidence, observationTrend, fieldReport, observationRecheck } from "../src/lib/field-diary";
+import { compareSales } from "../src/lib/sale-planner";
+test("field observations validate sample counts and avoid invalid or future dates", () => {
+  const draft = { crop:"Tomato", plot:"North", date:"2026-09-01", symptoms:"Yellow leaves", action:"", checked:"20", affected:"3" };
+  const value = validateObservation(draft, "2026-10-04");
+  assert.equal(incidence(value), 15);
+  assert.equal(incidence(validateObservation({...draft, checked:"", affected:""})), null);
+  for (const change of [{checked:"0"},{affected:"21"},{affected:"-1"},{affected:"1.5"},{checked:"NaN"},{checked:""},{date:"2026-02-30"},{date:"2100-01-01"},{symptoms:" "},{plot:""}]) assert.throws(()=>validateObservation({...draft,...change}, "2026-10-04"));
+  const first={...value,id:"a"}; const last={...value,id:"b",date:"2026-09-03",affected:1};
+  assert.equal(observationTrend([first,last])?.change, -10);
+  assert.equal(observationTrend([first,{...last,plot:"South"}]), null);
+  assert.equal(observationTrend([first,{...last,date:first.date}]), null);
+  assert.match(fieldReport([last,first]), /3\/20 \(15.0%\)/);
+  assert.match(fieldReport([last],true), /पुष्टि किया हुआ निदान नहीं/);
+  assert.equal(observationRecheck(first, localDay()).id, "diary-a");
+  assert.throws(()=>observationRecheck(first, "1900-01-01"));
+});
+test("sale comparison normalizes quintals and kg and deducts only entered costs", () => {
+  const a={buyer:"Local",price:"2000",unit:"quintal" as const,transport:"100",fees:"50",commission:"2"};
+  const b={...a,buyer:"Distant",price:"21",unit:"kg" as const,transport:"300",fees:"",commission:""};
+  const rows=compareSales("100",[a,b]);
+  assert.deepEqual(rows[0], {buyer:"Local",gross:2000,deductions:190,net:1810,netPerKg:18.1});
+  assert.equal(rows[1].net,1800);
+  for(const qty of ["0","-1","NaN","","0.001"]) assert.throws(()=>compareSales(qty,[a,b]));
+  for(const change of [{commission:"101"},{price:"0"},{fees:"-2"},{buyer:""}]) assert.throws(()=>compareSales("100",[{...a,...change},b]));
+  assert.equal(compareSales("1",[{...a,transport:"2000"},b]).some(r=>r.net<0),true);
+});
 test("area and seed calculations convert units without prescribing a rate", () => {
   assert.equal(areaInMetres("1", "Hectares"), 10000);
   assert.equal(areaInMetres("1", "Acres"), 4046.8564224);

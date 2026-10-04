@@ -8,6 +8,8 @@ import {
   CalendarDays,
   Calculator,
   Camera,
+  ClipboardList,
+  Scale,
   CloudSun,
   Download,
   Home,
@@ -32,6 +34,10 @@ import { languageChoice } from "./lib/languages";
 import { FarmPlot } from "./components/FarmPlot";
 import { FarmCalculators } from "./components/FarmCalculators";
 import { FarmLedger } from "./components/FarmLedger";
+import { CropDiary } from "./components/CropDiary";
+import { SalePlanner } from "./components/SalePlanner";
+import { DIARY_KEY } from "./lib/field-diary";
+import { SALE_KEY } from "./lib/sale-planner";
 import { UpcomingTasks } from "./components/FieldTasks";
 import { LEDGER_KEY } from "./lib/farm-tools";
 import { Calendar, Community, Soil } from "./components/FieldRecords";
@@ -60,6 +66,8 @@ const modules = [
   { id: "home", label: "Home", icon: Home },
   { id: "ask", label: "Ask", icon: MessageSquare },
   { id: "diagnose", label: "Diagnose", icon: Camera },
+  { id: "diary", label: "Crop Diary", icon: ClipboardList },
+  { id: "sales", label: "Sale Planner", icon: Scale },
   { id: "sound", label: "EHI / Sound", icon: Activity },
   { id: "weather", label: "Weather", icon: CloudSun },
   { id: "calendar", label: "Calendar", icon: CalendarDays },
@@ -73,6 +81,8 @@ const modules = [
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
 const recordKeys = [
+  DIARY_KEY,
+  SALE_KEY,
   LEDGER_KEY,
   "joita-fa-questions",
   "joita-fa-layouts",
@@ -349,6 +359,18 @@ export default function App() {
                 <div className="tool-grid">
                   {[
                     {
+                      id: "diary",
+                      icon: ClipboardList,
+                      title: "Track crop symptoms",
+                      text: "Field observations, rechecks, and expert reports.",
+                    },
+                    {
+                      id: "sales",
+                      icon: Scale,
+                      title: "Compare buyer offers",
+                      text: "Sale value after transport, fees, and commission.",
+                    },
+                    {
                       id: "diagnose",
                       icon: Camera,
                       title: "Check a crop photo",
@@ -431,6 +453,8 @@ export default function App() {
             {active === "visualizer" && <FarmPlot />}
             {active === "calculators" && <FarmCalculators />}
             {active === "ledger" && <FarmLedger />}
+            {active === "diary" && <CropDiary />}
+            {active === "sales" && <SalePlanner />}
             {active === "soil" && <Soil />}
             {active === "calendar" && <Calendar />}
             {active === "community" && <Community />}

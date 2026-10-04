@@ -2,6 +2,9 @@ import { useStored } from "./storage";
 
 export type InterfaceLanguage = "en" | "hi";
 const hindi: Record<string, string> = {
+  "Crop Diary": "फसल डायरी", "Sale Planner": "बिक्री की योजना",
+  "Track crop symptoms": "फसल के लक्षण दर्ज करें", "Field observations, rechecks, and expert reports.": "खेत के अवलोकन, दोबारा जांच और विशेषज्ञ रिपोर्ट।",
+  "Compare buyer offers": "खरीदारों के भाव की तुलना", "Sale value after transport, fees, and commission.": "ढुलाई, शुल्क और कमीशन के बाद बिक्री की रकम।",
   "Start a question": "सवाल शुरू करें", "Leaf symptoms": "पत्तियों के लक्षण", "Irrigation": "सिंचाई", "Crop planning": "फसल की योजना",
   "What should I check before irrigating my crop?": "फसल की सिंचाई से पहले मुझे क्या जांचना चाहिए?",
   "What information do you need to help me plan my next crop?": "अगली फसल की योजना बनाने के लिए आपको कौन सी जानकारी चाहिए?",

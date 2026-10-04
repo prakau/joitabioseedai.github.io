@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { NavLink } from "react-router-dom";
 import {
   Copy,
+  ClipboardList,
   Download,
   MessageSquare,
   Share2,
@@ -329,6 +331,10 @@ export function AdvisoryAnswer({
             : "")}
       </p>
       <AdvisoryTask crop={crop} />
+      <NavLink className="text-link" to={`/diary?${new URLSearchParams({ crop, symptoms: question.slice(0, 800) })}`}>
+        <ClipboardList size={18} />
+        {actualLanguage.name === "Hindi" ? "फसल डायरी में निरीक्षण दर्ज करें" : "Record a field observation"}
+      </NavLink>
     </section>
   );
 }
