@@ -13,7 +13,11 @@ async function setup(page: Page) {
 }
 async function nav(page: Page, label: string) {
   if (await page.getByRole("button", { name: "Toggle navigation" }).isVisible()) await page.getByRole("button", { name: "Toggle navigation" }).click();
-  await page.getByRole("navigation", { name: "JOITAFA modules" }).getByRole("link", { name: label, exact: true }).click();
+  const link = page.getByRole("navigation", { name: "JOITAFA modules" }).getByRole("link", { name: label, exact: true });
+  const target = await link.getAttribute("href");
+  await link.click();
+  // The mobile drawer closes after navigation; inspect its active DOM link even while hidden.
+  await expect(page.locator('#farm-navigation a[aria-current="page"]')).toHaveAttribute("href", target!);
 }
 function silentAudio() {
   // A real PCM fixture exercises browser decoding without a provider call.
@@ -196,7 +200,7 @@ test("cloud read-aloud plays audio parts and stops on navigation without device 
   await expect(page.getByText("Google speech / part 2 of 2")).toBeVisible();
   await page.evaluate(()=>{(window as unknown as {testPlayer:HTMLAudioElement}).testPlayer=document.querySelector("audio")!;});
   await nav(page,"Home");
-  expect(await page.evaluate(()=>(window as unknown as {testPlayer:HTMLAudioElement}).testPlayer.paused)).toBe(true);
+  await expect.poll(()=>page.evaluate(()=>(window as unknown as {testPlayer:HTMLAudioElement}).testPlayer.paused)).toBe(true);
 });
 test("speech cancellation cannot start audio after the user has stopped", async ({page}) => {
   await page.route("**/api/health",route=>route.fulfill({json:{ok:true,hasGeminiKey:true,hasSpeechKey:true}}));
@@ -380,7 +384,7 @@ test("read-aloud uses a matching voice, stops on navigation, and missing voices 
   await page.goto("./#/ask"); await page.getByLabel("Your question",{exact:true}).fill("Tomato leaves curling"); await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
   await page.getByRole("button",{name:"Read answer aloud",exact:true}).click(); await expect(page.getByRole("button",{name:"Stop reading",exact:true})).toBeVisible();
   expect(await page.evaluate(()=>(window as unknown as {speechTest:{utterances:{lang:string}[]}}).speechTest.utterances[0].lang)).toBe("en-IN");
-  await nav(page,"Home"); expect(await page.evaluate(()=>(window as unknown as {speechTest:{cancelled:number}}).speechTest.cancelled)).toBeGreaterThanOrEqual(2);
+  await nav(page,"Home"); await expect.poll(()=>page.evaluate(()=>(window as unknown as {speechTest:{cancelled:number}}).speechTest.cancelled)).toBeGreaterThanOrEqual(2);
   await nav(page,"Ask"); await page.getByLabel("Answer language").selectOption("Punjabi"); await page.getByLabel("Your question",{exact:true}).fill("Wheat irrigation"); await page.getByRole("button",{name:"Ask JOITAFA",exact:true}).click();
   await page.getByRole("button",{name:"Read answer aloud",exact:true}).click(); await expect(page.getByText(/No Punjabi voice is available/)).toBeVisible();
 });

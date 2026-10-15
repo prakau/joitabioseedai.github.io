@@ -20,7 +20,7 @@ test("Hindi dashboard persists independently of the answer language", async ({ p
   await page.locator(".app-sidebar").getByRole("link", { name: "पूछें", exact: true }).click();
   await expect(page.getByLabel("Answer language")).toHaveValue("Punjabi");
   await page.getByRole("link", { name: "JOITAFA होम", exact: true }).click();
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await page.getByRole("group", { name: "डैशबोर्ड की भाषा", exact: true }).getByRole("button", { name: "English", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.getByRole("heading", { name: "Good farming. Clear next steps." })).toBeVisible();
 });
