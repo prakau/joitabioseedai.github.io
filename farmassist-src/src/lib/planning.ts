@@ -1,6 +1,7 @@
 import { createEvents, type EventAttributes } from "ics";
 
 export const PLAN_KEY = "joita-fa-plans-v3";
+export const preplantActivities = ["Land preparation", "Soil sampling", "Nursery preparation", "Seed procurement"] as const;
 export type Plan = {
   id: string;
   crop: string;
@@ -8,6 +9,7 @@ export type Plan = {
   task: string;
   due: string;
   done: boolean;
+  preplantActivity?: (typeof preplantActivities)[number] | "";
 };
 export function localDay(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -26,11 +28,22 @@ export function isDay(value: string) {
 export function validatePlan(plan: Omit<Plan, "id" | "done">) {
   if (!plan.task.trim() || plan.task.length > 160)
     throw new Error("Enter a task of 1 to 160 characters.");
-  if (!isDay(plan.due)) throw new Error("Choose a valid task due date.");
-  if (plan.sowing && !isDay(plan.sowing))
-    throw new Error("Choose a valid sowing date or leave it empty.");
+  const issue = planDateIssue(plan);
+  if (issue) throw new Error(issue);
+}
+export function planDateIssue(plan: Pick<Plan, "sowing" | "due" | "preplantActivity">): string | null {
+  if (!isDay(plan.due)) return "Choose a valid task due date.";
+  if (plan.sowing && !isDay(plan.sowing)) return "Choose a valid sowing date or leave it empty.";
+  if (plan.preplantActivity && !preplantActivities.includes(plan.preplantActivity)) return "Choose a supported pre-plant activity.";
+  if (plan.preplantActivity && (!plan.sowing || plan.due >= plan.sowing))
+    return "A pre-plant activity needs a due date before a valid sowing date.";
+  if (plan.sowing && plan.due < plan.sowing && !plan.preplantActivity)
+    return "Task is before sowing. Correct the dates or select a valid pre-plant activity.";
+  return null;
 }
 export function planStatus(plan: Plan, today = localDay()) {
+  // Legacy inconsistent dates remain editable, but never become overdue alerts.
+  if (planDateIssue(plan)) return "Needs review";
   if (plan.done) return "Completed";
   if (plan.due < today) return "Overdue";
   if (plan.due === today) return "Today";
@@ -52,7 +65,7 @@ export function calendarFile(plans: Plan[]) {
       start: [year, month, day],
       end: [next.getUTCFullYear(), next.getUTCMonth() + 1, next.getUTCDate()],
       title: `${plan.crop || "Farm"}: ${plan.task}`,
-      description: `JOITAFA field task. ${plan.sowing ? `Sowing date: ${plan.sowing}. ` : ""}Confirm crop treatment decisions with your local agriculture expert.`,
+      description: `JOITAFA field task. ${plan.sowing ? `Sowing date: ${plan.sowing}. ` : ""}${plan.preplantActivity ? `Pre-plant activity: ${plan.preplantActivity}. ` : ""}Confirm crop treatment decisions with your local agriculture expert.`,
       classification: "PRIVATE",
       status: "CONFIRMED",
       transp: "TRANSPARENT",

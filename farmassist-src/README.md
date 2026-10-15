@@ -31,7 +31,7 @@ Install a Playwright Chromium browser with `npx playwright install chromium`, or
 - Soil: measured lab values, units, range validation, screening guidance, history and export. Blank values are not treated as zero. Soil test methods and crop requirements take priority over generic screening ranges.
 - Sound: 60-second microphone recording, stop control, uploaded audio analysis, playback, measured RMS/activity/quiet frames, saved metrics and export. Permission and decoding errors are visible. Audio stays in the browser and is not sent to AI services.
 - Community: local field notes, search, delete, export and explicit sharing/email actions. No seeded users or fictional public posts.
-- Settings: farm profile, location, record export, offline cache status and diagnostics. No AI-key entry or browser AI credentials.
+- Settings: farm profile, location, versioned record backup/merge restore, IndexedDB recovery copies, offline cache status and diagnostics. No AI-key entry or browser AI credentials.
 
 ## External services and limits
 
@@ -43,9 +43,9 @@ Vercel runs `/api/health`, `/api/farmassist-chat`, `/api/farmassist-speech`, and
 
 Chat and speech each have a simple limit of 10 requests per IP per hour **per warm server instance**, not a distributed global quota. Configure Google project quotas to cap cross-instance usage and billing alerts to monitor cost. Cloud speech can incur charges beyond the provider allowance; Standard voices are selected explicitly instead of higher-priced premium voices. No billing plan or provider quota is changed by this application.
 
-Chat requests default to JSON for backwards compatibility. `Accept: text/event-stream` enables `status`, `delta`, `reset`, and final `complete` events. Each event contains JSON data. Only a validated `complete` event is a finished answer; a provider switch clears its preceding partial output. Truncated streams are never saved as live answers. Vercel installs the API and frontend dependencies separately. Provider timeouts fit within the 30-second function budget.
+Chat requests default to JSON for backwards compatibility. `Accept: text/event-stream` enables `status`, `delta`, `reset`, and final `complete` events. Each event contains JSON data. Only a validated `complete` event is a finished answer; a provider switch clears its preceding partial output. Truncated streams are never saved as live answers. Vercel installs the API and frontend dependencies separately. The configured function budget is 60 seconds, with bounded provider timeouts.
 
-Automatic language matching uses script detection, not a guaranteed language classifier. Shared scripts such as Hindi/Marathi/Haryanvi require an explicit choice for the intended language or dialect. Offline crop guides remain in English. Interface navigation remains English; native-language prompts and AI answers are available in the advisory workspace.
+Automatic language matching uses script detection and Roman-Hindi rules, not a guaranteed language classifier. Shared scripts such as Hindi/Marathi/Haryanvi require an explicit choice for the intended language or dialect. Dashboard navigation and new recovery controls support English and Hindi. Offline Hindi covers selected field-check topics; some detailed tools and crop guides remain English.
 
 There is no shared community database or automatic synchronization between devices. A scientifically validated EHI or acoustic species classifier is not connected; sound activity is not ecosystem health. Nearby GBIF/iNaturalist observations provide geographic context only, never species detections from a recording. Pl@ntNet is not presented as an active disease detector.
 
@@ -56,3 +56,31 @@ The service worker precaches the app shell, JS and CSS. It only intercepts this 
 Existing questions/layouts/notes remain accessible. Earlier soil and EHI records remain exportable but are not relabeled as new validated measurements. Local storage failures display a warning; save confirmation appears only after successful persistence.
 
 The public website deploys from the repository to Vercel. A static GitHub Pages copy can serve the UI/offline tools but cannot run live API functions.
+
+## Foundation increment (2026-10-14)
+
+See `../docs/climateos/BASELINE-2026-10-14.md` for the current-state audit,
+architecture, proposed schema, privacy risks and sequential roadmap. Existing
+managed PostgreSQL and the user's identity provider are the intended cloud
+target; neither is connected in this checkout. Secure accounts, tenant isolation
+and cross-device record sync are not released by this increment.
+
+- Calendar rejects tasks dated before sowing unless a supported pre-plant
+  activity is selected. Contradictory legacy dates remain editable as Needs
+  review, not Overdue. ICS export rejects invalid relationships too.
+- Settings exports version 4 record JSON; restore accepts version 3/4. It
+  validates allowed collections, shapes, IDs, units and size (5 MB), previews
+  additions/duplicates/conflicts and keeps existing conflicting records.
+- Restore saves the prior and incoming records transactionally in IndexedDB
+  before attempting localStorage writes. A failed multi-key write attempts
+  rollback; an incomplete rollback is reported with recovery instructions.
+  An interrupted browser/process can leave a partially applied merge; re-import
+  is idempotent. No distributed transaction or cross-device sync is claimed.
+- Checkpoints use `joitafa-recovery-v1`, store `checkpoints`. They persist across
+  refresh but not clearing site data/uninstall. They are not app-encrypted and
+  are kept until explicitly deleted. A downloaded private backup is essential.
+- Imports never overwrite profiles, API keys, app preferences or arbitrary
+  storage. Photos/audio and caches are not included. Invalid current records
+  block restore instead of being treated as empty.
+- Normal records retain their original localStorage keys and IDs. No silent
+  migration, contact import, evidence verification or consent inference occurs.

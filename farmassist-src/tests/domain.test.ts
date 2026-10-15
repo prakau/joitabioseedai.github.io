@@ -18,6 +18,14 @@ test("Roman Hindi overrides a stale English preference without changing other la
 import { areaInMetres, calculateWater, calculateSeed, parseMoney, ledgerTotals } from "../src/lib/farm-tools";
 import { calendarFile, isDay, localDay, planStatus, upcomingPlans, validatePlan, type Plan } from "../src/lib/planning";
 import ICAL from "ical.js";
+import { parseWebsiteQuestion } from "../src/lib/website-launch";
+test("homepage handoffs accept only recent validated questions", () => {
+  const pending={id:"test",question:"tamatar ke patte peele hain",language:"Auto",createdAt:1000};
+  assert.deepEqual(parseWebsiteQuestion(JSON.stringify(pending),2000),pending);
+  for(const patch of [{id:""},{question:" "},{question:"x".repeat(1001)},{language:"unknown"},{createdAt:999999},{createdAt:"1000"}]) assert.equal(parseWebsiteQuestion(JSON.stringify({...pending,...patch}),2000),null);
+  assert.equal(parseWebsiteQuestion(JSON.stringify(pending),301001),null);
+  assert.equal(parseWebsiteQuestion("bad json"),null);
+});
 import { validateObservation, incidence, observationTrend, fieldReport, observationRecheck } from "../src/lib/field-diary";
 import { compareSales } from "../src/lib/sale-planner";
 test("field observations validate sample counts and avoid invalid or future dates", () => {

@@ -1,0 +1,51 @@
+name: JOITAFA web regression
+on:
+  push:
+    branches: [main]
+    paths: ['farmassist-src/**', 'api/**', 'index.html', 'css/**', 'js/**', '.github/workflows/joitafa-checks.yml']
+  pull_request:
+    paths: ['farmassist-src/**', 'api/**', 'index.html', 'css/**', 'js/**', '.github/workflows/joitafa-checks.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: farmassist-src
+    env:
+      CI: 'true'
+      FARMASSIST_TEST_URL: http://127.0.0.1:4180/farmassist/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            farmassist-src/package-lock.json
+            api/package-lock.json
+      - run: npm ci --prefix ../api
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: App regression on built assets (synthetic provider fixtures)
+        run: npx playwright test
+      - name: Website handoff, filters and comparison
+        run: npx playwright test -c playwright.website.config.ts
+      - name: Cold offline reload and record persistence
+        run: |
+          python3 -m http.server 4180 --bind 127.0.0.1 --directory .. &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:4180/farmassist/ --output /dev/null
+          node tests/verify-offline.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: joitafa-web-test-evidence
+          retention-days: 14
+          path: farmassist-src/test-results/

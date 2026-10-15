@@ -26,7 +26,9 @@
     <link rel="sitemap" type="application/xml" href="/sitemap.xml">
     <link rel="icon" href="images/favicon.png">
     <link rel="stylesheet" href="css/site-2026.css">
+    <link rel="stylesheet" href="css/home-interactive.css">
     <script defer src="js/site-2026.js"></script>
+    <script defer src="js/home-interactive.js"></script>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -120,13 +122,18 @@
 
       <section class="section home-capability-section white">
         <div class="section-inner">
-          <div class="home-section-heading reveal"><span class="section-index">01 / Capabilities</span><div><h2>Built Around Four Field Capabilities</h2><p>Clear capabilities. Practical decisions. Less complexity for farmers.</p></div></div>
-          <div class="capability-ledger">
-            <article class="capability-item reveal"><span class="capability-number">01</span><span class="icon"><svg viewBox="0 0 24 24"><path d="M12 3v4"/><path d="M12 17v4"/><path d="M3 12h4"/><path d="M17 12h4"/><rect x="7" y="7" width="10" height="10" rx="3"/><path d="M10 11h4"/><path d="M10 14h4"/></svg></span><h3>AI Advisory</h3><p>Recommendations that help farmers and field teams make timely, informed decisions.</p></article>
-            <article class="capability-item reveal delay-1"><span class="capability-number">02</span><span class="icon"><svg viewBox="0 0 24 24"><path d="M5 19c9 0 15-7 15-15-8 0-15 6-15 15Z"/><path d="M5 19c2-5 6-9 12-12"/></svg></span><h3>Advanced Crop Inputs</h3><p>Developed to enable crop resilience and more precise application decisions.</p></article>
-            <article class="capability-item reveal delay-2"><span class="capability-number">03</span><span class="icon"><svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-5"/><path d="M12 16V8"/><path d="M16 16v-3"/></svg></span><h3>Field Evaluation</h3><p>Demonstration plots, FPO partnerships, and structured feedback build practical evidence.</p></article>
-            <article class="capability-item reveal delay-3"><span class="capability-number">04</span><span class="icon"><svg viewBox="0 0 24 24"><path d="M12 3l4 3-4 3-4-3 4-3Z"/><path d="M12 9v11"/><path d="M8 14l4-3 4 3"/><path d="M7 20h10"/><path d="M5 7c1.4 2.2 3.6 3.5 7 3.5S17.6 9.2 19 7"/></svg></span><h3>Edge Sensing</h3><p>Root-zone measurements and offline intelligence connect farm conditions to JOITAFA.</p></article>
+          <div class="home-section-heading reveal"><span class="section-index">01 / Start here</span><div><h2>Your next field decision.</h2><p>Practical tools for the crop, the field, and the sale.</p></div></div>
+          <div class="task-finder" id="field-tools">
+            <fieldset class="task-modes"><legend>I want help with</legend><label><input type="radio" name="field-goal" value="crop" checked><span>Crop health</span></label><label><input type="radio" name="field-goal" value="records"><span>Field records</span></label><label><input type="radio" name="field-goal" value="selling"><span>Selling my crop</span></label><label><input type="radio" name="field-goal" value="pilots"><span>Research &amp; pilots</span></label></fieldset>
+            <div class="task-links" id="task-links" aria-live="polite"><a href="/farmassist/#/diagnose"><strong>Check a crop photo</strong><span>Visible symptoms and practical next checks.</span><b aria-hidden="true">&nearr;</b></a><a href="/farmassist/#/weather"><strong>Check local weather</strong><span>Location-specific forecasts and dated observations.</span><b aria-hidden="true">&nearr;</b></a></div>
           </div>
+          <form id="home-question" class="home-question" action="/farmassist/">
+            <div class="question-heading"><label for="home-crop-question">Ask JOITAFA</label><label class="answer-language">Answer language<select id="home-answer-language"><option value="Auto">Match my question</option><option value="Hindi">हिन्दी</option><option value="English">English</option></select></label></div>
+            <textarea id="home-crop-question" required maxlength="1000" rows="3" placeholder="My tomato leaves are yellowing. What should I check?"></textarea>
+            <div class="question-footer"><p>Crop advisory only. Do not include private information.</p><button class="button lime" type="submit">Ask JOITAFA <span aria-hidden="true">&rarr;</span></button></div>
+            <p id="home-question-error" class="interaction-error" role="alert" hidden></p>
+            <noscript><p>Open <a href="/farmassist/">JOITAFA</a> to ask your crop question.</p></noscript>
+          </form>
         </div>
       </section>
 
@@ -143,7 +150,9 @@
 
       <section class="section home-products-section" id="products">
         <div class="section-inner">
-          <div class="home-section-heading product-intro reveal"><span class="section-index">03 / Product system</span><div><h2>One Platform. Seven Field-Ready Solutions.</h2><p>Crop inputs, AI advisory, soil-water resilience, edge sensing, seed support, aquaculture, and soil diagnostics. One practical portfolio for pilots, partnerships, and farmer deployment.</p></div></div>
+          <div class="home-section-heading product-intro reveal"><span class="section-index">03 / Product system</span><div><h2>Find your fit in the JOITA portfolio.</h2><p>Explore crop inputs, advisory, and field technologies. Research products remain subject to supervised evaluation.</p></div></div>
+          <div class="product-controls" hidden><label for="product-search">Find a product<input id="product-search" type="search" placeholder="Try soil, advisory, or nursery" maxlength="100"></label><label for="product-category">Focus area<select id="product-category"><option value="all">All products</option><option value="inputs">Crop inputs</option><option value="digital">Digital tools</option><option value="sensing">Soil &amp; sensing</option><option value="water">Water &amp; aquaculture</option></select></label><button type="button" class="text-link" id="reset-products">Reset filters</button></div>
+          <p id="product-count" class="product-count" role="status" hidden></p>
           <div class="home-product-mosaic">
             <article class="home-product-card product-prime reveal"><div class="home-product-top"><span class="product-kicker">Soil-water resilience</span><span>01</span></div><div><h3>BioSynth Prime</h3><p>A waste-to-value FA-WAP hydrogel platform developed from rice stubble, fly ash, and <em>Bacillus subtilis</em>, currently undergoing field evaluation.</p></div><div class="home-product-tags"><span>FA-WAP hydrogel</span><span>Waste-to-value</span></div></article>
             <article class="home-product-card product-nano reveal delay-1"><div class="home-product-top"><span class="product-kicker">Functional nanomaterials</span><span>02</span></div><div><h3>BioSynth Nano</h3><p>A next-generation crop-input platform combining functional nanomaterials with data-guided application strategies.</p></div><div class="home-product-tags"><span>CQD research sample</span><span>Supervised evaluation</span></div></article>
@@ -153,6 +162,8 @@
             <article class="home-product-card product-aqua reveal delay-2"><div class="home-product-top"><span class="product-kicker">Aquaculture</span><span>06</span></div><div><h3>AquaSynth Nano</h3><p>An aquaculture technology platform for water-quality management, controlled pilots, and validation-led deployment.</p></div><div class="home-product-tags"><span>Water quality</span><span>Controlled pilots</span></div></article>
             <article class="home-product-card product-soil reveal delay-3"><div class="home-product-top"><span class="product-kicker">Soil intelligence</span><span>07</span></div><div><h3>JOITA Soil Sathi App</h3><p>A field companion app for recording multi-parameter soil measurements, including moisture, temperature, EC, pH, fertility, and NPK.</p></div><div class="home-product-footer"><a href="/soil-sathi-app.html">Open Soil Sathi</a><span>Sensor-linked records</span></div></article>
           </div>
+          <p id="products-empty" hidden>No matching products. Try a different search or reset the filters.</p>
+          <div class="comparison-bar" hidden><p id="comparison-count" aria-live="polite">0 products selected</p><div><button type="button" class="button lime" id="open-comparison" disabled>Compare products</button><button type="button" class="text-link" id="clear-comparison">Clear selection</button></div><p id="comparison-error" class="interaction-error" role="alert" hidden></p></div>
           <a class="text-link reveal" href="/products.html">Explore the complete product system <span aria-hidden="true">&rarr;</span></a>
         </div>
       </section>
@@ -206,6 +217,7 @@
       <section class="section home-join-section"><div class="section-inner"><div class="home-join-panel reveal"><span class="section-index">07 / Join the team</span><div><h2>Build the Next Generation of Agricultural Technology.</h2><p>Work across AI, agronomy, application development, field evaluation, nanobiotechnology, bioinformatics, design, and business development.</p></div><div class="button-row"><a class="button lime" href="/join-us.html">View Open Roles</a><a class="button secondary" href="mailto:contact@joitabioseedai.com?subject=Join%20JOITA">Send Your CV</a></div></div></div></section>
       <section class="section dark home-contact-section"><div class="section-inner"><div class="home-contact-grid reveal"><div><span class="section-index">08 / Contact</span><h2>Ready to Build Smarter Farms?</h2><p>Request a pilot, explore JOITAFA, or partner with JOITA.</p></div><div class="button-row"><a class="button lime" href="/contact.html">Contact JOITA</a><a class="button secondary" href="/farmassist/">Open JOITAFA</a></div></div></div></section>
     </main>
+    <dialog id="product-comparison" aria-labelledby="comparison-title"><div class="comparison-heading"><h2 id="comparison-title">Product comparison</h2><button type="button" class="dialog-close" aria-label="Close comparison">&times;</button></div><div class="comparison-scroll" tabindex="0" role="region" aria-label="Product comparison table"><table><tbody id="comparison-body"></tbody></table></div><p>Research and pilot products are not a recommendation to apply an input. Confirm use with approved guidance and a local agriculture expert.</p></dialog>
     <footer class="footer"><div class="footer-inner"><p class="footer-tagline">AI-Guided Biology for Smarter Farming</p><p>JOITA Bioseed AI integrates AI-guided advisory, advanced crop inputs, field sensing, and validation-led deployment to build practical technologies for smallholder agriculture.</p><p><a href="/products.html">Products</a> | <a href="/farmassist-ai.html">JOITAFA</a> | <a href="/data-validation.html">Field Validation</a> | <a href="/farmers-fpos.html">Farmers &amp; FPOs</a> | <a href="/investors-partners.html">Investors &amp; Partners</a> | <a href="/join-us.html">Join Us</a> | <a href="/contact.html">Contact</a></p><p class="disclaimer">JOITA products and technologies are subject to ongoing research and field validation. Crop responses may vary depending on crop, variety, location, season, soil conditions, weather, application timing, and management practices. Products should be used in accordance with approved guidance, applicable regulations, and appropriate technical recommendations.</p><p>&copy; 2025-2026 JOITA Bioseed AI. All rights reserved.</p></div></footer>
   </body>
 </html>

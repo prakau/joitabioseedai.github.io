@@ -41,14 +41,14 @@ npm install
 npm run build
 ```
 
-FarmAssist uses public/no-key APIs where possible and stores optional API keys only in browser localStorage.
+JOITAFA uses public/no-key data APIs where possible. AI, speech and market credentials stay in Vercel environment variables, never in browser storage. See `farmassist-src/README.md` for current behavior and `docs/climateos/BASELINE-2026-10-14.md` for the ClimateOS audit and roadmap.
 
 ## OpenRouter FarmAssist Proxy
 
 OpenRouter is supported only through a backend proxy. Do not place the OpenRouter key in frontend JavaScript or GitHub Pages HTML.
 
 - Backend function: `api/farmassist-chat.js`
-- Required environment variable: `OPENROUTER_API_KEY`
+- AI environment variables: `GEMINI_API_KEY` (primary), `OPENROUTER_API_KEY` (fallback)
 - Template: `.env.example`
 - Main deployment: Vercel, with the serverless function at `/api/farmassist-chat`
 - Backup deployment: GitHub Pages for the static site only
@@ -64,9 +64,9 @@ Vercel setup:
 
 Production hardening:
 
-- `/api/farmassist-chat` uses a simple in-memory Vercel rate limit of 10 requests per IP per hour.
+- `/api/farmassist-chat` uses a simple in-memory limit of 10 requests per IP per hour per warm server instance, not a distributed quota.
 - Requests are capped at 1000 message characters and 4 MB crop image uploads.
-- Frontend shows `AI online` or `AI advisory temporarily offline` based on backend health.
+- Backend health confirms configured services; only a successful live answer confirms live AI availability. Neither indicates cloud record sync.
 - Analytics hooks emit safe FarmAssist events only when analytics providers are configured.
 - Server logs include only crop, location district/state, problem type, model used, and timestamp.
 

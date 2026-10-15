@@ -5,9 +5,11 @@ import {
   PLAN_KEY,
   calendarFile,
   planStatus,
+  preplantActivities,
   validatePlan,
   type Plan,
 } from "../lib/planning";
+import { useInterface } from "../lib/interface";
 import { Button } from "./ui/button";
 import { Input, Textarea } from "./ui/input";
 import { CropSelect, Empty, Field, Notice, Select, Title } from "./workspace";
@@ -199,6 +201,7 @@ export function Soil() {
   );
 }
 export function Calendar() {
+  const { t } = useInterface();
   const [search, setSearch] = useState("");
   const [season, setSeason] = useState("All");
   const [plans, savePlans] = useStored<Plan[]>(PLAN_KEY, []);
@@ -211,6 +214,7 @@ export function Calendar() {
     sowing: "",
     task: "Field scouting",
     due: "",
+    preplantActivity: "" as Plan["preplantActivity"],
   });
   const [message, setMessage] = useState("");
   const guides = searchCrops(search).filter(
@@ -286,6 +290,7 @@ export function Calendar() {
       )}
       <section className="section-divider">
         <h3>My field tasks</h3>
+        {plans.some(plan => planStatus(plan) === "Needs review") && <Notice error>{t("Some saved tasks need date review. They are kept on this device, but are not counted as overdue. Edit the task to correct its dates.")}</Notice>}
         <form
           ref={taskForm}
           onSubmit={(e) => {
@@ -354,6 +359,12 @@ export function Calendar() {
                 onChange={(e) => setForm({ ...form, due: e.target.value })}
               />
             </Field>
+            <Field label={t("Pre-plant activity (only if before sowing)")}>
+              <Select value={form.preplantActivity || ""} onChange={e => setForm({ ...form, preplantActivity: e.target.value as Plan["preplantActivity"] })}>
+                <option value="">{t("Not a pre-plant activity")}</option>
+                {preplantActivities.map(activity => <option key={activity} value={activity}>{t(activity)}</option>)}
+              </Select>
+            </Field>
           </div>
           <Button>
             <Save size={18} />
@@ -373,7 +384,7 @@ export function Calendar() {
             </Button>
           )}
         </form>
-        {taskError && <Notice error>{taskError}</Notice>}
+        {taskError && <Notice error>{t(taskError)}</Notice>}
         {message && <Notice>{message}</Notice>}
         {!plans.length && <Empty>No scheduled tasks yet.</Empty>}
         {!!plans.length && (
@@ -384,7 +395,7 @@ export function Calendar() {
                   value={taskFilter}
                   onChange={(event) => setTaskFilter(event.target.value)}
                 >
-                  {["All", "Today", "Overdue", "Upcoming", "Completed"].map(
+                  {["All", "Today", "Overdue", "Upcoming", "Completed", "Needs review"].map(
                     (filter) => (
                       <option key={filter}>{filter}</option>
                     ),
@@ -436,6 +447,7 @@ export function Calendar() {
                   sowing: plan.sowing,
                   task: plan.task,
                   due: plan.due,
+                  preplantActivity: plan.preplantActivity || "",
                 });
                 setMessage("");
                 taskForm.current?.scrollIntoView({

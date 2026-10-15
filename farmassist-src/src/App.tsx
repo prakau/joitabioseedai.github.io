@@ -11,7 +11,6 @@ import {
   ClipboardList,
   Scale,
   CloudSun,
-  Download,
   Home,
   Info,
   Leaf,
@@ -36,10 +35,7 @@ import { FarmCalculators } from "./components/FarmCalculators";
 import { FarmLedger } from "./components/FarmLedger";
 import { CropDiary } from "./components/CropDiary";
 import { SalePlanner } from "./components/SalePlanner";
-import { DIARY_KEY } from "./lib/field-diary";
-import { SALE_KEY } from "./lib/sale-planner";
 import { UpcomingTasks } from "./components/FieldTasks";
-import { LEDGER_KEY } from "./lib/farm-tools";
 import { Calendar, Community, Soil } from "./components/FieldRecords";
 import { SoundMonitor } from "./components/SoundMonitor";
 import { LocationPicker, Market, Weather } from "./components/WeatherMarket";
@@ -50,7 +46,6 @@ import { requestJson, type ChatResult, type Health } from "./lib/network";
 import { defaultPlace, fetchWeather, type Place } from "./lib/weather";
 import {
   displayDate,
-  downloadJson,
   readStored,
   useStored,
   writeStored,
@@ -60,6 +55,9 @@ import { DashboardStart } from "./components/DashboardStart";
 import { nativeApp, backendUrl } from "./lib/platform";
 import { useInterface } from "./lib/interface";
 import { InterfaceLanguage } from "./components/InterfaceLanguage";
+import { LAUNCH_KEY, readWebsiteQuestion } from "./lib/website-launch";
+import { recordKeys } from "./lib/record-backup";
+import { RecordRecovery } from "./components/RecordRecovery";
 
 
 const modules = [
@@ -80,33 +78,11 @@ const modules = [
   { id: "about", label: "About", icon: Info },
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
-const recordKeys = [
-  DIARY_KEY,
-  SALE_KEY,
-  LEDGER_KEY,
-  "joita-fa-questions",
-  "joita-fa-layouts",
-  "joita-fa-soils-v3",
-  "joita-fa-soils",
-  "joita-fa-sound-v3",
-  "joita-fa-ehi",
-  "joita-fa-posts",
-  "joita-fa-plans-v3",
-];
-function exportRecords() {
-  const records = Object.fromEntries(
-    recordKeys.map((key) => [key, readStored(key, [])]),
-  );
-  downloadJson("joita-farmassist-records.json", {
-    version: 3,
-    exportedAt: new Date().toISOString(),
-    records,
-  });
-}
 export default function App() {
   const { language: interfaceLanguage, t } = useInterface();
   const location = useLocation();
   const navigate = useNavigate();
+  const [websiteQuestion, setWebsiteQuestion] = useState(() => location.pathname === "/ask" ? readWebsiteQuestion() : null);
   const submittedQuestion = typeof location.state?.submittedQuestion === "string" ? location.state.submittedQuestion.slice(0, 1000) : "";
   const active = location.pathname.replace(/^\//, "") || "home";
   const [place, savePlace] = useStored<Place>(
@@ -440,13 +416,17 @@ export default function App() {
               <Advisory
                 key={active}
                 location={profile.district || place.label}
-                preferredLanguage={preferredLanguage}
+                preferredLanguage={websiteQuestion?.language || preferredLanguage}
                 onLanguage={setLanguage}
                 diagnose={active === "diagnose"}
                 cloudSpeech={online && Boolean(health.data?.hasSpeechKey)}
-                initialQuestion={submittedQuestion || new URLSearchParams(location.search).get("question")?.slice(0, 1000) || ""}
-                autoSubmitId={submittedQuestion ? location.state?.submissionId : undefined}
-                onAutoSubmitConsumed={() => navigate(`${location.pathname}${location.search}`, { replace: true, state: null })}
+                initialQuestion={submittedQuestion || websiteQuestion?.question || new URLSearchParams(location.search).get("question")?.slice(0, 1000) || ""}
+                autoSubmitId={submittedQuestion ? location.state?.submissionId : websiteQuestion?.id}
+                onAutoSubmitConsumed={() => {
+                  try { sessionStorage.removeItem(LAUNCH_KEY); } catch { /* A blocked store must not prevent an answer. */ }
+                  setWebsiteQuestion(null);
+                  navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+                }}
                 onResult={setLastAnswer}
               />
             )}
@@ -691,15 +671,12 @@ function SettingsPanel({
           Records are saved to this browser. Export them before clearing website
           data or switching devices.
         </p>
-        <Button variant="secondary" onClick={exportRecords}>
-          <Download size={18} />
-          Export all farm records
-        </Button>
         <p className="muted">
           Old EHI and soil records are included in exports for continuity, but
           are not presented as newly validated measurements.
         </p>
       </section>
+      <RecordRecovery />
       <section className="section-divider">
         <h3>Service status</h3>
         <Notice>

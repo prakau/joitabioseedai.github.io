@@ -102,3 +102,13 @@
 .sale-results th,.sale-results td { text-align:left; padding:14px 10px; border-bottom:1px solid #d8e3de; }
 @media(max-width:700px) { .offer-grid { grid-template-columns:minmax(0,1fr); } .observation-row .section-row,.sale-results .section-row { align-items:flex-start; flex-wrap:wrap; gap:10px; } }
 @media(prefers-reduced-motion:no-preference) { .observation-row,.sale-results { animation:field-record-in .25s ease-out both; } @keyframes field-record-in { from {opacity:0;transform:translateY(5px)} to {opacity:1;transform:translateY(0)} } }
+.recovery-panel { min-width: 0; }
+.recovery-panel .form-field { margin-top: 24px; }
+.recovery-panel .saved-row { flex-wrap: wrap; gap: 12px; }
+.recovery-panel .saved-row small { display: block; }
+.recovery-panel .actions { flex-wrap: wrap; }
+.restore-preview { margin: 20px 0; padding: 20px 0; border-block: 1px solid #d5dfda; overflow-wrap: anywhere; }
+.recovery-counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
+.recovery-counts dd { font-size: 24px; font-weight: 700; margin: 4px 0; }
+.status-needs-review { background: #fff1d7; color: #644200; }
+@media (max-width: 540px) { .recovery-counts { grid-template-columns: 1fr; } }

@@ -2,6 +2,16 @@ import { useStored } from "./storage";
 
 export type InterfaceLanguage = "en" | "hi";
 const hindi: Record<string, string> = {
+  "Needs review": "तारीख की जांच करें", "Sowing date": "बुवाई की तारीख",
+  "Land preparation": "खेत की तैयारी", "Soil sampling": "मिट्टी का नमूना लेना", "Nursery preparation": "नर्सरी की तैयारी", "Seed procurement": "बीज की व्यवस्था",
+  "Pre-plant activity (only if before sowing)": "बुवाई से पहले का काम (यदि पहले करना है)",
+  "Not a pre-plant activity": "बुवाई से पहले का काम नहीं",
+  "Some saved tasks need date review. They are kept on this device, but are not counted as overdue. Edit the task to correct its dates.": "कुछ सहेजे हुए कामों की तारीखें जांचें। रिकॉर्ड सुरक्षित हैं और इन्हें विलंबित नहीं गिना गया है। काम संपादित करके तारीख ठीक करें।",
+  "Choose a valid task due date.": "काम की सही तारीख चुनें।",
+  "Choose a valid sowing date or leave it empty.": "बुवाई की सही तारीख चुनें या खाली छोड़ें।",
+  "Choose a supported pre-plant activity.": "सूची से बुवाई से पहले का काम चुनें।",
+  "A pre-plant activity needs a due date before a valid sowing date.": "बुवाई से पहले के काम की तारीख बुवाई की सही तारीख से पहले होनी चाहिए।",
+  "Task is before sowing. Correct the dates or select a valid pre-plant activity.": "काम की तारीख बुवाई से पहले है। तारीख ठीक करें या बुवाई से पहले का सही काम चुनें।",
   "Crop Diary": "फसल डायरी", "Sale Planner": "बिक्री की योजना",
   "Track crop symptoms": "फसल के लक्षण दर्ज करें", "Field observations, rechecks, and expert reports.": "खेत के अवलोकन, दोबारा जांच और विशेषज्ञ रिपोर्ट।",
   "Compare buyer offers": "खरीदारों के भाव की तुलना", "Sale value after transport, fees, and commission.": "ढुलाई, शुल्क और कमीशन के बाद बिक्री की रकम।",

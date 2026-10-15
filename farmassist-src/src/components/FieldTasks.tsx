@@ -58,12 +58,13 @@ export function TaskList({
               {plan.crop || t("Farm")}: {plan.task}
               <small>
                 {t("Due")} {plan.due}
-                {plan.sowing ? ` / ${t("planted")} ${plan.sowing}` : ""}
+                {plan.sowing ? ` / ${t("Sowing date")} ${plan.sowing}` : ""}
+                {plan.preplantActivity ? ` / ${t(plan.preplantActivity)}` : ""}
               </small>
             </span>
           </label>
           <span
-            className={`task-status status-${planStatus(plan).toLowerCase()}`}
+            className={`task-status status-${planStatus(plan).toLowerCase().replaceAll(" ", "-")}`}
           >
             {t(planStatus(plan))}
           </span>
