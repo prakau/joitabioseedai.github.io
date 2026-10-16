@@ -1,6 +1,6 @@
 # JOITA Bioseed AI Website
 
-Official GitHub Pages website for JOITA Bioseed AI.
+Official JOITA Bioseed AI website, deployed on Vercel. GitHub Pages is the static backup.
 
 JOITA Bioseed AI combines AI-guided recommendations, biological crop inputs, and field validation for farmer-first climate-resilient agriculture.
 
@@ -74,16 +74,19 @@ Production hardening:
 
 - Static HTML, CSS, and JavaScript for the public marketing site
 - React 18, Vite, TypeScript, Tailwind CSS for FarmAssist
-- GitHub Pages with custom domain through `CNAME`
+- Vercel for the custom domain and server-side APIs; GitHub Pages as a static backup with the existing `CNAME`
 
 ## Positioning
 
 Products and platform:
 
 - BioSynth Nano
-- FarmAssist AI
+- BioSynth Prime
+- JOITAFA
 - SmartSeedMat
 - AquaSynth Nano
+- AgriTrust TriLeaf Edge Node
+- JOITA Soil Sathi App
 
 Footer disclaimer:
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { NavLink } from "react-router-dom";
 import {
   Copy,
@@ -14,10 +15,22 @@ import {
 import { answerLanguage, matchingVoice, speechChunks } from "../lib/languages";
 import { downloadText, displayDate } from "../lib/storage";
 import { requestSpeech, type ChatResult } from "../lib/network";
-import { Answer, safetyNotice, sourceLabel } from "./workspace";
+import { Notice, Source, safetyNotice, sourceLabel } from "./workspace";
 import { Button } from "./ui/button";
 import { AdvisoryTask } from "./FieldTasks";
 import { copyText, shareText } from "../lib/platform";
+
+function Answer({ result, language = "en-IN", rtl = false }: { result: ChatResult; language?: string; rtl?: boolean }) {
+  return <div className="advisory-result" aria-live="polite">
+    <Source source={result.source} />
+    {result.source === "offline_kb" && result.failureReason && <Notice>
+      {language.startsWith("hi") ? "लाइव सलाह उपलब्ध नहीं है। ऑफलाइन मार्गदर्शिका से जवाब दिया गया है।" : "Live advisory is unavailable. Offline KB answered instead. Service details are in Settings."}
+    </Notice>}
+    {result.imageAnalyzed && <span className="source">{language.startsWith("hi") ? "फोटो पर आधारित शुरुआती जांच" : "Photo included in AI analysis"}</span>}
+    <div className="answer-copy" lang={language} dir={rtl ? "rtl" : "ltr"}><ReactMarkdown>{result.answer}</ReactMarkdown></div>
+    <p className="safety-note">{language.startsWith("hi") ? "AI की सहायता से दी गई सलाह। दवा या खाद के उपयोग से पहले स्वीकृत लेबल और स्थानीय KVK या कृषि विशेषज्ञ से पुष्टि करें।" : safetyNotice}</p>
+  </div>;
+}
 
 export function AdvisoryAnswer({
   result,

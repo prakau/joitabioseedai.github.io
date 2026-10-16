@@ -2,6 +2,18 @@ import { useStored } from "./storage";
 
 export type InterfaceLanguage = "en" | "hi";
 const hindi: Record<string, string> = {
+  "Skip to content": "मुख्य सामग्री पर जाएं",
+  "Opening your farm tool…": "आपका खेती उपकरण खुल रहा है…",
+  "Find a farm tool": "खेती का उपकरण खोजें",
+  "Search tools, e.g. water or costs": "उपकरण खोजें, जैसे पानी या खर्च",
+  "Clear search": "खोज हटाएं", "tools": "उपकरण",
+  "No matching tools. Try crop, water, soil, or costs.": "कोई उपकरण नहीं मिला। फसल, पानी, मिट्टी या खर्च खोजें।",
+  "Continue from your saved answers": "अपने सहेजे हुए जवाब फिर खोलें",
+  "Saved on this device. Open an answer without sending it again.": "इस डिवाइस पर सहेजे गए। सवाल दोबारा भेजे बिना जवाब खोलें।",
+  "View all": "सभी देखें", "Saved answer": "सहेजा हुआ जवाब",
+  "Ask a crop question": "फसल का सवाल पूछें", "Live advisory and saved offline crop guides.": "लाइव सलाह और सहेजी हुई ऑफलाइन फसल जानकारी।",
+  "Keep private field notes": "खेत के निजी नोट लिखें", "On-device notes with explicit sharing.": "डिवाइस पर नोट सहेजें और अपनी इच्छा से साझा करें।",
+  "Protect your farm records": "अपने खेती रिकॉर्ड सुरक्षित रखें", "Backups, recovery copies, and offline status.": "बैकअप, रिकॉर्ड की वापसी और ऑफलाइन स्थिति।",
   "Needs review": "तारीख की जांच करें", "Sowing date": "बुवाई की तारीख",
   "Land preparation": "खेत की तैयारी", "Soil sampling": "मिट्टी का नमूना लेना", "Nursery preparation": "नर्सरी की तैयारी", "Seed procurement": "बीज की व्यवस्था",
   "Pre-plant activity (only if before sowing)": "बुवाई से पहले का काम (यदि पहले करना है)",

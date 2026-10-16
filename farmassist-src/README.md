@@ -1,4 +1,4 @@
-# JOITA FarmAssist
+# JOITAFA
 
 Public application: https://www.joitabioseedai.com/farmassist/
 
@@ -51,11 +51,23 @@ There is no shared community database or automatic synchronization between devic
 
 ## Offline and data integrity
 
-The service worker precaches the app shell, JS and CSS. It only intercepts this app's same-origin GET assets/navigation, and never caches `/api/health`, chat, or third-party API calls. Cache cleanup is restricted to JOITA FarmAssist caches. Weather/API caches include coordinates or filters and source timestamps.
+The service worker is generated at build time from `src/service-worker.js`. It precaches the shell and every tool chunk, including tools never opened before going offline. The dashboard executes only its startup code; tool code loads on demand. A content-derived cache name separates releases, and an offline-ready marker is written only after the entire download succeeds. Failed downloads are discarded. One previous build is retained for already-open tabs. Settings checks the completion marker and current entry file before reporting readiness. APIs and third-party data are never cached by this worker. Weather/API caches separately include coordinates or filters and source timestamps.
 
 Existing questions/layouts/notes remain accessible. Earlier soil and EHI records remain exportable but are not relabeled as new validated measurements. Local storage failures display a warning; save confirmation appears only after successful persistence.
 
 The public website deploys from the repository to Vercel. A static GitHub Pages copy can serve the UI/offline tools but cannot run live API functions.
+
+## Usability and resilience increment (2026-10-16)
+
+The dashboard searches tool names and common terms in English and Hindi. Recent
+saved answers open directly without a new provider request and identify that
+they have not been checked against today's field conditions. Individual tool
+failures retain the navigation and offer reload/dashboard recovery. The website
+mobile menu closes on Escape or an outside click, returns keyboard focus on
+Escape, and identifies the active page. Both website and app include a keyboard
+skip link. Existing record keys, provider interfaces and URLs are unchanged.
+
+See `../docs/climateos/RELEASE-1B-2026-10-16.md` for verification and limits.
 
 ## Foundation increment (2026-10-14)
 

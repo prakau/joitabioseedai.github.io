@@ -13,24 +13,49 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   const siteNav = document.querySelector('.site-nav');
   const navContainer = document.querySelector('.nav-links');
+  const main = document.querySelector('main');
+  if (main && !document.querySelector('.site-skip-link')) {
+    if (!main.id) main.id = 'main-content';
+    main.tabIndex = -1;
+    const skip = document.createElement('a');
+    skip.className = 'site-skip-link';
+    skip.href = `#${main.id}`;
+    skip.textContent = 'Skip to content';
+    skip.addEventListener('click', event => { event.preventDefault(); main.focus(); });
+    document.body.prepend(skip);
+  }
   if (siteNav && navContainer) {
     const menuButton = document.createElement('button');
     menuButton.type = 'button';
     menuButton.className = 'mobile-menu-toggle';
     menuButton.setAttribute('aria-label', 'Open navigation menu');
     menuButton.setAttribute('aria-expanded', 'false');
+    if (!navContainer.id) navContainer.id = 'site-navigation-links';
+    menuButton.setAttribute('aria-controls', navContainer.id);
     menuButton.innerHTML = '<span></span><span></span><span></span><strong>Menu</strong>';
     siteNav.insertBefore(menuButton, navContainer);
+    const closeMenu = (returnFocus = false) => {
+      const wasOpen = header?.classList.contains('menu-open');
+      header?.classList.remove('menu-open');
+      menuButton.setAttribute('aria-expanded', 'false');
+      menuButton.setAttribute('aria-label', 'Open navigation menu');
+      if (wasOpen && returnFocus) menuButton.focus();
+    };
     menuButton.addEventListener('click', () => {
       const isOpen = header?.classList.toggle('menu-open') || false;
       menuButton.setAttribute('aria-expanded', String(isOpen));
       menuButton.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
     });
-    navLinks.forEach((link) => link.addEventListener('click', () => {
-      header?.classList.remove('menu-open');
-      menuButton.setAttribute('aria-expanded', 'false');
-      menuButton.setAttribute('aria-label', 'Open navigation menu');
-    }));
+    navLinks.forEach(link => link.addEventListener('click', () => closeMenu()));
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') closeMenu(true);
+    });
+    document.addEventListener('pointerdown', event => {
+      if (!siteNav.contains(event.target)) closeMenu();
+    });
+    window.addEventListener('resize', () => {
+      if (getComputedStyle(menuButton).display === 'none') closeMenu();
+    });
   }
   const normalizePath = (value) => {
     if (!value || value === '/index.html') return '/';

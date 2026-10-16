@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { App as NativeApp } from "@capacitor/app";
 import { useQuery } from "@tanstack/react-query";
@@ -27,17 +27,9 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { Advisory } from "./components/Advisory";
 import { LanguageSelect } from "./components/LanguageSelect";
 import { languageChoice } from "./lib/languages";
-import { FarmPlot } from "./components/FarmPlot";
-import { FarmCalculators } from "./components/FarmCalculators";
-import { FarmLedger } from "./components/FarmLedger";
-import { CropDiary } from "./components/CropDiary";
-import { SalePlanner } from "./components/SalePlanner";
 import { UpcomingTasks } from "./components/FieldTasks";
-import { Calendar, Community, Soil } from "./components/FieldRecords";
-import { SoundMonitor } from "./components/SoundMonitor";
 import { LocationPicker, Market, Weather } from "./components/WeatherMarket";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
@@ -57,8 +49,21 @@ import { useInterface } from "./lib/interface";
 import { InterfaceLanguage } from "./components/InterfaceLanguage";
 import { LAUNCH_KEY, readWebsiteQuestion } from "./lib/website-launch";
 import { recordKeys } from "./lib/record-backup";
-import { RecordRecovery } from "./components/RecordRecovery";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { FarmTools } from "./components/FarmTools";
+import { RecentAnswers } from "./components/RecentAnswers";
 
+const Advisory = lazy(() => import("./components/Advisory").then(m => ({ default: m.Advisory })));
+const FarmPlot = lazy(() => import("./components/FarmPlot").then(m => ({ default: m.FarmPlot })));
+const FarmCalculators = lazy(() => import("./components/FarmCalculators").then(m => ({ default: m.FarmCalculators })));
+const FarmLedger = lazy(() => import("./components/FarmLedger").then(m => ({ default: m.FarmLedger })));
+const CropDiary = lazy(() => import("./components/CropDiary").then(m => ({ default: m.CropDiary })));
+const SalePlanner = lazy(() => import("./components/SalePlanner").then(m => ({ default: m.SalePlanner })));
+const SoundMonitor = lazy(() => import("./components/SoundMonitor").then(m => ({ default: m.SoundMonitor })));
+const RecordRecovery = lazy(() => import("./components/RecordRecovery").then(m => ({ default: m.RecordRecovery })));
+const Calendar = lazy(() => import("./components/FieldRecords").then(m => ({ default: m.Calendar })));
+const Community = lazy(() => import("./components/FieldRecords").then(m => ({ default: m.Community })));
+const Soil = lazy(() => import("./components/FieldRecords").then(m => ({ default: m.Soil })));
 
 const modules = [
   { id: "home", label: "Home", icon: Home },
@@ -188,6 +193,10 @@ export default function App() {
   const recordCount = (key: string) => readStored<unknown[]>(key, []).length;
   return (
     <div className="app-shell">
+      <a className="skip-to-content" href="#main-content" onClick={event => {
+        event.preventDefault();
+        document.getElementById("main-content")?.focus();
+      }}>{t("Skip to content")}</a>
       <header className="app-header">
         <NavLink to="/" className="app-brand" onClick={() => setMenu(false)}>
           <span className="brand-icon">
@@ -269,7 +278,7 @@ export default function App() {
             <a href="mailto:contact@joitabioseedai.com">{t("Contact our team")}</a>
           </div>
         </aside>
-        <main className={`app-main ${active === "home" ? "home-workspace" : ""}`} id="main-content">
+        <main className={`app-main ${active === "home" ? "home-workspace" : ""}`} id="main-content" tabIndex={-1}>
           <InterfaceLanguage />
           {storageWarning && <Notice error>{storageWarning}</Notice>}
           {!online && (
@@ -278,6 +287,8 @@ export default function App() {
             </Notice>
           )}
           <div className="module-view" key={active}>
+            <ErrorBoundary language={interfaceLanguage} onHome={() => navigate("/")}>
+            <Suspense fallback={<div className="module-loading" role="status"><RefreshCw size={22} aria-hidden="true" /><span>{t("Opening your farm tool…")}</span></div>}>
             {active === "home" && (
               <>
                 <Title
@@ -331,82 +342,8 @@ export default function App() {
                   </div>
                 </div>
                 <UpcomingTasks />
-                <h3 className="section-heading">{t("Your farm tools")}</h3>
-                <div className="tool-grid">
-                  {[
-                    {
-                      id: "diary",
-                      icon: ClipboardList,
-                      title: "Track crop symptoms",
-                      text: "Field observations, rechecks, and expert reports.",
-                    },
-                    {
-                      id: "sales",
-                      icon: Scale,
-                      title: "Compare buyer offers",
-                      text: "Sale value after transport, fees, and commission.",
-                    },
-                    {
-                      id: "diagnose",
-                      icon: Camera,
-                      title: "Check a crop photo",
-                      text: "Visible symptoms and the next field checks.",
-                    },
-                    {
-                      id: "visualizer",
-                      icon: Map,
-                      title: "Plan your field",
-                      text: `${recordCount("joita-fa-layouts")} ${t("layouts saved. Dimensions, rows, and irrigation.")}`,
-                    },
-                    {
-                      id: "weather",
-                      icon: CloudSun,
-                      title: "Check local weather",
-                      text: "Location-specific forecast with dated observations.",
-                    },
-                    {
-                      id: "soil",
-                      icon: TestTube2,
-                      title: "Read your soil test",
-                      text: "Measured values, explicit units, and soil context.",
-                    },
-                    {
-                      id: "calendar",
-                      icon: CalendarDays,
-                      title: "Plan crop tasks",
-                      text: "Search growing windows and save dated tasks.",
-                    },
-                    {
-                      id: "sound",
-                      icon: Activity,
-                      title: "Record field sound",
-                      text: "Measure sound activity and review nearby records.",
-                    },
-                    {
-                      id: "calculators",
-                      icon: Calculator,
-                      title: "Calculate field quantities",
-                      text: "Area, seed quantity, water volume and pump time.",
-                    },
-                    {
-                      id: "ledger",
-                      icon: Wallet,
-                      title: "Track income & costs",
-                      text: "Your crop transactions and recorded balance.",
-                    },
-                  ].map((tool) => (
-                    <NavLink
-                      className="tool-item"
-                      key={tool.id}
-                      to={`/${tool.id}`}
-                    >
-                      <tool.icon size={24} />
-                      <h4>{t(tool.title)}</h4>
-                      <p>{t(tool.text)}</p>
-                      <ArrowUpRight className="tool-arrow" size={20} />
-                    </NavLink>
-                  ))}
-                </div>
+                <RecentAnswers />
+                <FarmTools layouts={recordCount("joita-fa-layouts")} />
                 <p className="pilot-note">
                   {t("JOITAFA is in pilot mode. Responses are AI-assisted and should be confirmed with local expert recommendations.")}
                 </p>
@@ -422,6 +359,7 @@ export default function App() {
                 cloudSpeech={online && Boolean(health.data?.hasSpeechKey)}
                 initialQuestion={submittedQuestion || websiteQuestion?.question || new URLSearchParams(location.search).get("question")?.slice(0, 1000) || ""}
                 autoSubmitId={submittedQuestion ? location.state?.submissionId : websiteQuestion?.id}
+                initialRecordId={typeof location.state?.savedQuestionId === "string" ? location.state.savedQuestionId : undefined}
                 onAutoSubmitConsumed={() => {
                   try { sessionStorage.removeItem(LAUNCH_KEY); } catch { /* A blocked store must not prevent an answer. */ }
                   setWebsiteQuestion(null);
@@ -542,6 +480,8 @@ export default function App() {
                 </NavLink>
               </>
             )}
+            </Suspense>
+            </ErrorBoundary>
           </div>
         </main>
       </div>
@@ -598,7 +538,15 @@ function SettingsPanel({
       }
       try {
         const keys = await caches.keys();
-        const ready = keys.some((key) => key === "joita-farmassist-v5");
+        const controller = navigator.serviceWorker?.controller;
+        const entry = document.querySelector<HTMLScriptElement>('script[type="module"][src]')?.src;
+        const ready = Boolean(controller && entry) && (await Promise.all(keys
+          .filter(key => key.startsWith("joita-farmassist-"))
+          .map(async key => {
+            const cache = await caches.open(key);
+            return (await cache.match("/farmassist/offline-ready")) && entry && await cache.match(entry);
+          })))
+          .some(Boolean);
         if (!cancelled)
           setOfflineStatus(
             ready

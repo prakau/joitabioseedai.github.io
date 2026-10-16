@@ -50,7 +50,7 @@ import {
   uid,
   useStored,
 } from "../lib/storage";
-type Record = {
+export type SavedAdvisory = {
   id: string;
   question: string;
   answer: string;
@@ -73,6 +73,7 @@ export function Advisory({
   cloudSpeech = false,
   initialQuestion = "",
   autoSubmitId,
+  initialRecordId,
   onAutoSubmitConsumed,
   onResult,
 }: {
@@ -83,10 +84,11 @@ export function Advisory({
   cloudSpeech?: boolean;
   initialQuestion?: string;
   autoSubmitId?: string;
+  initialRecordId?: string;
   onAutoSubmitConsumed?: () => void;
   onResult: (result: ChatResult) => void;
 }) {
-  const [history, saveHistory] = useStored<Record[]>("joita-fa-questions", []);
+  const [history, saveHistory] = useStored<SavedAdvisory[]>("joita-fa-questions", []);
   const [context, setContext] = useState<ChatContext>({
     crop: "",
     location,
@@ -96,8 +98,8 @@ export function Advisory({
   });
   const [question, setQuestion] = useState(initialQuestion);
   const [result, setResult] = useState<ChatResult | null>(null);
-  const [activeRecord, setActiveRecord] = useState<Record | null>(null);
-  const [deletedRecord, setDeletedRecord] = useState<Record | null>(null);
+  const [activeRecord, setActiveRecord] = useState<SavedAdvisory | null>(null);
+  const [deletedRecord, setDeletedRecord] = useState<SavedAdvisory | null>(null);
   const [historyLimit, setHistoryLimit] = useState(12);
   const [followingUp, setFollowingUp] = useState(false);
   const form = useRef<HTMLFormElement>(null);
@@ -119,6 +121,11 @@ export function Advisory({
     [],
   );
   useEffect(() => () => request.current?.abort(), []);
+  useEffect(() => {
+    if (!initialRecordId || autoSubmitId) return;
+    const saved = history.find(item => item.id === initialRecordId);
+    if (saved) openSavedRecord(saved);
+  }, [initialRecordId]);
   const consumedSubmission = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (!autoSubmitId || consumedSubmission.current === autoSubmitId) return;
@@ -160,6 +167,24 @@ export function Advisory({
     const input = form.current?.querySelector("textarea");
     input?.focus({ preventScroll: true });
     input?.scrollIntoView({ block: "center", behavior: "instant" });
+  }
+  function openSavedRecord(item: SavedAdvisory) {
+    setQuestion(item.question);
+    setPhoto("");
+    setContact("");
+    setError("");
+    setFollowingUp(false);
+    setActiveRecord(item);
+    setThread([{ question: item.question, answer: item.answer }]);
+    if (item.context) setContext({ ...item.context, language: preferredLanguage });
+    setResult({
+      ok: true,
+      source: item.source || "offline_kb",
+      model: "saved-record",
+      answer: item.answer,
+      imageAnalyzed: item.imageAnalyzed,
+      language: item.answerLanguage || (item.source === "offline_kb" ? "English" : item.context?.language),
+    });
   }
   function newQuestion() {
     setQuestion("");
@@ -280,7 +305,7 @@ export function Advisory({
     setThread((previous) =>
       [...previous, { question: message, answer: response.answer }].slice(-3),
     );
-    const record: Record = {
+    const record: SavedAdvisory = {
       id: uid(),
       question: message,
       answer: response.answer,
@@ -292,7 +317,7 @@ export function Advisory({
     };
     setActiveRecord(record);
     saveHistory(
-      [record, ...readStored<Record[]>("joita-fa-questions", history)].slice(
+      [record, ...readStored<SavedAdvisory[]>("joita-fa-questions", history)].slice(
         0,
         50,
       ),
@@ -590,6 +615,9 @@ export function Advisory({
           {result && activeRecord && (
             <>
               <div ref={answerAnchor} className="answer-anchor">
+                {result.model === "saved-record" && <Notice>
+                  {result.language === "Hindi" ? "सहेजा हुआ जवाब। आज की स्थिति के लिए दोबारा जांच नहीं की गई है।" : "Saved answer. It has not been checked again for today's field conditions."}
+                </Notice>}
                 <AdvisoryAnswer
                   key={activeRecord.id}
                   result={result}
@@ -695,30 +723,7 @@ export function Advisory({
                 <button
                   className="history-item"
                   disabled={busy || imageBusy}
-                  onClick={() => {
-                    setQuestion(item.question);
-                    setPhoto("");
-                    setContact("");
-                    setError("");
-                    setFollowingUp(false);
-                    setActiveRecord(item);
-                    setThread([
-                      { question: item.question, answer: item.answer },
-                    ]);
-                    if (item.context)
-                      setContext({
-                        ...item.context,
-                        language: preferredLanguage,
-                      });
-                    setResult({
-                      ok: true,
-                      source: item.source || "offline_kb",
-                      model: "saved-record",
-                      answer: item.answer,
-                      imageAnalyzed: item.imageAnalyzed,
-                      language: item.answerLanguage || (item.source === "offline_kb" ? "English" : item.context?.language),
-                    });
-                  }}
+                  onClick={() => openSavedRecord(item)}
                 >
                   <strong>{item.question}</strong>
                   <small>

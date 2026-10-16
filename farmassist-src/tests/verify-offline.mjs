@@ -6,12 +6,31 @@ try {
   const page = await context.newPage();
   const errors = []; page.on("pageerror", e => errors.push(e.message));
   await page.goto(process.env.FARMASSIST_TEST_URL || "http://localhost:4173/farmassist/");
-  await page.evaluate(async () => { await navigator.serviceWorker.ready; await caches.open("unrelated-app-cache"); });
+  await page.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration())?.active));
+  await page.evaluate(async () => { await caches.open("unrelated-app-cache"); });
   await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
-  const keys = await page.evaluate(async () => (await (await caches.open("joita-farmassist-v5")).keys()).map(request => new URL(request.url).pathname));
+  const keys = await page.evaluate(async () => {
+    const name = (await caches.keys()).find(key => key.startsWith("joita-farmassist-v6-"));
+    if (!name) throw new Error("Current offline build is missing");
+    const cache = await caches.open(name);
+    if (!await cache.match("/farmassist/offline-ready")) throw new Error("Offline download is incomplete");
+    return (await cache.keys()).map(request => new URL(request.url).pathname);
+  });
   assert(keys.some(key => key.endsWith(".js"))); assert(keys.some(key => key.endsWith(".css"))); assert(!keys.some(key => key.startsWith("/api/")));
+  assert(keys.some(key => /FarmPlot-.*\.js$/.test(key))); assert(keys.some(key => /Advisory-.*\.js$/.test(key)));
   await context.setOffline(true);
   await page.reload();
+  await page.evaluate(() => { location.hash = "#/visualizer"; });
+  await page.locator("canvas").waitFor();
+  const colors = await page.locator("canvas").evaluate(canvas => {
+    const copy = document.createElement("canvas"); copy.width = canvas.width; copy.height = canvas.height;
+    const ctx = copy.getContext("2d"); ctx.drawImage(canvas, 0, 0);
+    const pixels = ctx.getImageData(0, 0, copy.width, copy.height).data;
+    const colors = new Set(); for (let i = 0; i < pixels.length; i += 400) colors.add(`${pixels[i]},${pixels[i + 1]},${pixels[i + 2]}`);
+    return colors.size;
+  });
+  assert(colors > 15, "3D plot must render real geometry on its first offline visit");
+  await page.getByRole("link", {name:"JOITAFA home",exact:true}).click();
   await page.getByRole("button", { name: "Toggle navigation" }).click(); await page.getByRole("navigation", { name: "JOITAFA modules" }).getByRole("link", {name:"Ask",exact:true}).click();
   await page.getByLabel("Answer language").selectOption("Hindi");
   await page.getByLabel("Your question", {exact:true}).fill("Mustard aphids at flowering. What should I inspect?");
@@ -53,5 +72,29 @@ try {
   assert.match(await page.locator("tbody tr").first().innerText(),/2,100/);
   const savedCaches = await page.evaluate(() => caches.keys()); assert(savedCaches.includes("unrelated-app-cache")); assert.deepEqual(errors, []);
   await page.screenshot({path:"test-results/offline-mobile.png",fullPage:true,animations:"disabled"});
-  console.log(JSON.stringify({offlineReload:true, offlineQuestion:true, offlineCalculators:true, offlineLedger:true, offlineDiary:true, offlineSalePlanner:true, savedAnswerAfterReload:true, assetsCached:keys.length, apiNeverCached:true, unrelatedCachePreserved:true, browserErrors:errors}));
+  await context.close();
+  const interrupted = await browser.newContext();
+  let rejected;
+  const downloadRejected = new Promise(resolve => { rejected = resolve; });
+  await interrupted.route(/\/assets\/FarmPlot-[^/]+\.js/, async route => {
+    await route.abort(); rejected();
+  });
+  const retryPage = await interrupted.newPage();
+  await retryPage.goto(process.env.FARMASSIST_TEST_URL || "http://localhost:4173/farmassist/");
+  const timeout = setTimeout(() => rejected(new Error("No tool download was intercepted")), 15000);
+  const rejection = await downloadRejected; clearTimeout(timeout); if (rejection) throw rejection;
+  await retryPage.waitForFunction(async () => !(await navigator.serviceWorker.getRegistration()));
+  assert.equal(await retryPage.evaluate(async () => (await caches.keys()).some(key => key.startsWith("joita-farmassist-v6-"))), false, "A failed download must not leave a ready or partially cached build");
+  await retryPage.evaluate(() => { location.hash = "#/settings"; });
+  await retryPage.getByText(/Offline app download is not ready/).waitFor();
+  await interrupted.unroute(/\/assets\/FarmPlot-[^/]+\.js/);
+  await retryPage.reload();
+  await retryPage.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration())?.active));
+  await retryPage.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+  await interrupted.setOffline(true);
+  await retryPage.reload();
+  await retryPage.evaluate(() => { location.hash = "#/visualizer"; });
+  await retryPage.locator("canvas").waitFor();
+  await interrupted.close();
+  console.log(JSON.stringify({offlineReload:true, coldOffline3D:true, interruptedDownloadRecovery:true, offlineQuestion:true, offlineCalculators:true, offlineLedger:true, offlineDiary:true, offlineSalePlanner:true, savedAnswerAfterReload:true, assetsCached:keys.length, apiNeverCached:true, unrelatedCachePreserved:true, browserErrors:errors}));
 } finally { await browser.close(); }

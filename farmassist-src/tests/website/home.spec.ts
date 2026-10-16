@@ -1,5 +1,23 @@
 import { test, expect } from "@playwright/test";
 
+test("mobile navigation closes with Escape and outside clicks and keeps the current page accurate", async ({page}) => {
+  await page.setViewportSize({width:390,height:844});
+  await page.goto("/products.html");
+  const toggle = page.locator(".mobile-menu-toggle");
+  await toggle.click();
+  await expect(page.locator('.nav-links a[aria-current="page"]')).toHaveText("Products");
+  await page.locator(".nav-links a").first().focus();
+  await page.keyboard.press("Escape");
+  await expect(toggle).toHaveAttribute("aria-expanded","false");
+  await expect(toggle).toBeFocused();
+  await toggle.click();
+  await page.locator("main h1").click();
+  await expect(toggle).toHaveAttribute("aria-expanded","false");
+  await toggle.click();
+  await page.locator(".nav-links a").filter({hasText:/^Home$/}).click();
+  await expect(page.locator('.nav-links a[aria-current="page"]')).toHaveText("Home");
+});
+
 test("task finder switches destinations and product search resets accurately", async ({page}) => {
   await page.goto("/");
   await page.getByRole("radio",{name:"Field records",exact:true}).check();
