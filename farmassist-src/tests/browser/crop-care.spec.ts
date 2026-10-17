@@ -138,7 +138,8 @@ test("guided checks and case views fit Hindi phone, tablet and desktop layouts",
   await startCase(page);
   await page.getByRole("button", { name: "Save case & recheck", exact: true }).click();
   await page.getByRole("link", { name: "Open this crop case", exact: true }).click();
-  await page.getByRole("button", { name: "हिन्दी", exact: true }).click();
+  await expect(page.locator(".case-overview")).toBeVisible();
+  await page.locator(".interface-options button[lang=hi]").click();
   for (const width of [360, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

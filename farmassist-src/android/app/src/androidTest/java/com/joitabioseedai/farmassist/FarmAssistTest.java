@@ -130,11 +130,11 @@ public class FarmAssistTest {
             js(scenario, "document.querySelector('.save-crop-case form').requestSubmit()");
             until(scenario, "document.querySelector('.save-crop-case').innerText.includes('Case and calendar recheck saved')");
             js(scenario, "(()=>{const root=JSON.parse(localStorage.getItem('joita-fa-diary-v1')).find(e=>e.plot==='Emulator crop case'&&e.caseInfo);window.caseTestId=root.id;location.hash='#/diary?case='+root.id;})()");
-            until(scenario, "Boolean(document.querySelector('.case-timeline li'))");
+            until(scenario, "Boolean(document.querySelector('.case-timeline > li'))");
             assertEquals("true", js(scenario, "JSON.parse(localStorage.getItem('joita-fa-plans-v3')).some(p=>p.id==='diary-'+window.caseTestId)"));
             js(scenario, "(()=>{const input=document.querySelector('#diary-observation-form textarea');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(input,'Rechecked affected and healthy plants');input.dispatchEvent(new Event('input',{bubbles:true}));})()");
             js(scenario, "document.querySelector('#diary-observation-form').requestSubmit()");
-            until(scenario, "document.querySelectorAll('.case-timeline li').length===2");
+            until(scenario, "document.querySelectorAll('.case-timeline > li').length===2");
             screenshot("android-crop-case-followup");
             js(scenario, "window.policyCheck=null;fetch('https://www.joitabioseedai.com/api/farmassist-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'कीटनाशक की कितनी मात्रा मिलाएं?',language:'Hindi'})}).then(r=>r.json()).then(d=>window.policyCheck=d)");
             until(scenario, "Boolean(window.policyCheck)");
