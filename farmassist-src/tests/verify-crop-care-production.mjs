@@ -1,7 +1,6 @@
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
-import { createParser } from "eventsource-parser";
 
 // Explicitly opt in: this check consumes the existing production provider quota.
 if (process.env.JOITA_LIVE_TESTS !== "1") throw new Error("Set JOITA_LIVE_TESTS=1 to run the live provider checks.");
@@ -15,21 +14,11 @@ try {
   const page = await context.newPage();
   page.setDefaultTimeout(60000);
   const errors = []; page.on("pageerror", e => errors.push(e.message));
-  const captures = [];
   results.answers = [];
-  page.on("response", response => {
-    if (response.url().endsWith("/api/farmassist-chat")) {
-      captures.push((async () => {
-        const text = await response.text();
-        let result;
-        if (response.headers()["content-type"]?.includes("text/event-stream")) {
-          const parser = createParser({ onEvent(event) { if (event.event === "complete") result = JSON.parse(event.data); } });
-          parser.feed(text);
-        } else result = JSON.parse(text);
-        assert(result?.ok, "The live response did not complete successfully");
-        results.answers.push({ source: result.source, imageAnalyzed: result.imageAnalyzed, imagesAnalyzed: result.imagesAnalyzed, language: result.language, answer: result.answer });
-      })());
-    }
+  // Read the completed, validated app record, not Chromium's evictable SSE body.
+  const completedAnswer = () => page.evaluate(() => {
+    const record = JSON.parse(localStorage.getItem("joita-fa-questions"))[0];
+    return { source: record.source, imageAnalyzed: record.imageAnalyzed, language: record.answerLanguage, answer: record.answer };
   });
   const healthResponse = await context.request.get(`${origin}/api/health`);
   results.health = await healthResponse.json();
@@ -49,7 +38,7 @@ try {
   await page.locator(".advisory-result").waitFor();
   assert.match(await page.locator(".advisory-result").innerText(),/JOITA Live AI/);
   assert.equal(await page.locator(".answer-copy").getAttribute("lang"),"hi-IN");
-  await Promise.all(captures);
+  results.answers.push(await completedAnswer());
   await page.screenshot({path:`${evidence}/hindi-voice-answer.png`,fullPage:true});
   await page.goto(`${origin}/farmassist/#/diagnose`);
   await page.getByLabel("Crop",{exact:true}).selectOption("Tomato");
@@ -65,7 +54,7 @@ try {
   assert.match(await page.locator(".advisory-result").innerText(),/JOITA Live AI/);
   assert.match(await page.locator(".advisory-result").innerText(),/फोटो पर आधारित/);
   assert.equal(await page.locator(".answer-copy").getAttribute("lang"),"hi-IN");
-  await Promise.all(captures);
+  results.answers.push(await completedAnswer());
   await page.screenshot({path:`${evidence}/photo-advisory.png`,fullPage:true});
   await page.locator(".save-crop-case > summary").click();
   await page.getByRole("button",{name:"Save case & recheck",exact:true}).click();
@@ -83,7 +72,7 @@ try {
   results.browserErrors=errors;assert.deepEqual(errors,[]);
   assert.equal(results.answers.length,2);
   assert(results.answers.every(answer=>["gemini","openrouter"].includes(answer.source)));
-  assert.equal(results.answers[1].imagesAnalyzed,1);
+  assert.equal(results.answers[1].imageAnalyzed,true);
   await context.close();
   await writeFile(`${evidence}/result.json`,JSON.stringify(results,null,2));
   console.log(JSON.stringify(results,null,2));

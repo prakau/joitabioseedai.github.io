@@ -241,13 +241,6 @@ export function Advisory({
       setError("Keep your question within 1000 characters.");
       return;
     }
-    setBusy(true);
-    const controller = new AbortController();
-    request.current = controller;
-    setPartialAnswer("");
-    setProgress("Connecting to live advisory...");
-    setError("");
-    setResult(null);
     const actualContext = {
       ...context,
       crop: inferCrop(message, context.crop),
@@ -257,6 +250,19 @@ export function Advisory({
         activeRecord?.context?.language,
       ),
     };
+    if (cropCase && inferCrop(actualContext.crop, actualContext.crop) !== inferCrop(cropCase.crop, cropCase.crop)) {
+      setError(actualContext.language === "Hindi" || actualContext.language === "Haryanvi"
+        ? "यह सवाल दूसरी फसल के बारे में है। रिकॉर्ड अलग रखने के लिए फसल की नई जांच शुरू करें।"
+        : "This question names a different crop. Start a new crop check to keep its records separate.");
+      return;
+    }
+    setBusy(true);
+    const controller = new AbortController();
+    request.current = controller;
+    setPartialAnswer("");
+    setProgress("Connecting to live advisory...");
+    setError("");
+    setResult(null);
     setContext({ ...context, crop: actualContext.crop });
     setRequestLanguage(actualContext.language);
     if (followUp) {

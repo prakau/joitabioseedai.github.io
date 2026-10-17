@@ -68,6 +68,10 @@ test("guided three-photo investigation becomes a case, recheck and linked diary 
   await expect(page.getByLabel("Crop", { exact: true })).toHaveValue("Tomato");
   await expect(page.getByLabel("Plot name (optional)")).toHaveValue("North plot");
   await photo(page, "Crop photo (optional)", "#558a44");
+  await page.getByLabel("Symptoms and field observations").fill("My wheat leaves are yellow. What should I check?");
+  await page.getByRole("button", { name: "Analyze crop", exact: true }).click();
+  await expect(page.getByText("यह सवाल दूसरी फसल के बारे में है। रिकॉर्ड अलग रखने के लिए फसल की नई जांच शुरू करें।", {exact:true})).toBeVisible();
+  expect(bodies).toHaveLength(1);
   await page.getByLabel("Symptoms and field observations").fill("Tomato follow-up: fewer affected plants, what next?");
   await page.getByRole("button", { name: "Analyze crop", exact: true }).click();
   await expect(page.locator(".answer-copy")).toBeVisible();
