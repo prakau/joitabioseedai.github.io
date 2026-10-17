@@ -6,13 +6,15 @@ import { readFile, mkdir, writeFile } from "node:fs/promises";
 if (process.env.JOITA_LIVE_TESTS !== "1") throw new Error("Set JOITA_LIVE_TESTS=1 to run the live provider checks.");
 const origin = "https://www.joitabioseedai.com";
 const browser = await chromium.launch(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } : {});
-const evidence = "test-results/production-crop-care";
+const evidence = process.env.JOITA_EVIDENCE_DIR || "test-results/production-crop-care";
 await mkdir(evidence, { recursive: true });
 const results = { origin, timestamp: new Date().toISOString() };
 try {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, serviceWorkers: "block" });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, serviceWorkers: "block", reducedMotion: "reduce" });
   const page = await context.newPage();
   page.setDefaultTimeout(60000);
+  let chatRequests = 0;
+  page.on("request", request => { if (new URL(request.url()).pathname === "/api/farmassist-chat") chatRequests++; });
   const errors = []; page.on("pageerror", e => errors.push(e.message));
   results.answers = [];
   // Read the completed, validated app record, not Chromium's evictable SSE body.
@@ -69,6 +71,12 @@ try {
   results.case = await page.evaluate(()=>({observations:JSON.parse(localStorage.getItem("joita-fa-diary-v1")).length,rechecks:JSON.parse(localStorage.getItem("joita-fa-plans-v3")).length,rawMediaStored:Object.values(localStorage).some(value=>value.includes("data:image")||value.includes("audio/mpeg"))}));
   assert.equal(results.case.observations,2);assert.equal(results.case.rechecks,1);assert.equal(results.case.rawMediaStored,false);
   await page.screenshot({path:`${evidence}/saved-case.png`,fullPage:true});
+  await page.getByRole("link",{name:"Add a photo follow-up",exact:true}).click();
+  await page.getByLabel("Symptoms and field observations").fill("My wheat leaves are yellow. What should I check?");
+  await page.getByRole("button",{name:"Analyze crop",exact:true}).click();
+  await page.getByText("यह सवाल दूसरी फसल के बारे में है। रिकॉर्ड अलग रखने के लिए फसल की नई जांच शुरू करें।",{exact:true}).waitFor();
+  assert.equal(chatRequests,2,"Different-crop guard must not call the provider or duplicate requests");
+  results.differentCropGuard=true;
   results.browserErrors=errors;assert.deepEqual(errors,[]);
   assert.equal(results.answers.length,2);
   assert(results.answers.every(answer=>["gemini","openrouter"].includes(answer.source)));

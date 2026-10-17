@@ -151,7 +151,16 @@ test("market provider errors including HTTP-200 errors are not labeled live", as
     globalThis.fetch = async () => new Response(JSON.stringify({status:"error",records:[],message:"test-market-secret"}),{status});
     const res=response(); await market({method:"GET",query:{}},res);
     assert.equal(res.statusCode,502); assert.doesNotMatch(JSON.stringify(res.data), /test-market-secret/);
+    assert.equal(res.data.providerStatus,status);
+    assert.equal(res.data.failureReason,status===403?"access_denied":status===429?"rate_limited":"provider_error");
   }
+});
+test("market explains non-JSON provider failures without exposing the upstream body", async () => {
+  process.env.DATAGOV_API_KEY="test-market-secret";
+  globalThis.fetch=async()=>new Response("<html>test-market-secret maintenance</html>");
+  const res=response(); await market({method:"GET",query:{}},res);
+  assert.equal(res.statusCode,502);assert.equal(res.data.failureReason,"invalid_provider_response");assert.equal(res.data.providerStatus,200);
+  assert.doesNotMatch(JSON.stringify(res.data),/test-market-secret|<html>/);
 });
 test("healthy market with no regional publications is empty, not an error", async () => {
   process.env.DATAGOV_API_KEY = "test-market-secret";

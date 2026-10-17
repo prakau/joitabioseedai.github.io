@@ -99,14 +99,19 @@ public class FarmAssistTest {
             js(scenario, "(()=>{const input=document.querySelector('#field-question');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(input,'tamatar ke patte peele ho rahe hain kya karu');input.dispatchEvent(new Event('input',{bubbles:true}));})()");
             js(scenario, "document.querySelector('#field-question').form.requestSubmit()");
             until(scenario, "Boolean(document.querySelector('.advisory-result'))");
-            assertEquals("true", js(scenario, "document.querySelector('.advisory-result').innerText.includes('JOITA Live AI')"));
+            if (!"true".equals(js(scenario, "document.querySelector('.advisory-result').innerText.includes('JOITA Live AI')"))) {
+                screenshot("android-live-advisory-failure");
+                js(scenario, "location.hash='#/settings'");
+                until(scenario, "Array.from(document.querySelectorAll('details')).some(e=>e.textContent.includes('Last failure'))");
+                fail("Live advisory did not succeed: " + js(scenario, "Array.from(document.querySelectorAll('details')).find(e=>e.textContent.includes('Last failure'))?.textContent"));
+            }
             assertEquals("true", js(scenario, "document.querySelector('.answer-copy').lang === 'hi-IN'"));
             js(scenario, "document.querySelector('[aria-label=\"Read answer aloud\"]').click()");
             until(scenario, "Boolean(document.querySelector('audio')) && document.querySelector('audio').duration > 0");
             screenshot("android-live-advisory");
             js(scenario, "document.querySelector('[aria-label=\"Stop reading\"]').click();location.hash='#/market'");
-            until(scenario, "Boolean(document.querySelector('tbody tr')) || document.body.innerText.includes('No published prices')");
-            assertEquals("true", js(scenario, "document.body.innerText.includes('AGMARKNET / Data.gov.in: live')"));
+            until(scenario, "document.body.innerText.includes('AGMARKNET / Data.gov.in: live') || document.body.innerText.includes('AGMARKNET / Data.gov.in: unavailable')");
+            assertEquals("Market must provide real dated records or an explicit unavailable state, never demonstration prices", "true", js(scenario, "document.body.innerText.includes('AGMARKNET / Data.gov.in: live') || (document.body.innerText.includes('AGMARKNET / Data.gov.in: unavailable') && !document.querySelector('tbody tr') && Boolean(document.querySelector('a[href=\"https://agmarknet.gov.in/\"]')))"));
             screenshot("android-market");
         }
     }

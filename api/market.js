@@ -16,10 +16,16 @@ export default async function handler(req, res) {
   }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10000);
+  let providerStatus = null;
+  let failureReason = "connection_failed";
   try {
     const response = await fetch(url, { signal: controller.signal });
-    const data = await response.json();
-    if (!response.ok || data.status !== "ok" || !Array.isArray(data.records)) throw new Error("Market service unavailable");
+    providerStatus = response.status;
+    failureReason = [401, 403].includes(response.status) ? "access_denied" : response.status === 429 ? "rate_limited" : "provider_error";
+    const data = await response.json().catch(() => null);
+    if (!data) failureReason = "invalid_provider_response";
+    else if (typeof data.message === "string" && /(?:invalid|expired|missing).{0,30}(?:api.?key|credential)|api.?key.{0,30}(?:invalid|expired|missing)/i.test(data.message)) failureReason = "access_denied";
+    if (!response.ok || data?.status !== "ok" || !Array.isArray(data.records)) throw new Error("Market service unavailable");
     const updated = new Date(data.updated_date);
     return res.status(200).json({
       status: "live",
@@ -29,7 +35,13 @@ export default async function handler(req, res) {
       sourceUpdatedAt: Number.isNaN(updated.getTime()) ? undefined : updated.toISOString(),
       total: data.total,
     });
-  } catch {
-    return res.status(502).json({ error: "The mandi service did not return data. Please retry or check the official portal." });
+  } catch (error) {
+    if (error?.name === "AbortError" || controller.signal.aborted) failureReason = "provider_timeout";
+    console.warn(JSON.stringify({ service: "joitafa-market", providerStatus, failureReason, timestamp: new Date().toISOString() }));
+    const message = failureReason === "access_denied" ? "Data.gov.in denied access. The configured mandi credential needs administrator review. Use the official portal meanwhile."
+      : failureReason === "rate_limited" ? "Data.gov.in is limiting requests. Retry later or check the official market portal."
+      : failureReason === "provider_timeout" ? "Data.gov.in took too long to respond. Retry or check the official market portal."
+      : "Data.gov.in did not return usable mandi data. Retry or check the official portal; no sample prices are used.";
+    return res.status(502).json({ error: message, providerStatus, failureReason });
   } finally { clearTimeout(timer); }
 }
