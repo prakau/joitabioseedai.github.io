@@ -22,7 +22,9 @@ Install a Playwright Chromium browser with `npx playwright install chromium`, or
 ## What works
 
 - Ask: streamed Gemini primary, OpenRouter fallback, honest local knowledge fallback; 14 answer languages, automatic script matching, native-language examples, short conversation context, simpler-explanation follow-ups, saved answers, searchable history and export. Stop cancels a request without saving unfinished text. Read-aloud uses server-side Google speech with matching device voices as an explicit fallback. Native audio controls support pause and seeking; Stop and navigation cancel playback.
-- Diagnose: real JPEG/PNG/WebP bytes sent to the provider, with text symptoms and explicit photo-analysis status. Uploads limited to 4 MB and resized before base64 transport. Images are not included in saved history.
+- Diagnose: up to three labelled JPEG/PNG/WebP views (whole plant, leaf underside, field view), symptom duration/spread and previous actions. Each upload is limited to 20 MB and resized locally; combined decoded transport is limited to 3 MB. Legacy single-photo requests remain supported. Images are not included in saved history or crop cases.
+- Crop cases: save an advisory snapshot and observations in the existing Crop Diary, schedule a calendar recheck, add dated field/photo follow-ups, and close/reopen the case. Plant counts are farmer-entered samples, not independently verified treatment outcomes. Photos/audio are not retained.
+- Voice questions: record or upload 1-30 seconds, transcribe online, review/edit the words, then submit once. Cancel releases the microphone and cancels transcription. Failure preserves typed text. This is separate from the entirely local field-sound measurements.
 - Plot: actual Three.js field geometry driven by dimensions and row count, camera controls, irrigation overlays, input validation, saved layout loading, deletion and export. A 2D plan remains available when WebGL is unsupported.
 - Weather: manual town search/geolocation; current Open-Meteo estimates and seven-day forecast, coordinate-specific cache with original observation time, and separately labeled NASA POWER historical climatology. No fabricated weather observations or numerical disease-risk scores.
 - Calendar: crop/topic/season search, dated task editing and completion, overdue filters, dashboard upcoming tasks, and real all-day `.ics` exports. Answers can become user-confirmed inspection tasks. Calendar export does not enable background notifications in FarmAssist.
@@ -35,7 +37,9 @@ Install a Playwright Chromium browser with `npx playwright install chromium`, or
 
 ## External services and limits
 
-Vercel runs `/api/health`, `/api/farmassist-chat`, `/api/farmassist-speech`, and `/api/market`. `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, `DATAGOV_API_KEY`, and `GOOGLE_TTS_API_KEY` belong only in Vercel secret environment settings. Never commit keys or `.env` files. Environment changes require a new production deployment.
+Vercel runs `/api/health`, `/api/farmassist-chat`, `/api/farmassist-transcribe`, `/api/farmassist-speech`, and `/api/market`. `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, `DATAGOV_API_KEY`, and `GOOGLE_TTS_API_KEY` belong only in Vercel secret environment settings. Never commit keys or `.env` files. Environment changes require a new production deployment.
+
+Voice transcription reuses the server-side Gemini key. Health `hasVoiceInput` reports configuration, not a successful transcription or guaranteed provider availability. The endpoint accepts validated audio up to 2 MB, times out after 22 seconds, and limits requests to 10/IP/hour per warm instance. The UI limits recordings to 30 seconds. Audio is forwarded to the provider but not persisted in app records or logged. Transcription and read-aloud use existing provider quotas and may incur provider charges. No billing or quota settings are changed.
 
 `DATAGOV_API_KEY` enables the AGMARKNET adapter. Market distinguishes feed publication time, retrieval time, and each record's arrival date. An empty state filter means no matching publication, not a zero price or a broken connection. Show all markets clears filters; up to 200 records are returned. The daily resource is not a historical archive. Without a key, Market shows an unavailable state and official market links, never demonstration prices. Offline caches preserve original records and dates for identical filters only.
 
@@ -80,7 +84,9 @@ and cross-device record sync are not released by this increment.
 - Calendar rejects tasks dated before sowing unless a supported pre-plant
   activity is selected. Contradictory legacy dates remain editable as Needs
   review, not Overdue. ICS export rejects invalid relationships too.
-- Settings exports version 4 record JSON; restore accepts version 3/4. It
+- Settings exports version 4 record JSON, or version 5 when crop-case metadata is
+  present; restore accepts version 3/4/5. Older builds reject version 5 rather
+  than accidentally dropping linked case data. It
   validates allowed collections, shapes, IDs, units and size (5 MB), previews
   additions/duplicates/conflicts and keeps existing conflicting records.
 - Restore saves the prior and incoming records transactionally in IndexedDB
@@ -96,3 +102,14 @@ and cross-device record sync are not released by this increment.
   block restore instead of being treated as empty.
 - Normal records retain their original localStorage keys and IDs. No silent
   migration, contact import, evidence verification or consent inference occurs.
+
+## Connected crop care (2026-10-17)
+
+See `../docs/climateos/RELEASE-1C-2026-10-17.md`. Cases extend the current diary
+key without migrating existing observations. Backup validation checks root links,
+crop/plot identity, snapshot bounds and supported statuses before any restore.
+Conflicting linked records are rejected rather than merged into the wrong crop.
+Save retries do not duplicate an observation if calendar storage fails. Case
+closure means closed by the farmer, never independently verified recovery.
+Detailed older tools are not all translated; the new guided/case controls are
+English/Hindi and live advisory retains its existing answer-language choices.

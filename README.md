@@ -43,6 +43,12 @@ npm run build
 
 JOITAFA uses public/no-key data APIs where possible. AI, speech and market credentials stay in Vercel environment variables, never in browser storage. See `farmassist-src/README.md` for current behavior and `docs/climateos/BASELINE-2026-10-14.md` for the ClimateOS audit and roadmap.
 
+The connected crop-care update adds guided multi-photo checks, editable Hindi
+voice transcription, and device-local crop cases linked to diary observations
+and calendar rechecks. See `docs/climateos/RELEASE-1C-2026-10-17.md` for verification,
+backup compatibility, privacy and deployment limits. No cloud registry or expert
+review network is implied.
+
 ## OpenRouter FarmAssist Proxy
 
 OpenRouter is supported only through a backend proxy. Do not place the OpenRouter key in frontend JavaScript or GitHub Pages HTML.

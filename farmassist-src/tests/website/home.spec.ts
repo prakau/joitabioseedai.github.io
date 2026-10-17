@@ -75,6 +75,17 @@ test("storage failure leaves the question intact and does not navigate", async (
   await expect(page.locator("#home-question-error")).toContainText("blocked");
   await expect(page.getByLabel("Ask JOITAFA",{exact:true})).toHaveValue("How should I inspect wheat?");
 });
+test("JOITAFA detail page opens the real guided check, Hindi advice and existing crop cases", async ({page}) => {
+  await page.route("**/api/health", r => r.fulfill({json:{ok:true,hasGeminiKey:true,hasVoiceInput:true}}));
+  await page.goto("/farmassist-ai.html");
+  await expect(page.locator("main h1")).toHaveText("JOITAFA");
+  const hindi = page.locator('main a[href="/farmassist/#/ask?language=Hindi"]');
+  await expect(hindi).toBeVisible();
+  await expect(page.locator('main a[href="/farmassist/#/diagnose"]').first()).toBeVisible();
+  await expect(page.locator('main a[href="/farmassist/#/diary"]').first()).toBeVisible();
+  await hindi.click();
+  await expect(page.getByLabel("Answer language", {exact:true})).toHaveValue("Hindi");
+});
 test("phone, tablet and desktop controls fit with reduced motion and valid detail links", async ({page}) => {
   await page.emulateMedia({reducedMotion:"reduce"});
   for (const width of [360,768,1440]) {

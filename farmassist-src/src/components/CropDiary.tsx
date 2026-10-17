@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   CalendarPlus,
@@ -28,21 +28,26 @@ import { downloadText, readStored, uid, useStored } from "../lib/storage";
 import { Button } from "./ui/button";
 import { Input, Textarea } from "./ui/input";
 import { Empty, Field, Notice, Select, Title } from "./workspace";
+import { CropCases } from "./CropCases";
+import { readDiary } from "../lib/record-backup";
 
 export function CropDiary() {
   const { language } = useInterface();
   const hi = language === "hi";
   const l = (en: string, hindi: string) => (hi ? hindi : en);
   const query = new URLSearchParams(useLocation().search);
-  const blank = (): ObservationDraft => ({
-    crop: query.get("crop")?.slice(0, 80) || "",
-    plot: "",
+  const caseId = query.get("case")?.slice(0, 200) || "";
+  const blank = (): ObservationDraft => {
+    const root = readStored<Observation[]>(DIARY_KEY, []).find(entry => entry.id === caseId && entry.caseInfo);
+    return ({
+    crop: root?.crop || query.get("crop")?.slice(0, 80) || "",
+    plot: root?.plot || "",
     date: localDay(),
     symptoms: query.get("symptoms")?.slice(0, 800) || "",
     action: "",
     checked: "",
     affected: "",
-  });
+  }); };
   const [entries, saveEntries] = useStored<Observation[]>(DIARY_KEY, []);
   const [plans, savePlans] = useStored<Plan[]>(PLAN_KEY, []);
   const [draft, setDraft] = useState(blank);
@@ -57,10 +62,11 @@ export function CropDiary() {
   const key = (entry: Observation) => JSON.stringify([entry.crop, entry.plot]);
   const groups = [...new Set(entries.map(key))].sort();
   const filtered = entries
-    .filter((e) => !filter || key(e) === filter)
+    .filter((e) => (!filter || key(e) === filter) && (!caseId || e.id === caseId || e.caseId === caseId))
     .sort((a, b) => b.date.localeCompare(a.date));
   const trend = observationTrend(filtered);
   const report = fieldReport(filtered, hi);
+  useEffect(() => { setDraft(blank()); setEditing(""); setFilter(""); }, [caseId]);
   const errors: Record<string, string> = {
     identity: l(
       "Enter a crop and plot name (up to 80 characters each).",
@@ -88,7 +94,7 @@ export function CropDiary() {
     setMessage("");
     try {
       const data = validateObservation(draft);
-      const current = readStored<Observation[]>(DIARY_KEY, []);
+      const current = readDiary(localStorage);
       if (editing && !current.some((e) => e.id === editing))
         throw new Error(
           l(
@@ -103,7 +109,11 @@ export function CropDiary() {
             "नए रिकॉर्ड से पहले पुराने रिकॉर्ड निर्यात करके हटाएं।",
           ),
         );
-      const entry = { ...data, id: editing || uid() };
+      const linked = current.find(entry => entry.id === editing)?.caseId || caseId;
+      const root = linked ? current.find(entry => entry.id === linked && entry.caseInfo) : undefined;
+      if (!editing && caseId && (!root || root.caseInfo?.status === "closed")) throw new Error(l("Open an active crop case before adding an observation.", "निरीक्षण जोड़ने से पहले सक्रिय मामला खोलें।"));
+      if (root && (data.crop !== root.crop || data.plot !== root.plot)) throw new Error(l("Keep the crop and plot of this case.", "मामले की फसल और खेत का नाम ही रखें।"));
+      const entry = { ...current.find(e => e.id === editing), ...data, id: editing || uid(), ...(!editing && root ? { caseId: root.id } : {}) };
       if (
         saveEntries(
           editing
@@ -169,6 +179,7 @@ export function CropDiary() {
           )}
         </p>
       </div>
+      <CropCases selected={caseId} />
       <section className="section-divider">
         <h3>
           {editing
@@ -176,6 +187,7 @@ export function CropDiary() {
             : l("Record a field check", "खेत की जांच दर्ज करें")}
         </h3>
         <form
+          id="diary-observation-form"
           ref={form}
           onSubmit={(e) => {
             e.preventDefault();
@@ -186,6 +198,7 @@ export function CropDiary() {
             <Field label={l("Crop name", "फसल का नाम")}>
               <Input
                 required
+                readOnly={Boolean(caseId)}
                 maxLength={80}
                 value={draft.crop}
                 onChange={(e) => setDraft({ ...draft, crop: e.target.value })}
@@ -194,6 +207,7 @@ export function CropDiary() {
             <Field label={l("Plot name", "खेत का नाम")}>
               <Input
                 required
+                readOnly={Boolean(caseId)}
                 maxLength={80}
                 value={draft.plot}
                 onChange={(e) => setDraft({ ...draft, plot: e.target.value })}
@@ -471,6 +485,7 @@ export function CropDiary() {
                   className="icon-action"
                   title={l("Delete observation", "निरीक्षण हटाएं")}
                   aria-label={l("Delete observation", "निरीक्षण हटाएं")}
+                  disabled={Boolean(entry.caseInfo && entries.some(row => row.caseId === entry.id && row.id !== entry.id))}
                   onClick={() => {
                     if (
                       saveEntries(

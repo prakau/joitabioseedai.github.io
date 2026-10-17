@@ -4,10 +4,12 @@ import { ArrowUpRight, Camera, MessageSquare, Store, CloudSun, Send } from "luci
 import { Textarea } from "./ui/input";
 import { Button } from "./ui/button";
 import { useInterface } from "../lib/interface";
+import { VoiceQuestion } from "./VoiceQuestion";
 
-export function DashboardStart() {
+export function DashboardStart({ language, voiceAvailable }: { language: string; voiceAvailable: boolean }) {
   const { t } = useInterface();
   const [question, setQuestion] = useState("");
+  const [voiceBusy, setVoiceBusy] = useState(false);
   const desk = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   return (
@@ -17,16 +19,18 @@ export function DashboardStart() {
         <h3>{t("One question. A clearer next step.")}</h3>
         <form onSubmit={event => {
           event.preventDefault();
+          if (voiceBusy) return;
           if (!question.trim()) { desk.current?.querySelector("textarea")?.focus(); return; }
           navigate("/ask", { state: { submittedQuestion: question.trim(), submissionId: crypto.randomUUID() } });
         }}>
           <label htmlFor="field-question">{t("What would you like to check today?")}</label>
-          <Textarea id="field-question" value={question} maxLength={1000} rows={3}
+          <Textarea id="field-question" value={question} disabled={voiceBusy} maxLength={1000} rows={3}
             placeholder={t("My tomato leaves are curling. What should I check?")}
             onChange={event => setQuestion(event.target.value)} />
+          <VoiceQuestion language={language} value={question} onChange={setQuestion} available={voiceAvailable} onBusyChange={setVoiceBusy} />
           <div className="field-question-actions">
             <span>{t("Crop advisory support only")}</span>
-            <Button type="submit"><Send size={18} />{t("Ask JOITAFA")}</Button>
+            <Button type="submit" disabled={voiceBusy}><Send size={18} />{t("Ask JOITAFA")}</Button>
           </div>
         </form>
         <div className="question-starters" aria-label={t("Start a question")}>
@@ -49,6 +53,7 @@ export function DashboardStart() {
           </NavLink>
         ))}
         <NavLink to="/ask" className="field-continue"><MessageSquare size={16} />{t("Your saved conversations")}<ArrowUpRight size={16} /></NavLink>
+        <NavLink to="/diary" className="field-continue"><Camera size={16} />{t("Crop cases & follow-ups")}<ArrowUpRight size={16} /></NavLink>
       </div>
     </section>
   );

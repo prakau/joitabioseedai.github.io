@@ -41,6 +41,8 @@ export type ChatContext = {
   language: string;
   problemType: string;
 };
+export type CropImage = { view: "whole_plant" | "leaf_underside" | "field_view"; dataUrl: string };
+export type Investigation = { plot: string; duration: string; spread: string; recentAction: string; previousObservations?: string };
 export type ChatResult = {
   ok: boolean;
   answer: string;
@@ -49,6 +51,7 @@ export type ChatResult = {
   mode?: string;
   failureReason?: string;
   imageAnalyzed?: boolean;
+  imagesAnalyzed?: number;
   language?: string;
   responseTimeMs?: number;
 };
@@ -144,6 +147,7 @@ export type Health = {
   environment: string;
   hasMarketKey?: boolean;
   hasSpeechKey?: boolean;
+  hasVoiceInput?: boolean;
 };
 export async function requestSpeech(text: string, language: string, signal: AbortSignal) {
   const controller = new AbortController();
@@ -178,6 +182,7 @@ export async function sendQuestion(
   history: { question: string; answer: string }[] = [],
   onProgress?: (event: ChatProgress) => void,
   signal?: AbortSignal,
+  investigation?: { images?: CropImage[]; details?: Investigation },
 ) {
   if (!message.trim()) throw new Error("Enter a crop question first.");
   if (message.length > 1000)
@@ -198,7 +203,8 @@ export async function sendQuestion(
       body: JSON.stringify({
         message: message.trim(),
         ...context,
-        imageUrl,
+        ...(investigation?.images?.length ? { images: investigation.images } : { imageUrl }),
+        ...(investigation?.details ? { investigation: investigation.details } : {}),
         history: history.slice(-3),
       }),
     });
@@ -228,7 +234,7 @@ export async function sendQuestion(
     signal?.removeEventListener("abort", abort);
   }
 }
-export async function cropPhoto(file: File): Promise<string> {
+export async function cropPhoto(file: File, maxSide = 1600, maxEncodedBytes = 2 * 1024 * 1024): Promise<string> {
   if (file.type && !/^image\/(jpeg|png|webp|heic|heif)$/.test(file.type))
     throw new Error("Choose a crop photo, not a document. / फसल की फोटो चुनें, दस्तावेज़ नहीं।");
   if (!file.size || file.size > 20 * 1024 * 1024)
@@ -242,7 +248,7 @@ export async function cropPhoto(file: File): Promise<string> {
       image.src = url;
     });
   } finally { URL.revokeObjectURL(url); }
-  const ratio = Math.min(1, 1600 / Math.max(image.naturalWidth, image.naturalHeight));
+  const ratio = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
   canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
@@ -255,10 +261,10 @@ export async function cropPhoto(file: File): Promise<string> {
   ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
   let result = canvas.toDataURL("image/jpeg", 0.85);
   for (const quality of [0.7, 0.55, 0.4]) {
-    if (result.length < 2 * 1024 * 1024) break;
+    if (result.length < maxEncodedBytes) break;
     result = canvas.toDataURL("image/jpeg", quality);
   }
-  if (!result.startsWith("data:image/jpeg;base64,") || result.length >= 2 * 1024 * 1024)
+  if (!result.startsWith("data:image/jpeg;base64,") || result.length >= maxEncodedBytes)
     throw new Error("Photo is too complex to upload. Take a closer crop photo. / पास से फसल की फोटो लें।");
   return result;
 }

@@ -21,7 +21,7 @@ test("a large phone photo is compressed, image-only advice works, and bad replac
   await page.route("**/api/health", r=>r.fulfill({json:{ok:true,hasGeminiKey:true}}));
   let image="";
   await page.route("**/api/farmassist-chat", async r=>{
-    const body=r.request().postDataJSON();image=body.imageUrl;
+    const body=r.request().postDataJSON();image=body.images?.[0]?.dataUrl || body.imageUrl;
     expect(body.message.length).toBeGreaterThan(0);expect(image.length).toBeLessThan(2*1024*1024);
     await r.fulfill({json:{ok:true,source:"gemini",language:"Hindi",imageAnalyzed:true,answer:"फोटो में पत्ती पर धब्बे दिख रहे हैं। यह पक्का निदान नहीं है। स्थानीय विशेषज्ञ से जांच कराएं।"}});
   });

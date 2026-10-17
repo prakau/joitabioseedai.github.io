@@ -38,6 +38,7 @@ export default async function handler(req, res) {
     hasOpenRouterKey: Boolean(process.env.OPENROUTER_API_KEY),
     hasMarketKey: Boolean(process.env.DATAGOV_API_KEY),
     hasSpeechKey: Boolean(process.env.GOOGLE_TTS_API_KEY),
+    hasVoiceInput: Boolean(process.env.GEMINI_API_KEY),
     timestamp: new Date().toISOString(),
     environment: environmentName()
   });

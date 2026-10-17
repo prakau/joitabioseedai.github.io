@@ -15,11 +15,48 @@ import {
   recordKeys,
   MAX_BACKUP_BYTES,
   rawRecoveryFile,
+  readDiary,
   type Backup,
 } from "../src/lib/record-backup";
 import { defaultLayout } from "../src/lib/plot";
 import { analyzeSoil, emptySoil } from "../src/lib/soil";
 import { compareSales } from "../src/lib/sale-planner";
+import { caseObservation, validCaseData, fieldReport, type Observation } from "../src/lib/field-diary";
+
+const caseInput = {
+  id: "case-root", draft: { crop: "Mustard", plot: "North", date: "2026-10-14", symptoms: "Yellow leaves", action: "Observed soil", checked: "10", affected: "2" },
+  advisory: { questionId: "answer-1", question: "My mustard leaves are yellow. What should I check?", answer: "Inspect moisture and compare affected plants before selecting any treatment.", source: "gemini" as const, language: "English", date: "2026-10-14T10:00:00Z" },
+  stage: "vegetative", location: "Haryana",
+};
+test("crop cases extend diary records, preserve advice, deduplicate retries and require a live root for follow-ups", () => {
+  const root = caseObservation(caseInput, [], "2026-10-14T10:00:00Z");
+  assert.equal(root.caseId, root.id); assert.equal(root.caseInfo?.status, "monitoring");
+  assert.equal(root.checked, 10); assert.equal(root.affected, 2);
+  assert.equal(caseObservation({ ...caseInput, id: "retry" }, [root]).id, root.id);
+  const next = caseObservation({ ...caseInput, id: "followup", caseId: root.id, advisory: { ...caseInput.advisory, questionId: "answer-2" } }, [root]);
+  assert.equal(next.caseId, root.id); assert.equal(next.caseInfo, undefined);
+  assert.throws(() => caseObservation({ ...caseInput, caseId: "missing", advisory: { ...caseInput.advisory, questionId: "new" } }, [root]), /case_missing/);
+  assert.throws(() => caseObservation({ ...caseInput, caseId: root.id, draft: { ...caseInput.draft, crop: "Wheat" }, advisory: { ...caseInput.advisory, questionId: "new" } }, [root]), /case_identity/);
+  assert.throws(() => caseObservation({ ...caseInput, caseId: root.id, advisory: { ...caseInput.advisory, questionId: "new" } }, [{ ...root, caseInfo: { ...root.caseInfo!, status: "closed" } }]), /case_closed/);
+  assert.match(fieldReport([root, next]), /not an independent expert verification/);
+});
+test("case metadata round-trips backups and rejects orphaned or inconsistent evidence", () => {
+  const root = caseObservation(caseInput, []);
+  const next = caseObservation({ ...caseInput, id: "next", caseId: root.id, advisory: { ...caseInput.advisory, questionId: "new" } }, [root]);
+  const data = { version: 4, app: "JOITAFA", exportedAt: "2026-10-14T10:00:00Z", records: { "joita-fa-diary-v1": [root, next] } };
+  assert.deepEqual(parseBackup(JSON.stringify(data)).records["joita-fa-diary-v1"], [root, next]);
+  assert.equal(parseBackup(JSON.stringify(data)).version, 5);
+  assert.throws(() => parseBackup(JSON.stringify({ ...data, records: { "joita-fa-diary-v1": [next] } })), /records/);
+  assert.throws(() => parseBackup(JSON.stringify({ ...data, records: { "joita-fa-diary-v1": [root, { ...next, crop: "Wheat" }] } })), /records/);
+  assert.equal(validCaseData({ ...root, caseInfo: { ...root.caseInfo, status: "verified" } }), false);
+  assert.equal(validCaseData({ ...root, advisory: { ...root.advisory, answer: "x".repeat(16001) } }), false);
+  const original = { getItem: () => "{broken" };
+  assert.throws(() => readDiary(original));
+  const changed = { ...root, crop: "Wheat" };
+  const incoming = parseBackup(JSON.stringify(data));
+  const current = parseBackup(JSON.stringify({ ...data, records: { "joita-fa-diary-v1": [changed] } }));
+  assert.throws(() => mergeBackups(current, incoming), /case_links/);
+});
 
 const plan: Plan = {
   id: "task-1",

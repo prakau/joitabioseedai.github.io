@@ -41,6 +41,17 @@ try {
   assert.equal(await page.locator(".answer-copy").getAttribute("lang"), "hi-IN");
   await page.reload(); await page.locator(".history-item").first().click(); assert.match(await page.locator(".advisory-result").innerText(), /कीट/);
   assert.equal(await page.getByLabel("Answer language").inputValue(), "Hindi");
+  await page.locator(".save-crop-case > summary").click();
+  await page.getByLabel("Case crop", {exact:true}).fill("Mustard");
+  await page.getByLabel("Case plot", {exact:true}).fill("Offline mustard case");
+  await page.getByRole("button", {name:"Save case & recheck",exact:true}).click();
+  await page.getByRole("link", {name:"Open this crop case",exact:true}).click();
+  await page.reload();
+  assert.match(await page.locator(".case-overview").innerText(), /Offline mustard case/);
+  await page.locator(".case-advisory > summary").click();
+  assert.match(await page.locator(".case-advisory").innerText(), /Offline KB/);
+  assert.match(await page.locator(".case-advisory").innerText(), /कीट/);
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("joita-fa-plans-v3")).length), 1);
   await page.getByRole("link", {name:"JOITAFA home",exact:true}).click();
   assert.equal(await page.getByRole("link", {name:"JOITA website",exact:true}).isVisible(), true);
   await page.getByRole("button",{name:"Toggle navigation",exact:true}).click();
@@ -56,7 +67,7 @@ try {
   await page.getByLabel("Plot name",{exact:true}).fill("Offline north field");
   await page.getByLabel("Symptoms observed",{exact:true}).fill("Yellow lower leaves");
   await page.getByRole("button",{name:"Save observation",exact:true}).click();
-  await page.reload(); assert.match(await page.locator(".observation-row").innerText(),/Offline north field/);
+  await page.reload(); assert.match(await page.locator(".observation-row").filter({hasText:"Offline north field"}).innerText(),/Offline north field/);
   await page.evaluate(()=>{location.hash="#/sales";});
   await page.getByLabel("Crop / produce",{exact:true}).fill("Wheat");
   await page.getByLabel("Quantity to sell (kg)",{exact:true}).fill("100");
@@ -96,5 +107,5 @@ try {
   await retryPage.evaluate(() => { location.hash = "#/visualizer"; });
   await retryPage.locator("canvas").waitFor();
   await interrupted.close();
-  console.log(JSON.stringify({offlineReload:true, coldOffline3D:true, interruptedDownloadRecovery:true, offlineQuestion:true, offlineCalculators:true, offlineLedger:true, offlineDiary:true, offlineSalePlanner:true, savedAnswerAfterReload:true, assetsCached:keys.length, apiNeverCached:true, unrelatedCachePreserved:true, browserErrors:errors}));
+  console.log(JSON.stringify({offlineReload:true, coldOffline3D:true, interruptedDownloadRecovery:true, offlineQuestion:true, offlineCalculators:true, offlineLedger:true, offlineDiary:true, offlineCropCaseAndRecheck:true, offlineSalePlanner:true, savedAnswerAfterReload:true, assetsCached:keys.length, apiNeverCached:true, unrelatedCachePreserved:true, browserErrors:errors}));
 } finally { await browser.close(); }

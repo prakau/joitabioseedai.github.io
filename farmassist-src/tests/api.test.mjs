@@ -5,6 +5,7 @@ import health from "../../api/health.js";
 import { answerPolicy } from "../../api/_lib/advisory-policy.js";
 import market from "../../api/market.js";
 import speech, { splitSpeechText } from "../../api/farmassist-speech.js";
+import transcribe, { validVoiceAudio } from "../../api/farmassist-transcribe.js";
 const originalFetch = globalThis.fetch;
 test("photo uncertainty is allowed but confirmed diagnosis claims are not", () => {
   assert.equal(answerPolicy("यह पक्का निदान नहीं है। स्थानीय विशेषज्ञ से जांच कराएं।"), null);
@@ -15,23 +16,85 @@ test("leaf-curl direction shortcuts are withheld but uncertainty is allowed", ()
   assert.equal(answerPolicy("ऊपर की ओर मुड़ने से वायरस तय नहीं होता।"), null);
 });
 const originalEnv = { gemini: process.env.GEMINI_API_KEY, router: process.env.OPENROUTER_API_KEY, node: process.env.NODE_ENV, market: process.env.DATAGOV_API_KEY, speech: process.env.GOOGLE_TTS_API_KEY };
-beforeEach(() => { globalThis.__joitaFarmAssistRateLimit.clear(); globalThis.__joitaSpeechRateLimit.clear(); process.env.GEMINI_API_KEY = "test-gemini-token"; process.env.OPENROUTER_API_KEY = "test-router-token"; process.env.NODE_ENV = "production"; delete process.env.DATAGOV_API_KEY; delete process.env.GOOGLE_TTS_API_KEY; });
+beforeEach(() => { globalThis.__joitaFarmAssistRateLimit.clear(); globalThis.__joitaSpeechRateLimit.clear(); globalThis.__joitaVoiceRateLimit.clear(); process.env.GEMINI_API_KEY = "test-gemini-token"; process.env.OPENROUTER_API_KEY = "test-router-token"; process.env.NODE_ENV = "production"; delete process.env.DATAGOV_API_KEY; delete process.env.GOOGLE_TTS_API_KEY; });
 afterEach(() => { globalThis.fetch = originalFetch; for (const [key, value] of Object.entries({ GEMINI_API_KEY: originalEnv.gemini, OPENROUTER_API_KEY: originalEnv.router, NODE_ENV: originalEnv.node, DATAGOV_API_KEY: originalEnv.market, GOOGLE_TTS_API_KEY: originalEnv.speech })) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } });
 const question = { message: "Tomato leaves are yellowing and curling. What should I check?", crop: "Mustard", location: "Haryana", stage: "flowering", language: "English", problemType: "disease" };
 const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a2ioAAAAASUVORK5CYII=";
 function response() { return { statusCode: 200, headers: {}, data: null, stream: "", headersSent: false, setHeader(k, v) { this.headers[k] = v; }, flushHeaders() { this.headersSent = true; }, write(chunk) { this.stream += chunk; }, status(n) { this.statusCode = n; return this; }, json(data) { this.data = data; return this; }, end() { this.writableEnded = true; return this; } }; }
 async function run(body, method = "POST", headers = {}) { const res = response(); await handler({ method, body, headers, socket: { remoteAddress: "test-ip" } }, res); return res; }
 function geminiReply(answer = "Inspect the underside of the leaves and compare soil moisture in affected and healthy patches. Confirm the cause with your KVK before choosing an input.") { return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: answer }] }, finishReason: "STOP" }] }), { status: 200 }); }
+test("three labelled views and field observations reach both live providers", async () => {
+  const images = ["whole_plant", "leaf_underside", "field_view"].map(view => ({ view, dataUrl: `data:image/png;base64,${png}` }));
+  const bodies = [];
+  globalThis.fetch = async (_url, options) => {
+    bodies.push(JSON.parse(options.body));
+    if (bodies.length === 1) return new Response(JSON.stringify({ error: { message: "Unavailable" } }), { status: 503 });
+    return new Response(JSON.stringify({ choices: [{ message: { content: "Compare the affected and healthy patches and inspect leaf undersides. Confirm the cause locally before choosing a treatment." }, finish_reason: "stop" }] }));
+  };
+  const res = await run({ ...question, images, investigation: { plot: "North", duration: "2-3 days", spread: "patches", recentAction: "Irrigated yesterday" } });
+  assert.equal(res.data.source, "openrouter"); assert.equal(res.data.imagesAnalyzed, 3);
+  assert.equal(bodies[0].contents[0].parts.filter(part => part.inlineData).length, 3);
+  assert.match(bodies[0].contents[0].parts[0].text, /Irrigated yesterday/);
+  assert.match(JSON.stringify(bodies[0].contents), /leaf underside/);
+  assert.equal(bodies[1].messages[1].content.filter(part => part.type === "image_url").length, 3);
+});
+test("invalid investigation shapes and combined photo limits reject before provider calls", async () => {
+  globalThis.fetch = async () => { throw new Error("Must not call provider"); };
+  const image = { view: "whole_plant", dataUrl: `data:image/png;base64,${png}` };
+  const big = Buffer.alloc(1600000); Buffer.from([137,80,78,71,13,10,26,10]).copy(big);
+  for (const patch of [
+    { images: [image, image] }, { images: [image, { ...image, view: "document" }] }, { images: [image, { ...image, view: { toString: 1 } }] },
+    { images: [image, { ...image, view: "leaf_underside" }, { ...image, view: "field_view" }, image] },
+    { images: [image], imageUrl: image.dataUrl }, { images: null },
+    { images: ["whole_plant", "leaf_underside"].map(view => ({ view, dataUrl: `data:image/png;base64,${big.toString("base64")}` })) },
+    { investigation: { recentAction: "x".repeat(301) } }, { investigation: { privateKey: "not-allowed" } }, { investigation: [] },
+  ]) assert.equal((await run({ ...question, ...patch })).statusCode, 400);
+});
+const voiceWav = Buffer.alloc(3200); voiceWav.write("RIFF"); voiceWav.write("WAVE", 8);
+const voiceBody = { audio: voiceWav.toString("base64"), mimeType: "audio/wav", language: "Hindi" };
+async function hear(body = voiceBody, options = {}) { const res = response(); await transcribe({ method: "POST", headers: { "content-type": "application/json" }, body, socket: { remoteAddress: "voice-test" }, ...options }, res); return res; }
+test("voice transcription uses server credentials, native-script instructions and exact audio bytes", async () => {
+  let sent;
+  globalThis.fetch = async (_url, options) => { sent = options; return geminiReply(JSON.stringify({ transcript: "मेरी सरसों की पत्तियां पीली हैं", unclear: false })); };
+  const res = await hear(); const body = JSON.parse(sent.body);
+  assert.equal(res.statusCode, 200); assert.match(res.data.transcript, /सरसों/); assert.equal(res.data.source, "joita_voice");
+  assert.equal(sent.headers["X-Goog-Api-Key"], "test-gemini-token");
+  assert.equal(body.contents[0].parts[1].inlineData.data, voiceBody.audio);
+  assert.match(body.contents[0].parts[0].text, /Devanagari/);
+  assert.equal(JSON.stringify(res.data).includes("test-gemini-token"), false);
+});
+test("voice rejects MIME spoofing, unsupported languages, wrong origins and missing configuration", async () => {
+  assert.equal(validVoiceAudio(voiceBody.audio, "audio/wav"), true);
+  assert.equal(validVoiceAudio(voiceBody.audio, "audio/webm"), false);
+  assert.equal((await hear({ ...voiceBody, mimeType: "audio/webm" })).statusCode, 400);
+  assert.equal((await hear({ ...voiceBody, language: "Unsupported" })).statusCode, 400);
+  assert.equal((await hear(voiceBody, { method: "GET" })).statusCode, 405);
+  assert.equal((await hear(voiceBody, { headers: { origin: "https://untrusted.example", "content-type": "application/json" } })).statusCode, 403);
+  delete process.env.GEMINI_API_KEY; assert.equal((await hear()).statusCode, 503);
+});
+test("voice treats unclear or unfinished output as failure and rate-limits request eleven", async () => {
+  globalThis.fetch = async () => geminiReply(JSON.stringify({ transcript: "", unclear: true }));
+  assert.equal((await hear()).statusCode, 422);
+  globalThis.__joitaVoiceRateLimit.clear();
+  globalThis.fetch = async () => geminiReply(JSON.stringify({ transcript: "सरसों में क्या जांचूं?", unclear: false }));
+  for (let n = 0; n < 10; n++) assert.equal((await hear()).statusCode, 200);
+  assert.equal((await hear()).statusCode, 429);
+  globalThis.__joitaVoiceRateLimit.clear();
+  globalThis.fetch = async () => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ transcript: "Incomplete", unclear: false }) }] }, finishReason: "MAX_TOKENS" }] }));
+  assert.equal((await hear()).statusCode, 502);
+  globalThis.fetch = async () => { throw new DOMException("Timeout", "AbortError"); };
+  assert.equal((await hear()).statusCode, 504);
+});
 test("Gemini receives the photo bytes, actual crop, and follow-up context", async () => {
   let request;
   globalThis.fetch = async (_, options) => { request = JSON.parse(options.body); return geminiReply(); };
   const res = await run({ ...question, imageUrl: `data:image/png;base64,${png}`, history: [{ question: "When did it start?", answer: "Yesterday." }] });
   assert.equal(res.data.source, "gemini"); assert.equal(res.data.mode, "vision"); assert.equal(res.data.imageAnalyzed, true); assert.equal(res.data.crop, "Tomato");
-  assert.equal(request.contents[0].parts[1].inlineData.data, png); assert.match(request.contents[0].parts[0].text, /Yesterday/);
+  assert.equal(request.contents[0].parts.find(part => part.inlineData).inlineData.data, png); assert.match(request.contents[0].parts[0].text, /Yesterday/);
 });
 test("failed Gemini attempts OpenRouter with the image", async () => {
   const calls = [];
-  globalThis.fetch = async (url, options) => { calls.push(url); if (calls.length === 1) return new Response(JSON.stringify({ error: { message: "Provider quota exceeded" } }), { status: 429 }); const body = JSON.parse(options.body); assert.equal(body.messages[1].content[1].type, "image_url"); return new Response(JSON.stringify({ choices: [{ message: { content: "Check the affected and healthy plants carefully. Confirm the cause locally before selecting any crop input." }, finish_reason: "stop" }] })); };
+  globalThis.fetch = async (url, options) => { calls.push(url); if (calls.length === 1) return new Response(JSON.stringify({ error: { message: "Provider quota exceeded" } }), { status: 429 }); const body = JSON.parse(options.body); assert.equal(body.messages[1].content.filter(part => part.type === "image_url").length, 1); return new Response(JSON.stringify({ choices: [{ message: { content: "Check the affected and healthy plants carefully. Confirm the cause locally before selecting any crop input." }, finish_reason: "stop" }] })); };
   const res = await run({ ...question, imageUrl: `data:image/png;base64,${png}` });
   assert.equal(calls.length, 2); assert.equal(res.data.source, "openrouter");
 });

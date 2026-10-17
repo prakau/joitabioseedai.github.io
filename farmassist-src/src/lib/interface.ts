@@ -2,6 +2,7 @@ import { useStored } from "./storage";
 
 export type InterfaceLanguage = "en" | "hi";
 const hindi: Record<string, string> = {
+  "Crop cases & follow-ups": "फसल के मामले और दोबारा जांच",
   "Skip to content": "मुख्य सामग्री पर जाएं",
   "Opening your farm tool…": "आपका खेती उपकरण खुल रहा है…",
   "Find a farm tool": "खेती का उपकरण खोजें",

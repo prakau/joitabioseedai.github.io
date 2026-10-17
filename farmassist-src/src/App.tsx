@@ -300,7 +300,7 @@ export default function App() {
                     year: "numeric",
                   })}
                 />
-                <DashboardStart />
+                <DashboardStart language={preferredLanguage} voiceAvailable={online && Boolean(health.data?.hasVoiceInput ?? health.data?.hasGeminiKey)} />
                 <div className="metrics dashboard-metrics">
                   <div>
                     <CloudSun className="metric-icon" size={20} aria-hidden="true" />
@@ -351,15 +351,18 @@ export default function App() {
             )}
             {(active === "ask" || active === "diagnose") && (
               <Advisory
-                key={active}
+                key={`${active}:${new URLSearchParams(location.search).get("case") || ""}`}
                 location={profile.district || place.label}
-                preferredLanguage={websiteQuestion?.language || preferredLanguage}
+                preferredLanguage={websiteQuestion?.language || (new URLSearchParams(location.search).get("language") === "Hindi" ? "Hindi" : preferredLanguage)}
                 onLanguage={setLanguage}
                 diagnose={active === "diagnose"}
                 cloudSpeech={online && Boolean(health.data?.hasSpeechKey)}
+                voiceAvailable={online && Boolean(health.data?.hasVoiceInput ?? health.data?.hasGeminiKey)}
                 initialQuestion={submittedQuestion || websiteQuestion?.question || new URLSearchParams(location.search).get("question")?.slice(0, 1000) || ""}
                 autoSubmitId={submittedQuestion ? location.state?.submissionId : websiteQuestion?.id}
                 initialRecordId={typeof location.state?.savedQuestionId === "string" ? location.state.savedQuestionId : undefined}
+                caseId={new URLSearchParams(location.search).get("case")?.slice(0, 200) || undefined}
+                onLeaveCase={recordId => navigate(location.pathname, { replace: true, state: recordId ? { savedQuestionId: recordId } : null })}
                 onAutoSubmitConsumed={() => {
                   try { sessionStorage.removeItem(LAUNCH_KEY); } catch { /* A blocked store must not prevent an answer. */ }
                   setWebsiteQuestion(null);

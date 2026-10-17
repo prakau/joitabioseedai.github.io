@@ -64,11 +64,11 @@ public class FarmAssistTest {
             });
             until(scenario, "document.body.innerText.includes('Device offline')");
             js(scenario, "localStorage.setItem('joita-native-test', 'persisted');location.hash='#/calculators'");
-            until(scenario, "document.title.startsWith('Calculators |')");
+            until(scenario, "document.title.startsWith('Calculators |') && document.body.innerText.includes('Field area')");
             assertEquals("true", js(scenario, "document.body.innerText.includes('Field area')"));
             for (String route : new String[]{"calendar", "ledger", "soil", "visualizer", "settings", "home"}) {
                 js(scenario, "location.hash='#/" + (route.equals("home") ? "" : route) + "'");
-                until(scenario, "Boolean(document.querySelector('.app-sidebar a.active[href=\"#/" + (route.equals("home") ? "" : route) + "\"]'))");
+                until(scenario, "Boolean(document.querySelector('.app-sidebar a.active[href=\"#/" + (route.equals("home") ? "" : route) + "\"]')) && !document.querySelector('.module-loading')");
                 assertEquals("true", js(scenario, "document.documentElement.scrollWidth <= innerWidth"));
             }
             reload(scenario);
@@ -125,9 +125,34 @@ public class FarmAssistTest {
             assertEquals("false", js(scenario, "document.body.innerText.includes('Gemini')"));
             js(scenario, "document.querySelector('.advisory-result').scrollIntoView({block:'center',behavior:'instant'})");
             screenshot("android-hindi-photo-advisory");
+            js(scenario, "document.querySelector('.save-crop-case').open=true");
+            js(scenario, "(()=>{const form=document.querySelector('.save-crop-case form');const fields=form.querySelectorAll('input');for(const [i,value] of [[0,'Tomato'],[1,'Emulator crop case']]){Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(fields[i],value);fields[i].dispatchEvent(new Event('input',{bubbles:true}));}})()");
+            js(scenario, "document.querySelector('.save-crop-case form').requestSubmit()");
+            until(scenario, "document.querySelector('.save-crop-case').innerText.includes('Case and calendar recheck saved')");
+            js(scenario, "(()=>{const root=JSON.parse(localStorage.getItem('joita-fa-diary-v1')).find(e=>e.plot==='Emulator crop case'&&e.caseInfo);window.caseTestId=root.id;location.hash='#/diary?case='+root.id;})()");
+            until(scenario, "Boolean(document.querySelector('.case-timeline li'))");
+            assertEquals("true", js(scenario, "JSON.parse(localStorage.getItem('joita-fa-plans-v3')).some(p=>p.id==='diary-'+window.caseTestId)"));
+            js(scenario, "(()=>{const input=document.querySelector('#diary-observation-form textarea');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(input,'Rechecked affected and healthy plants');input.dispatchEvent(new Event('input',{bubbles:true}));})()");
+            js(scenario, "document.querySelector('#diary-observation-form').requestSubmit()");
+            until(scenario, "document.querySelectorAll('.case-timeline li').length===2");
+            screenshot("android-crop-case-followup");
             js(scenario, "window.policyCheck=null;fetch('https://www.joitabioseedai.com/api/farmassist-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'कीटनाशक की कितनी मात्रा मिलाएं?',language:'Hindi'})}).then(r=>r.json()).then(d=>window.policyCheck=d)");
             until(scenario, "Boolean(window.policyCheck)");
             assertEquals("true", js(scenario, "window.policyCheck.source==='joita_rules' && window.policyCheck.language==='Hindi'"));
+        }
+    }
+    @Test public void hindiVoiceNoteIsTranscribedWithoutAutoSubmitting() throws Exception {
+        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+            ready(scenario);
+            js(scenario, "location.hash='#/'");
+            until(scenario, "Boolean(document.querySelector('#field-question')) && Boolean(document.querySelector('input[aria-label=\"Voice note (1–30 seconds)\"]'))");
+            js(scenario, "window.voiceFixture=null;fetch('https://www.joitabioseedai.com/api/farmassist-speech',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'मेरी सरसों की पत्तियां पीली हो रही हैं। क्या जांच करूं?',language:'Hindi'})}).then(r=>r.json()).then(d=>window.voiceFixture=d)");
+            until(scenario, "Boolean(window.voiceFixture)");
+            assertEquals("true", js(scenario, "window.voiceFixture.ok && window.voiceFixture.audioParts.length>0"));
+            js(scenario, "(()=>{const input=document.querySelector('#field-question');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(input,'');input.dispatchEvent(new Event('input',{bubbles:true}));const transfer=new DataTransfer();transfer.items.add(new File([Uint8Array.from(atob(window.voiceFixture.audioParts[0]),c=>c.charCodeAt(0))],'voice.mp3',{type:'audio/mpeg'}));const upload=document.querySelector('input[aria-label=\"Voice note (1–30 seconds)\"]');upload.files=transfer.files;upload.dispatchEvent(new Event('change',{bubbles:true}));})()");
+            until(scenario, "document.querySelector('#field-question').value.includes('सरसों')");
+            assertEquals("true", js(scenario, "document.querySelector('#field-question').value.length>5 && !document.querySelector('.advisory-result')"));
+            screenshot("android-hindi-voice-question");
         }
     }
 }

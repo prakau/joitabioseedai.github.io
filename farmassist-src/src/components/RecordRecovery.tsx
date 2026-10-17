@@ -38,8 +38,12 @@ const reasons: Record<string, [string, string]> = {
     "यह मान्य JOITAFA रिकॉर्ड बैकअप नहीं है।",
   ],
   version: [
-    "Unsupported backup version. Use a version 3 or 4 JOITAFA export.",
-    "यह बैकअप संस्करण समर्थित नहीं है। JOITAFA संस्करण 3 या 4 का निर्यात चुनें।",
+    "Unsupported backup version. Use a version 3, 4 or 5 JOITAFA export.",
+    "यह बैकअप संस्करण समर्थित नहीं है। JOITAFA संस्करण 3, 4 या 5 का निर्यात चुनें।",
+  ],
+  case_links: [
+    "Case links conflict with the crop or plot on this device. No records were changed. Compare the original backups before restoring.",
+    "मामले की फसल या खेत इस डिवाइस के रिकॉर्ड से अलग है। कोई रिकॉर्ड नहीं बदला। वापस लाने से पहले मूल बैकअप की तुलना करें।",
   ],
   unknown: [
     "The file includes an unsupported storage collection. Nothing was imported.",

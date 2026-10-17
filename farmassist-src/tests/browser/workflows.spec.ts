@@ -118,7 +118,7 @@ test("live answer, saved history, offline failure, and crop search", async ({pag
 });
 test("diagnosis submits real image bytes and shows source", async ({page}) => {
   let image = "";
-  await page.route("**/api/farmassist-chat", async route => { image = route.request().postDataJSON().imageUrl; await route.fulfill({ json: { ok: true, source: "gemini", model: "test", answer: advisory, imageAnalyzed: true, mode: "vision" } }); });
+  await page.route("**/api/farmassist-chat", async route => { const body = route.request().postDataJSON(); image = body.images?.[0]?.dataUrl || body.imageUrl; await route.fulfill({ json: { ok: true, source: "gemini", model: "test", answer: advisory, imageAnalyzed: true, mode: "vision" } }); });
   await page.goto("./#/diagnose");
   await page.getByLabel("Crop photo (optional)").setInputFiles({ name: "crop.png", mimeType: "image/png", buffer: Buffer.from(await page.evaluate(() => { const canvas=document.createElement("canvas"); canvas.width=320; canvas.height=240; const ctx=canvas.getContext("2d")!; ctx.fillStyle="#427d4a"; ctx.fillRect(0,0,320,240); return canvas.toDataURL("image/png").split(",")[1]; }), "base64") });
   await expect(page.locator(".photo-preview img")).toBeVisible(); await page.getByLabel("Symptoms and field observations").fill("Leaves are curling");

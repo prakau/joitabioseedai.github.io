@@ -20,6 +20,10 @@ import {
 import { LanguageSelect } from "./LanguageSelect";
 import { AdvisoryAnswer } from "./AdvisoryAnswer";
 import { CropPhotoInput } from "./CropPhotoInput";
+import { GuidedPhotoCheck } from "./GuidedPhotoCheck";
+import { VoiceQuestion } from "./VoiceQuestion";
+import { SaveCropCase } from "./SaveCropCase";
+import { DIARY_KEY, type Observation } from "../lib/field-diary";
 import { offlineAdvice } from "../lib/offline-hindi";
 import { Button } from "./ui/button";
 import { Input, Textarea } from "./ui/input";
@@ -40,6 +44,8 @@ import {
   track,
   type ChatContext,
   type ChatResult,
+  type CropImage,
+  type Investigation,
 } from "../lib/network";
 import { searchCrops, inferCrop } from "../services/semanticSearch";
 import {
@@ -59,6 +65,7 @@ export type SavedAdvisory = {
   context?: ChatContext;
   imageAnalyzed?: boolean;
   answerLanguage?: string;
+  investigation?: Investigation;
 };
 const prompts = [
   "Tomato leaves are yellowing and curling. What should I check?",
@@ -71,9 +78,12 @@ export function Advisory({
   onLanguage,
   diagnose = false,
   cloudSpeech = false,
+  voiceAvailable = false,
   initialQuestion = "",
   autoSubmitId,
   initialRecordId,
+  caseId,
+  onLeaveCase,
   onAutoSubmitConsumed,
   onResult,
 }: {
@@ -82,17 +92,22 @@ export function Advisory({
   onLanguage: (language: string) => void;
   diagnose?: boolean;
   cloudSpeech?: boolean;
+  voiceAvailable?: boolean;
   initialQuestion?: string;
   autoSubmitId?: string;
   initialRecordId?: string;
+  caseId?: string;
+  onLeaveCase?: (recordId?: string) => void;
   onAutoSubmitConsumed?: () => void;
   onResult: (result: ChatResult) => void;
 }) {
   const [history, saveHistory] = useStored<SavedAdvisory[]>("joita-fa-questions", []);
+  const cropCase = caseId ? readStored<Observation[]>(DIARY_KEY, []).find(entry => entry.id === caseId && entry.caseInfo) : undefined;
+  const caseNotes = caseId ? readStored<Observation[]>(DIARY_KEY, []).filter(entry => entry.id === caseId || entry.caseId === caseId).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3).map(entry => `${entry.date}: ${entry.symptoms.slice(0, 160)}; action: ${entry.action.slice(0, 80)}; sampled plants: ${entry.affected ?? "not recorded"}/${entry.checked ?? "not recorded"}`).join("\n").slice(0, 1000) : "";
   const [context, setContext] = useState<ChatContext>({
-    crop: "",
-    location,
-    stage: "not sure",
+    crop: cropCase?.crop || "",
+    location: cropCase?.caseInfo?.location || location,
+    stage: cropCase?.caseInfo?.stage || "not sure",
     language: preferredLanguage,
     problemType: diagnose ? "disease" : "general",
   });
@@ -113,13 +128,15 @@ export function Advisory({
   const request = useRef<AbortController | null>(null);
   const streamAnchor = useRef<HTMLElement>(null);
   const [imageBusy, setImageBusy] = useState(false);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const [otherPhotos, setOtherPhotos] = useState<CropImage[]>([]);
+  const [investigation, setInvestigation] = useState<Investigation>({ plot: cropCase?.plot || "", duration: "not sure", spread: "not sure", recentAction: "" });
+  const photos: CropImage[] = [...(photo ? [{ view: "whole_plant" as const, dataUrl: photo }] : []), ...otherPhotos];
   const [error, setError] = useState("");
   const [historyFilter, setHistoryFilter] = useState("");
   const [contact, setContact] = useState("");
   const [kbSearch, setKbSearch] = useState("");
-  const [thread, setThread] = useState<{ question: string; answer: string }[]>(
-    [],
-  );
+  const [thread, setThread] = useState<{ question: string; answer: string }[]>(cropCase?.advisory ? [{ question: cropCase.advisory.question, answer: cropCase.advisory.answer }] : []);
   useEffect(() => () => request.current?.abort(), []);
   useEffect(() => {
     if (!initialRecordId || autoSubmitId) return;
@@ -171,6 +188,8 @@ export function Advisory({
   function openSavedRecord(item: SavedAdvisory) {
     setQuestion(item.question);
     setPhoto("");
+    setOtherPhotos([]);
+    setInvestigation(item.investigation || { plot: "", duration: "not sure", spread: "not sure", recentAction: "" });
     setContact("");
     setError("");
     setFollowingUp(false);
@@ -187,11 +206,14 @@ export function Advisory({
     });
   }
   function newQuestion() {
+    if (caseId) { onLeaveCase?.(); return; }
     setQuestion("");
     setResult(null);
     setActiveRecord(null);
     setThread([]);
     setPhoto("");
+    setOtherPhotos([]);
+    setInvestigation({ plot: "", duration: "not sure", spread: "not sure", recentAction: "" });
     setContact("");
     setError("");
     setFollowingUp(false);
@@ -206,8 +228,8 @@ export function Advisory({
     focusQuestion();
   }
   async function submit(offline = false, followUp?: string) {
-    if (busy) return;
-    if (!question.trim() && !followUp && !photo) {
+    if (busy || voiceBusy) return;
+    if (!question.trim() && !followUp && !photos.length) {
       setError("Describe your question or the symptoms you see.");
       return;
     }
@@ -240,12 +262,13 @@ export function Advisory({
     if (followUp) {
       setQuestion(followUp);
       setPhoto("");
+      setOtherPhotos([]);
     }
     track("JOITAFA question submitted", {
       crop: actualContext.crop,
       location: context.location,
       problemType: context.problemType,
-      hasImage: Boolean(photo),
+      hasImage: !followUp && Boolean(photos.length),
     });
     let response: ChatResult;
     try {
@@ -267,6 +290,7 @@ export function Advisory({
           }
         },
         controller.signal,
+        diagnose ? { images: followUp ? [] : photos, details: { ...investigation, ...(caseNotes ? { previousObservations: caseNotes } : {}) } } : undefined,
       );
       if (
         !response.answer?.trim() ||
@@ -314,6 +338,7 @@ export function Advisory({
       context: actualContext,
       imageAnalyzed: response.imageAnalyzed,
       answerLanguage: response.language || actualContext.language,
+      ...(diagnose ? { investigation } : {}),
     };
     setActiveRecord(record);
     saveHistory(
@@ -336,13 +361,16 @@ export function Advisory({
       .toLowerCase()
       .includes(historyFilter.toLowerCase()),
   );
-  async function upload(file?: File) {
+  async function upload(file?: File, view: CropImage["view"] = "whole_plant") {
     if (!file) return;
     setImageBusy(true);
-    setPhoto("");
+    if (view === "whole_plant") setPhoto("");
+    else setOtherPhotos(previous => previous.filter(image => image.view !== view));
     setError("");
     try {
-      setPhoto(await cropPhoto(file));
+      const dataUrl = await cropPhoto(file, diagnose ? 1200 : 1600, diagnose ? 1024 * 1024 : 2 * 1024 * 1024);
+      if (view === "whole_plant") setPhoto(dataUrl);
+      else setOtherPhotos(previous => [...previous.filter(image => image.view !== view), { view, dataUrl }]);
       track("Image uploaded", { crop: context.crop });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Photo could not be opened.");
@@ -377,7 +405,7 @@ export function Advisory({
             aria-label="New question"
             title="New question"
             variant="secondary"
-            disabled={busy || imageBusy}
+            disabled={busy || imageBusy || voiceBusy}
             onClick={newQuestion}
           >
             <Plus size={18} />
@@ -387,6 +415,7 @@ export function Advisory({
       />
       <div className="advisory-layout">
         <div>
+          {caseId && <Notice>{cropCase ? `Follow-up / दोबारा जांच: ${cropCase.crop} / ${cropCase.plot}` : "This case is not on this device. / यह मामला इस डिवाइस पर नहीं है।"}</Notice>}
           <form
             ref={form}
             aria-busy={busy}
@@ -432,9 +461,8 @@ export function Advisory({
                 <Languages size={21} />
                 <strong>{languageHelp.heading}</strong>
               </div>
-              {diagnose && <CropPhotoInput upload={upload} disabled={busy || imageBusy} onError={setError} />}
+              {diagnose && <GuidedPhotoCheck images={photos} upload={(view, file) => upload(file, view)} remove={view => view === "whole_plant" ? setPhoto("") : setOtherPhotos(previous => previous.filter(image => image.view !== view))} disabled={busy || imageBusy || voiceBusy} onError={setError} details={investigation} onDetails={setInvestigation} />}
               {diagnose && imageBusy && <Busy label="Preparing photo / फोटो तैयार हो रही है" />}
-              {diagnose && photo && <div className="photo-preview"><img src={photo} alt="Crop photo to be analyzed" /><Button type="button" variant="ghost" onClick={() => setPhoto("")}><Trash2 size={17}/>Remove photo / फोटो हटाएं</Button></div>}
               {followingUp && activeRecord && (
                 <div className="conversation-context">
                   <small>FOLLOW-UP TO</small>
@@ -448,12 +476,14 @@ export function Advisory({
               >
                 <Textarea
                   dir="auto"
+                  disabled={voiceBusy}
                   value={question}
                   maxLength={1000}
                   placeholder={languageHelp.example}
                   onChange={(e) => setQuestion(e.target.value)}
                 />
               </Field>
+              <VoiceQuestion language={context.language} value={question} onChange={setQuestion} available={voiceAvailable} disabled={busy || imageBusy} onBusyChange={setVoiceBusy} />
               <div className="form-meta">
                 <span>{question.length}/1000 characters</span>
                 <span className="answer-language-preview">
@@ -482,14 +512,14 @@ export function Advisory({
                 </div>
               )}
               <div className="actions question-actions">
-                <Button disabled={busy || imageBusy} type="submit">
+                <Button disabled={busy || imageBusy || voiceBusy} type="submit">
                   {diagnose ? <Camera size={18} /> : <Send size={18} />}
                   {diagnose ? "Analyze crop" : "Ask JOITAFA"}
                 </Button>
                 <Button
                   type="button"
                   variant="secondary"
-                  disabled={busy}
+                  disabled={busy || voiceBusy}
                   onClick={() => void submit(true)}
                 >
                   Use offline knowledge
@@ -638,6 +668,7 @@ export function Advisory({
                   onFollowUp={() => {
                     setQuestion("");
                     setPhoto("");
+                    setOtherPhotos([]);
                     setError("");
                     setFollowingUp(true);
                     const fileInput =
@@ -648,6 +679,7 @@ export function Advisory({
                     focusQuestion();
                   }}
                 />
+                {result.source !== "joita_rules" && <SaveCropCase key={`case-${activeRecord.id}`} advisory={{ questionId: activeRecord.id, question: activeRecord.question, answer: result.answer, source: result.source, language: result.language || activeRecord.answerLanguage || activeRecord.context?.language || "English", date: activeRecord.date }} crop={activeRecord.context?.crop || context.crop} plot={investigation.plot} stage={activeRecord.context?.stage || context.stage} location={activeRecord.context?.location || context.location} action={investigation.recentAction} caseId={caseId} />}
               </div>
               <div className="follow-up">
                 <h3>Want expert follow-up?</h3>
@@ -723,7 +755,7 @@ export function Advisory({
                 <button
                   className="history-item"
                   disabled={busy || imageBusy}
-                  onClick={() => openSavedRecord(item)}
+                  onClick={() => caseId ? onLeaveCase?.(item.id) : openSavedRecord(item)}
                 >
                   <strong>{item.question}</strong>
                   <small>

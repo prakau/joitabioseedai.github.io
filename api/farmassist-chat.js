@@ -11,6 +11,7 @@ const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+const PHOTO_VIEWS = { whole_plant: "whole plant", leaf_underside: "leaf underside", field_view: "field view" };
 const LANGUAGE_SCRIPTS = {
   English: /[A-Za-z]/u,
   Hindi: /\p{Script=Devanagari}/u,
@@ -202,7 +203,7 @@ function estimateDataUrlBytes(imageUrl) {
   return Math.floor((base64.length * 3) / 4) - padding;
 }
 
-function buildUserPrompt({ crop, location, stage, language, problemType, message, history }) {
+function buildUserPrompt({ crop, location, stage, language, problemType, message, history, investigation }) {
   return `Farm context (user-provided, not verified measurements):
 Crop: ${crop || "not provided"}
 Location: ${location || "not provided"}
@@ -210,6 +211,7 @@ Stage: ${stage || "not provided"}
 Answer language: ${language || "English"}. Write the complete answer in this language, including headings and safety guidance. Use its native script (Devanagari for Hindi and Haryanvi, Gurmukhi for Punjabi). Use familiar, farmer-friendly terms. The previous conversation's language must not override this selection.
 Problem type: ${problemType || "general"}
 Question: ${message}
+${investigation ? `Field investigation (farmer-reported, not verified):\n${JSON.stringify(investigation)}\nCompare the supplied views without assuming the labels prove their content. Use the stated duration, spread and previous actions to narrow the checks. Avoid repeating questions already answered here.` : ""}
 
 ${history.length ? `Recent conversation, for follow-up context only:\n${history.map(item => `Farmer: ${item.question}\nAssistant: ${item.answer}`).join("\n")}` : ""}
 
@@ -320,7 +322,7 @@ async function readProviderStream(response, provider, onDelta) {
   }
 }
 
-async function callGemini({ apiKey, prompt, imageUrl, onDelta, signal, language }) {
+async function callGemini({ apiKey, prompt, images, onDelta, signal, language }) {
   if (!apiKey) throw providerError("gemini", null, "GEMINI_API_KEY not configured");
   const timeout = withTimeout(GEMINI_TIMEOUT_MS, signal);
   try {
@@ -334,7 +336,10 @@ async function callGemini({ apiKey, prompt, imageUrl, onDelta, signal, language 
         contents: [
           {
             role: "user",
-            parts: [{ text: prompt }, ...(imageUrl ? [{ inlineData: { mimeType: imageUrl.slice(5, imageUrl.indexOf(";")), data: imageUrl.split(",")[1] } }] : [])]
+            parts: [{ text: prompt }, ...images.flatMap(image => [
+              { text: `Farmer-labelled view: ${PHOTO_VIEWS[image.view]}.` },
+              { inlineData: { mimeType: image.dataUrl.slice(5, image.dataUrl.indexOf(";")), data: image.dataUrl.split(",")[1] } }
+            ])]
           }
         ],
         generationConfig: {
@@ -370,7 +375,7 @@ async function callGemini({ apiKey, prompt, imageUrl, onDelta, signal, language 
   }
 }
 
-async function callOpenRouter({ apiKey, prompt, imageUrl, onDelta, signal, language }) {
+async function callOpenRouter({ apiKey, prompt, images, onDelta, signal, language }) {
   if (!apiKey) throw providerError("openrouter", null, "OPENROUTER_API_KEY not configured");
   const timeout = withTimeout(OPENROUTER_TIMEOUT_MS, signal);
   try {
@@ -387,7 +392,10 @@ async function callOpenRouter({ apiKey, prompt, imageUrl, onDelta, signal, langu
         model: OPENROUTER_MODEL,
         messages: [
           { role: "system", content: `${systemPrompt}\n\n${languageInstruction(language)}` },
-          { role: "user", content: imageUrl ? [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: imageUrl } }] : prompt }
+          { role: "user", content: images.length ? [{ type: "text", text: prompt }, ...images.flatMap(image => [
+            { type: "text", text: `Farmer-labelled view: ${PHOTO_VIEWS[image.view]}.` },
+            { type: "image_url", image_url: { url: image.dataUrl } }
+          ])] : prompt }
         ],
         temperature: 0.3,
         max_tokens: 1600,
@@ -485,6 +493,8 @@ async function handleFarmAssistChat(req, res, signal) {
     language = "Hindi",
     problemType = "general",
     imageUrl = "",
+    images: rawImages,
+    investigation,
     history: rawHistory = []
   } = readBody(req);
 
@@ -524,7 +534,14 @@ Live AI is limited to 10 requests per IP per hour, so this answer came from the 
     });
   }
 
-  const imageBytes = estimateDataUrlBytes(imageUrl);
+  if (typeof imageUrl !== "string" || (rawImages !== undefined && (!Array.isArray(rawImages) || rawImages.length > 3 || imageUrl)))
+    return res.status(400).json({ ok: false, error: "Send up to three labelled crop photos, or one legacy photo.", source: "validation" });
+  const images = rawImages === undefined ? (imageUrl ? [{ view: "whole_plant", dataUrl: imageUrl }] : []) : rawImages;
+  if (images.some(image => !image || typeof image !== "object" || typeof image.view !== "string" || !Object.hasOwn(PHOTO_VIEWS, image.view) || typeof image.dataUrl !== "string") || new Set(images.map(image => image.view)).size !== images.length)
+    return res.status(400).json({ ok: false, error: "Choose a distinct supported view for each crop photo.", source: "validation" });
+  if (investigation !== undefined && (!investigation || typeof investigation !== "object" || Array.isArray(investigation) || Object.entries(investigation).some(([key, value]) => !["plot", "duration", "spread", "recentAction", "previousObservations"].includes(key) || typeof value !== "string" || value.length > (key === "previousObservations" ? 1000 : key === "recentAction" ? 300 : 80))))
+    return res.status(400).json({ ok: false, error: "Invalid field investigation details.", source: "validation" });
+  const imageBytes = images.reduce((sum, image) => sum + estimateDataUrlBytes(image.dataUrl), 0);
   if (imageBytes > MAX_IMAGE_BYTES) {
     return res.status(400).json({
       ok: false,
@@ -542,7 +559,7 @@ Live AI is limited to 10 requests per IP per hour, so this answer came from the 
       language: ["Hindi", "Haryanvi"].includes(language) ? "Hindi" : "English", answer: policyReply(policyReason, language), guardrail: policyReason});
   }
 
-  const prompt = buildUserPrompt({ crop: effectiveCrop, location, stage, language, problemType, message: cleanMessage, history });
+  const prompt = buildUserPrompt({ crop: effectiveCrop, location, stage, language, problemType, message: cleanMessage, history, investigation });
   const providerErrors = [];
   const started = Date.now();
   const streaming = String(req.headers.accept || "").includes("text/event-stream");
@@ -564,15 +581,16 @@ Live AI is limited to 10 requests per IP per hour, so this answer came from the 
   }
 
   try {
-    const answer = await callGemini({ apiKey: process.env.GEMINI_API_KEY, prompt, imageUrl, onDelta, signal, language });
+    const answer = await callGemini({ apiKey: process.env.GEMINI_API_KEY, prompt, images, onDelta, signal, language });
     logSafeEvent({ crop: effectiveCrop, location, problemType, model: GEMINI_MODEL, source: "gemini" });
     return complete({
       ok: true,
       answer,
       source: "gemini",
       model: GEMINI_MODEL,
-      mode: imageUrl ? "vision" : "text",
-      imageAnalyzed: Boolean(imageUrl),
+      mode: images.length ? "vision" : "text",
+      imageAnalyzed: Boolean(images.length),
+      imagesAnalyzed: images.length,
       crop: effectiveCrop
     });
   } catch (error) {
@@ -584,15 +602,16 @@ Live AI is limited to 10 requests per IP per hour, so this answer came from the 
   if (streaming) streamEvent(res, "reset", { provider: "openrouter", message: language === "Hindi" ? "दूसरी लाइव सेवा से सुरक्षित जवाब तैयार हो रहा है..." : "Trying the backup advisory service..." });
 
   try {
-    const answer = await callOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY, prompt, imageUrl, onDelta, signal, language });
+    const answer = await callOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY, prompt, images, onDelta, signal, language });
     logSafeEvent({ crop: effectiveCrop, location, problemType, model: OPENROUTER_MODEL, source: "openrouter" });
     return complete({
       ok: true,
       answer,
       source: "openrouter",
       model: OPENROUTER_MODEL,
-      mode: imageUrl ? "vision" : "text",
-      imageAnalyzed: Boolean(imageUrl),
+      mode: images.length ? "vision" : "text",
+      imageAnalyzed: Boolean(images.length),
+      imagesAnalyzed: images.length,
       crop: effectiveCrop
     });
   } catch (error) {

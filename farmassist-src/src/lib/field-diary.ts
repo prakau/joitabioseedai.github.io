@@ -1,6 +1,8 @@
 import { isDay, localDay, type Plan } from "./planning";
 
 export const DIARY_KEY = "joita-fa-diary-v1";
+export type AdvisorySnapshot = { questionId: string; question: string; answer: string; source: "gemini" | "openrouter" | "offline_kb" | "joita_rules"; language: string; date: string };
+export type CaseInfo = { status: "monitoring" | "closed"; stage: string; location: string; createdAt: string };
 export type Observation = {
   id: string;
   crop: string;
@@ -10,7 +12,41 @@ export type Observation = {
   action: string;
   checked: number | null;
   affected: number | null;
+  caseId?: string;
+  caseInfo?: CaseInfo;
+  advisory?: AdvisorySnapshot;
 };
+export function validCaseData(row: Record<string, unknown>) {
+  const text = (v: unknown, max: number) => typeof v === "string" && v.length <= max;
+  if (row.caseId !== undefined && (!text(row.caseId, 200) || !row.caseId)) return false;
+  if (row.caseInfo !== undefined) {
+    const c = row.caseInfo as CaseInfo;
+    if (!c || typeof c !== "object" || Array.isArray(c) || row.caseId !== row.id || !["monitoring", "closed"].includes(c.status) || !text(c.stage, 160) || !text(c.location, 160) || !text(c.createdAt, 40) || !Number.isFinite(Date.parse(c.createdAt))) return false;
+  }
+  if (row.advisory !== undefined) {
+    const a = row.advisory as AdvisorySnapshot;
+    if (!a || typeof a !== "object" || Array.isArray(a) || !text(a.questionId, 200) || !a.questionId || !text(a.question, 1000) || !text(a.answer, 16000) || !a.answer.trim() || !["gemini", "openrouter", "offline_kb", "joita_rules"].includes(a.source) || !text(a.language, 50) || !text(a.date, 40) || !Number.isFinite(Date.parse(a.date))) return false;
+  }
+  return true;
+}
+
+export function caseObservation(input: { id: string; draft: ObservationDraft; advisory: AdvisorySnapshot; stage: string; location: string; caseId?: string }, entries: Observation[], now = new Date().toISOString()): Observation {
+  const existing = entries.find(entry => entry.advisory?.questionId === input.advisory.questionId && (input.caseId ? entry.caseId === input.caseId : Boolean(entry.caseInfo)));
+  if (existing) return existing;
+  if (input.advisory.source === "joita_rules") throw new Error("case_rules");
+  if (entries.length >= 300) throw new Error("case_limit");
+  const data = validateObservation(input.draft);
+  const root = input.caseId ? entries.find(entry => entry.id === input.caseId && entry.caseInfo) : undefined;
+  if (input.caseId && !root) throw new Error("case_missing");
+  if (root?.caseInfo?.status === "closed") throw new Error("case_closed");
+  if (root && (data.crop !== root.crop || data.plot !== root.plot)) throw new Error("case_identity");
+  const result: Observation = {
+    ...data, id: input.id, caseId: root?.id || input.id, advisory: input.advisory,
+    ...(!root ? { caseInfo: { status: "monitoring" as const, stage: input.stage, location: input.location, createdAt: now } } : {}),
+  };
+  if (!validCaseData(result as unknown as Record<string, unknown>)) throw new Error("case_data");
+  return result;
+}
 export type ObservationDraft = Omit<
   Observation,
   "id" | "checked" | "affected"
@@ -114,6 +150,11 @@ export function fieldReport(entries: Observation[], hindi = false) {
           : "Plant counts not recorded."
         : `${e.affected}/${e.checked} (${incidence(e)!.toFixed(1)}%) ${hindi ? "जांचे गए पौधों में लक्षण" : "sampled plants affected"}`,
       "",
+    );
+    if (e.caseInfo) lines.push(`${hindi ? "मामले की स्थिति" : "Case status"}: ${e.caseInfo.status === "closed" ? (hindi ? "किसान ने बंद किया" : "Closed by farmer") : (hindi ? "निगरानी जारी" : "Monitoring")}`);
+    if (e.advisory) lines.push(
+      `${hindi ? "सहेजी गई AI सलाह" : "Saved AI advisory"} (${e.advisory.date}; ${e.advisory.source === "offline_kb" ? "Offline KB" : "JOITA Live AI"}):`, e.advisory.answer,
+      hindi ? "यह स्वतंत्र विशेषज्ञ की पुष्टि नहीं है।" : "This is not an independent expert verification.", "",
     );
   }
   lines.push(

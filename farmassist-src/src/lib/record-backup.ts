@@ -2,6 +2,7 @@ import { isDay, preplantActivities } from "./planning";
 import { validateLayout, type Layout } from "./plot";
 import { compareSales, type Offer } from "./sale-planner";
 import { analyzeSoil, soilFields, type SoilValues } from "./soil";
+import { DIARY_KEY, validCaseData, type Observation } from "./field-diary";
 
 export const recordKeys = [
   "joita-fa-diary-v1",
@@ -19,7 +20,7 @@ export const recordKeys = [
 export type RecordKey = (typeof recordKeys)[number];
 type Row = Record<string, unknown> & { id: string };
 export type Backup = {
-  version: 4;
+  version: 4 | 5;
   app: "JOITAFA";
   exportedAt: string;
   records: Partial<Record<RecordKey, Row[]>>;
@@ -48,6 +49,13 @@ const fields = (r: Record<string, unknown>, names: string[], max = 2000) =>
 const fail = (code: string): never => {
   throw new Error(code);
 };
+function validCaseLinks(rows: Row[]) {
+  return rows.every(row => {
+    if (!row.caseId) return true;
+    const root = rows.find(entry => entry.id === row.caseId && entry.caseInfo);
+    return root && root.crop === row.crop && root.plot === row.plot;
+  });
+}
 
 // Imports are data, never storage instructions. Bound depth/size and reject prototype keys.
 function safeTree(v: unknown, depth = 0): boolean {
@@ -82,6 +90,7 @@ function validRow(key: RecordKey, r: Record<string, unknown>): boolean {
       );
     case "joita-fa-diary-v1":
       return (
+        validCaseData(r) &&
         fields(r, ["crop", "plot", "symptoms", "action"]) &&
         isDay(r.date as string) &&
         ((r.checked === null && r.affected === null) ||
@@ -206,8 +215,8 @@ export function parseBackup(raw: string): Backup {
   if (!object(v) || !safeTree(v) || !object(v.records) || !date(v.exportedAt))
     return fail("format");
   if (
-    ![3, 4].includes(v.version as number) ||
-    (v.version === 4 && v.app !== "JOITAFA")
+    ![3, 4, 5].includes(v.version as number) ||
+    ([4, 5].includes(v.version as number) && v.app !== "JOITAFA")
   )
     fail("version");
   for (const [key, rows] of Object.entries(v.records)) {
@@ -229,13 +238,20 @@ export function parseBackup(raw: string): Backup {
         fail("records");
       }
     }
+    if (key === "joita-fa-diary-v1" && !validCaseLinks(rows as Row[])) fail("records");
   }
+  const diary = v.records[DIARY_KEY] as Row[] | undefined;
   return {
-    version: 4,
+    version: diary?.some(row => row.caseId || row.caseInfo || row.advisory) ? 5 : 4,
     app: "JOITAFA",
     exportedAt: v.exportedAt as string,
     records: v.records as Backup["records"],
   };
+}
+export function readDiary(store: Pick<Storage, "getItem">): Observation[] {
+  const raw = store.getItem(DIARY_KEY);
+  const backup = parseBackup(JSON.stringify({ version: 4, app: "JOITAFA", exportedAt: new Date().toISOString(), records: { [DIARY_KEY]: raw === null ? [] : JSON.parse(raw) } }));
+  return (backup.records[DIARY_KEY] || []) as unknown as Observation[];
 }
 export function captureBackup(
   store: Pick<Storage, "getItem">,
@@ -309,6 +325,7 @@ export function mergeBackups(current: Backup, incoming: Backup) {
     )
       fail("limit");
   }
+  if (!validCaseLinks(records[DIARY_KEY] || [])) fail("case_links");
   return { records, added, duplicates, conflicts, conflictCollections };
 }
 export function restoreBackup(
