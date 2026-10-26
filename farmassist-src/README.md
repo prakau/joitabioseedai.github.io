@@ -113,3 +113,28 @@ Save retries do not duplicate an observation if calendar storage fails. Case
 closure means closed by the farmer, never independently verified recovery.
 Detailed older tools are not all translated; the new guided/case controls are
 English/Hindi and live advisory retains its existing answer-language choices.
+
+## Market-to-sale workspace (2026-10-26)
+
+Market now has English/Hindi controls, common Hindi crop/state aliases, saved
+searches, numeric sorting, publication-date filters, kg/quintal views, harvest
+gross-reference arithmetic, and formula-safe CSV exports. Phones show readable
+price rows with the modal value and date together; desktops retain a full table.
+The module is deferred from startup but included in the complete offline cache.
+
+Select 2-5 same-commodity/same-variety records to prefill Sale Planner. Confirm
+quality and buyer quotes and enter costs; this does not book a sale or save a
+record automatically. Buyer labels preserve the feed name, mandi and arrival
+date. The ten-minute handoff uses `sessionStorage`, not question/price URL data.
+Existing sale record and backup formats are unchanged. Saved search preferences
+use `joita-fa-market-searches-v1`, capped at eight, and are not record backups.
+
+Cached records keep original dates. Missing/zero/invalid prices, future dates,
+inconsistent ranges and malformed payloads never become computed sale references.
+Transport diagnostics expose only whitelisted codes. One transient reset/DNS
+retry shares the existing ten-second budget; authentication, HTTP throttling and
+TLS failures are not blindly retried or bypassed. No keys or quotas are changed.
+
+See `../docs/climateos/RELEASE-1D-2026-10-26.md` for verification and limitations.
+This release updates the web app and Android-compatible source; the published
+1.0.3 test APK is unchanged unless a separate Android release is issued.

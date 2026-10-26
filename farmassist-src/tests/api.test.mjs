@@ -168,6 +168,19 @@ test("healthy market with no regional publications is empty, not an error", asyn
   const res=response(); await market({method:"GET",query:{state:"Haryana"}},res);
   assert.equal(res.data.status,"live"); assert.equal(res.data.total,0); assert.deepEqual(res.data.records,[]);
 });
+test("market retries transient network resets without changing query or source dates", async () => {
+  process.env.DATAGOV_API_KEY="test-market-secret"; let calls=0;
+  globalThis.fetch=async()=>{calls++;if(calls===1)throw Object.assign(new Error("reset"),{cause:{code:"ECONNRESET"}});return new Response(JSON.stringify({status:"ok",records:[],updated_date:"2026-10-26T00:00:00Z"}));};
+  const res=response(); await market({method:"GET",query:{}},res);assert.equal(calls,2);assert.equal(res.data.status,"live");
+});
+test("market never retries or bypasses TLS failures and exposes only whitelisted transport codes", async () => {
+  process.env.DATAGOV_API_KEY="test-market-secret";
+  for(const code of ["CERT_HAS_EXPIRED","test-market-secret"]) {
+    let calls=0;globalThis.fetch=async()=>{calls++;throw Object.assign(new Error("test-market-secret"),{cause:{code}});};
+    const res=response();await market({method:"GET",query:{}},res);
+    assert.equal(calls,1);assert.equal(res.statusCode,502);assert.equal(res.data.networkCode,code==="CERT_HAS_EXPIRED"?code:undefined);assert.doesNotMatch(JSON.stringify(res.data),/test-market-secret/);
+  }
+});
 
 async function speak(body={text:"Hello farmer.",language:"English"}, options={}) {
   const res=response(); await speech({method:"POST",headers:{"content-type":"application/json"},body,socket:{remoteAddress:"speech-test"},...options},res); return res;

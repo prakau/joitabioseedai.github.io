@@ -6,6 +6,61 @@ import { analyzeSoil, emptySoil } from "../src/lib/soil";
 import { validateLayout, defaultLayout } from "../src/lib/plot";
 import { analyzeAudio } from "../src/lib/audio";
 import { filterMarketRows } from "../src/services/publicApis";
+import { canonicalMarketFilters, normaliseMarketRows, marketPrice, marketDay, comparablePrice, quantityKg, harvestValue, viewMarketRows, marketSaleDraft, parseMarketDraft, marketCsv, validMarketSearch, type MarketRow } from "../src/lib/market";
+const marketFixture: MarketRow = { commodity: "Onion", variety: "Local", state: "Haryana", district: "Hisar", market: "Hisar", arrival_date: "20/10/2026", min_price: "1500", modal_price: "1800", max_price: "2200" };
+test("common Hindi crop/state searches map to feed names without guessing unknown places", () => {
+  assert.deepEqual(canonicalMarketFilters({commodity:" प्याज ",state:"हरियाणा",district:" Hisar ",market:"",date:""}),{commodity:"Onion",state:"Haryana",district:"Hisar",market:"",date:""});
+  assert.equal(canonicalMarketFilters({commodity:"My local crop",state:"My state",district:"",market:"",date:""}).commodity,"My local crop");
+});
+test("market records are bounded, deduplicated and stripped of unknown payload fields", () => {
+  assert.deepEqual(normaliseMarketRows([{...marketFixture, secret:"not-retained"}, marketFixture, null, {...marketFixture, market:{}}, {...marketFixture, modal_price:[]}]), [marketFixture]);
+  assert.throws(()=>normaliseMarketRows(Array(201).fill(marketFixture)));
+  assert.throws(()=>normaliseMarketRows({records:[]}));
+  for (const value of ["", "0", "-1", "Infinity", "1e3", {}, "1.001"]) assert.equal(marketPrice(value), null);
+  assert.equal(marketPrice("1800.50"),1800.5);
+});
+test("market dates and inconsistent prices cannot silently become usable sale references", () => {
+  assert.equal(marketDay("31/02/2026"),null); assert.equal(marketDay("29/02/2024"),"2024-02-29");
+  assert.equal(comparablePrice(marketFixture,"2026-10-26"),1800);
+  assert.equal(comparablePrice(marketFixture,"2026-10-19"),null);
+  assert.equal(comparablePrice({...marketFixture,modal_price:"3000"},"2026-10-26"),null);
+});
+test("harvest values preserve kilogram/quintal units and reject missing or invalid quantities", () => {
+  assert.equal(quantityKg("2.50","quintal"),"250"); assert.equal(quantityKg("0.01","quintal"),"1");
+  assert.equal(harvestValue(marketFixture,"250","2026-10-26"),4500);
+  for (const value of ["0", "-1", "1e3", "abc", "", "1.001", "10000001"]) assert.throws(()=>quantityKg(value,"kg"));
+  assert.equal(harvestValue(marketFixture,""),null);
+});
+test("market sorting and recent-date filtering use publication dates, not retrieval times", () => {
+  const recent={...marketFixture,market:"Recent",arrival_date:"26/10/2026",modal_price:2000};
+  const old={...marketFixture,market:"Old",arrival_date:"01/10/2026"};
+  const unknown={...marketFixture,market:"Unknown",arrival_date:"bad"};
+  assert.deepEqual(viewMarketRows([old,unknown,recent],"",true,"latest","2026-10-26"),[recent]);
+  assert.equal(viewMarketRows([{...recent,arrival_date:"19/10/2026"}],"",true,"latest","2026-10-26").length,0);
+  assert.equal(viewMarketRows([old,recent],"",false,"high","2026-10-26")[0].market,"Recent");
+  assert.equal(viewMarketRows([old,recent],"recent",false,"low","2026-10-26").length,1);
+});
+test("market-to-sale handoffs require comparable crops, dates, valid amounts and recent payloads", () => {
+  const other={...marketFixture,market:"Hansi",modal_price:1900};
+  const now="2026-10-26T04:00:00Z", payload=marketSaleDraft([marketFixture,other],"250",now);
+  assert.equal(payload.offers[0].price,"1800");assert.match(payload.offers[0].buyer,/20\/10\/2026/);
+  assert.deepEqual(parseMarketDraft(JSON.stringify(payload),Date.parse(now)),payload);
+  assert.throws(()=>parseMarketDraft(JSON.stringify(payload),Date.parse(now)+600001));
+  assert.throws(()=>parseMarketDraft(JSON.stringify({...payload,offers:[{...payload.offers[0],unit:"tonne"},payload.offers[1]]}),Date.parse(now)));
+  assert.throws(()=>marketSaleDraft([marketFixture,{...other,commodity:"Wheat"}]));
+  assert.throws(()=>marketSaleDraft([marketFixture,{...other,variety:"Other"}]));
+  assert.throws(()=>marketSaleDraft([marketFixture,marketFixture]));
+  assert.throws(()=>marketSaleDraft([marketFixture,{...other,arrival_date:"bad"}]));
+});
+test("market CSV preserves provenance and neutralizes spreadsheet formulas and quotes", () => {
+  const csv=marketCsv([{...marketFixture,market:'=HYPERLINK("https://invalid.test")'}],{status:"cached",source:"AGMARKNET",records:[],retrievedAt:"2026-10-20T08:00:00Z"});
+  assert.ok(csv.startsWith("\uFEFF"));assert.match(csv,/'=HYPERLINK\(""https:/);assert.match(csv,/"cached"/);assert.match(csv,/20\/10\/2026/);assert.match(csv,/INR\/quintal/);
+});
+test("saved market preferences reject malformed filters without accepting storage instructions", () => {
+  assert.equal(validMarketSearch({id:"1",name:"Hisar onions",filters:{commodity:"Onion",state:"Haryana",district:"Hisar",market:"",date:""}}),true);
+  assert.equal(validMarketSearch({id:"1",name:"",filters:{}}),false);
+  assert.equal(validMarketSearch({id:"1",name:"Bad",filters:{commodity:"",state:"",district:"",market:"",date:{toString:1}}}),false);
+});
 import { answerLanguages, answerLanguage, matchingVoice, speechChunks, resolveAnswerLanguage } from "../src/lib/languages";
 test("Roman Hindi overrides a stale English preference without changing other languages", () => {
   for (const question of ["tamatar ke patte peele ho rahe hain kya karu", "pani kab dena chahiye", "hindi me batao"]) {

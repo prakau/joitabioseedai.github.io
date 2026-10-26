@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { Calculator, Download, Plus, Save, Store, Trash2 } from "lucide-react";
 import { useInterface } from "../lib/interface";
@@ -13,6 +13,7 @@ import { downloadJson, readStored, uid, useStored } from "../lib/storage";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Empty, Field, Notice, Select, Title } from "./workspace";
+import { MARKET_DRAFT_KEY, parseMarketDraft } from "../lib/market";
 
 const emptyOffer = (): Offer => ({
   buyer: "",
@@ -39,9 +40,14 @@ export function SalePlanner() {
       currency: "INR",
       maximumFractionDigits: 2,
     }).format(n);
-  const [quantity, setQuantity] = useState("");
-  const [crop, setCrop] = useState("");
-  const [offers, setOffers] = useState<Offer[]>([emptyOffer(), emptyOffer()]);
+  const [launch] = useState(() => {
+    try { const raw = sessionStorage.getItem(MARKET_DRAFT_KEY); return { draft: raw ? parseMarketDraft(raw) : null, error: false }; }
+    catch { return { draft: null, error: true }; }
+  });
+  useEffect(() => { try { sessionStorage.removeItem(MARKET_DRAFT_KEY); } catch { /* Manual sale planning remains available. */ } }, []);
+  const [quantity, setQuantity] = useState(launch.draft?.quantity || "");
+  const [crop, setCrop] = useState(launch.draft?.crop || "");
+  const [offers, setOffers] = useState<Offer[]>(launch.draft?.offers || [emptyOffer(), emptyOffer()]);
   const [result, setResult] = useState<Comparison | null>(null);
   const [history, saveHistory] = useStored<Comparison[]>(SALE_KEY, []);
   const [error, setError] = useState("");
@@ -74,11 +80,13 @@ export function SalePlanner() {
         <Calculator size={24} />
         <p>
           {l(
-            "Your quotes, not live market offers. Estimates exclude unentered costs, quality deductions, payment risk and tax.",
-            "ये आपके दर्ज किए हुए भाव हैं, लाइव ऑफर नहीं। अनुमान में बिना दर्ज खर्च, गुणवत्ता की कटौती, भुगतान का जोखिम और कर शामिल नहीं हैं।",
+            "Entered quotes and dated mandi references are not confirmed buyer offers. Estimates exclude unentered costs, quality deductions, payment risk and tax.",
+            "दर्ज भाव और तारीख वाले मंडी संदर्भ खरीदार के पक्के ऑफर नहीं हैं। अनुमान में बिना दर्ज खर्च, गुणवत्ता की कटौती, भुगतान का जोखिम और कर शामिल नहीं हैं।",
           )}
         </p>
       </div>
+      {launch.draft && <Notice>{l("Dated mandi references added. Confirm variety, quality and buyer price, then enter your transport and other costs. Nothing has been saved yet.", "तारीख वाले मंडी संदर्भ जोड़े गए। किस्म, गुणवत्ता और खरीदार का भाव जांचें, फिर ढुलाई और अन्य खर्च दर्ज करें। अभी कोई रिकॉर्ड नहीं सहेजा गया है।")}</Notice>}
+      {launch.error && <Notice error>{l("The market handoff expired or could not be read. Choose the prices again, or enter buyer quotes below.", "मंडी से भेजा गया विवरण पुराना या अमान्य है। भाव फिर चुनें या नीचे खरीदार के भाव दर्ज करें।")}</Notice>}
       <form
         onSubmit={(e) => {
           e.preventDefault();

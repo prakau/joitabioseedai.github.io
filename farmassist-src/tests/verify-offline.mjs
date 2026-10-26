@@ -18,8 +18,15 @@ try {
   });
   assert(keys.some(key => key.endsWith(".js"))); assert(keys.some(key => key.endsWith(".css"))); assert(!keys.some(key => key.startsWith("/api/")));
   assert(keys.some(key => /FarmPlot-.*\.js$/.test(key))); assert(keys.some(key => /Advisory-.*\.js$/.test(key)));
+  assert(keys.some(key => /Market-.*\.js$/.test(key)));
+  await page.evaluate(() => localStorage.setItem("joita-fa-market-v3:state=Haryana", JSON.stringify({status:"live",source:"QA fixture",retrievedAt:"2026-09-16T08:00:00Z",records:[{commodity:"Onion",variety:"Local",state:"Haryana",district:"Hisar",market:"Offline fixture mandi",arrival_date:"16/09/2026",min_price:1500,modal_price:1800,max_price:2000}]})));
   await context.setOffline(true);
   await page.reload();
+  await page.evaluate(() => { location.hash = "#/market"; });
+  await page.locator(".market-feed-cached").waitFor();
+  assert.match(await page.locator(".market-mobile").innerText(), /Offline fixture mandi/);
+  assert.match(await page.locator(".market-mobile").innerText(), /16\/09\/2026/);
+  await page.reload(); await page.locator(".market-feed-cached").waitFor();
   await page.evaluate(() => { location.hash = "#/visualizer"; });
   await page.locator("canvas").waitFor();
   const colors = await page.locator("canvas").evaluate(canvas => {

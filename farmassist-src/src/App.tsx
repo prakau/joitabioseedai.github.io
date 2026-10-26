@@ -30,7 +30,7 @@ import {
 import { LanguageSelect } from "./components/LanguageSelect";
 import { languageChoice } from "./lib/languages";
 import { UpcomingTasks } from "./components/FieldTasks";
-import { LocationPicker, Market, Weather } from "./components/WeatherMarket";
+import { LocationPicker, Weather } from "./components/WeatherMarket";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { Empty, Field, Notice, Title } from "./components/workspace";
@@ -54,6 +54,7 @@ import { FarmTools } from "./components/FarmTools";
 import { RecentAnswers } from "./components/RecentAnswers";
 
 const Advisory = lazy(() => import("./components/Advisory").then(m => ({ default: m.Advisory })));
+const Market = lazy(() => import("./components/Market").then(m => ({ default: m.Market })));
 const FarmPlot = lazy(() => import("./components/FarmPlot").then(m => ({ default: m.FarmPlot })));
 const FarmCalculators = lazy(() => import("./components/FarmCalculators").then(m => ({ default: m.FarmCalculators })));
 const FarmLedger = lazy(() => import("./components/FarmLedger").then(m => ({ default: m.FarmLedger })));

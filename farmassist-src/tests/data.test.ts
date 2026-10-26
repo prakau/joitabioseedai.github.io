@@ -35,6 +35,19 @@ test("market errors cannot fall back to fabricated prices", async () => {
   const result = await fetchMandiPrices({ commodity: "Onion", state: "Haryana", district: "", market: "", date: "" });
   assert.equal(result.status, "unavailable"); assert.deepEqual(result.records, []);
 });
+test("malformed market payloads or corrupt cache rows cannot crash the market view", async () => {
+  const filters={commodity:"",state:"Haryana",district:"",market:"",date:""};
+  globalThis.fetch=async()=>new Response(JSON.stringify({status:"live",source:"AGMARKNET",records:[{commodity:{},market:12}]}));
+  const bad=await fetchMandiPrices(filters);assert.equal(bad.excluded,1);assert.deepEqual(bad.records,[]);
+  store.set("joita-fa-market-v3:state=Haryana",JSON.stringify({status:"live",source:"AGMARKNET",records:{}}));
+  globalThis.fetch=async()=>{throw new Error("Offline");};
+  const unavailable=await fetchMandiPrices(filters);assert.equal(unavailable.status,"unavailable");assert.deepEqual(unavailable.records,[]);
+});
+test("market metadata accepts only real timestamp strings and drops unknown provider fields", async () => {
+  globalThis.fetch=async()=>new Response(JSON.stringify({status:"live",source:"AGMARKNET",records:[],retrievedAt:{toString:1},sourceUpdatedAt:"bad-date",privateField:"discard"}));
+  const result=await fetchMandiPrices({commodity:"",state:"Haryana",district:"",market:"",date:""});
+  assert.equal(result.status,"live");assert.equal(result.retrievedAt,undefined);assert.equal(result.sourceUpdatedAt,undefined);assert.doesNotMatch(JSON.stringify(result),/privateField|discard|toString/);
+});
 test("market caches actual records and original publication dates for the same filters only", async () => {
   const filters={commodity:"Banana - Green",state:"Tripura",district:"Dhalai",market:"Kulai APMC",date:"2026-09-16"};
   const records=[{commodity:filters.commodity,state:filters.state,district:filters.district,market:filters.market,arrival_date:"16/09/2026",min_price:1500,modal_price:1800,max_price:2000}];

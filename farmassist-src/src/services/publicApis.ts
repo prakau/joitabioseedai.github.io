@@ -1,5 +1,7 @@
 import { requestJson } from "../lib/network";
 import { readStored, writeStored } from "../lib/storage";
+import { normaliseMarketResult, type MarketFilters, type MarketRow, type MarketResult } from "../lib/market";
+export type { MarketFilters, MarketRow, MarketResult } from "../lib/market";
 export type ApiData<T> = {
   source: string;
   status: "live" | "cached" | "unavailable";
@@ -89,33 +91,6 @@ export function fetchINaturalistContext(lat: number, lon: number) {
     `joita-fa-inat-v3:${lat.toFixed(3)},${lon.toFixed(3)}`,
   );
 }
-export type MarketFilters = {
-  commodity: string;
-  state: string;
-  district: string;
-  market: string;
-  date: string;
-};
-export type MarketRow = {
-  commodity: string;
-  state: string;
-  district: string;
-  market: string;
-  arrival_date: string;
-  modal_price: string | number;
-  min_price: string | number;
-  max_price: string | number;
-  variety?: string;
-};
-export type MarketResult = {
-  status: "live" | "cached" | "unavailable";
-  source: string;
-  records: MarketRow[];
-  message?: string;
-  retrievedAt?: string;
-  sourceUpdatedAt?: string;
-  total?: number;
-};
 export function filterMarketRows(rows: MarketRow[], filters: MarketFilters) {
   return rows.filter(
     (row) =>
@@ -138,17 +113,22 @@ export async function fetchMandiPrices(
     params.set("arrival_date", filters.date.split("-").reverse().join("/"));
   const key = `joita-fa-market-v3:${params.toString()}`;
   try {
-    const result = await requestJson<MarketResult>(
+    const payload = await requestJson<MarketResult>(
       `/api/market?${params}`,
       {},
       14000,
     );
-    if (result.status === "unavailable") throw new Error(result.message);
+    if (!payload || payload.status !== "live") throw new Error(typeof payload?.message === "string" ? payload.message : "Market data is unavailable.");
+    const result = normaliseMarketResult(payload);
     result.records = filterMarketRows(result.records, filters);
     writeStored(key, result);
     return result;
   } catch (error) {
-    const cached = readStored<MarketResult | null>(key, null);
+    let cached = readStored<MarketResult | null>(key, null);
+    try {
+      if (cached) { cached = normaliseMarketResult(cached); cached.records = filterMarketRows(cached.records, filters); }
+      else cached = null;
+    } catch { cached = null; }
     return cached
       ? {
           ...cached,

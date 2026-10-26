@@ -164,11 +164,12 @@ test("market clears empty regional filters, shows dated prices, searches, and ca
   await expect(page.getByText(/No published prices match Haryana/)).toBeVisible();
   await page.getByRole("button",{name:"Show all markets",exact:true}).click();
   await expect(page.locator("tbody tr")).toHaveCount(1);
-  await expect(page.locator("tbody")).toContainText("1500 / 1800 / 2000");
+  await expect(page.locator("tbody")).toContainText("1,500 / 1,800 / 2,000");
   await expect(page.getByText(/Feed updated/)).toBeVisible();
   await expect(page.getByLabel("State",{exact:true})).toBeEmpty();
   await page.getByLabel("State",{exact:true}).fill("Tripura");
   await page.getByLabel("Commodity",{exact:true}).fill("Banana - Green");
+  await page.locator(".market-more-filters summary").click();
   await page.getByLabel("Arrival date (optional)").fill("2026-09-16");
   await page.getByRole("button",{name:"Search prices",exact:true}).click();
   await expect.poll(()=>queries.at(-1)?.get("arrival_date")).toBe("16/09/2026");

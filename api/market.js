@@ -18,8 +18,16 @@ export default async function handler(req, res) {
   const timer = setTimeout(() => controller.abort(), 10000);
   let providerStatus = null;
   let failureReason = "connection_failed";
+  let networkCode;
+  const safeCodes = new Set(["ENOTFOUND", "EAI_AGAIN", "ECONNRESET", "ECONNREFUSED", "ETIMEDOUT", "UND_ERR_CONNECT_TIMEOUT", "CERT_HAS_EXPIRED", "UNABLE_TO_VERIFY_LEAF_SIGNATURE", "UNABLE_TO_GET_ISSUER_CERT_LOCALLY"]);
   try {
-    const response = await fetch(url, { signal: controller.signal });
+    let response;
+    try { response = await fetch(url, { signal: controller.signal }); }
+    catch (error) {
+      // Retry only transient transport failures, within the original ten-second budget.
+      if (controller.signal.aborted || !["EAI_AGAIN", "ECONNRESET", "ETIMEDOUT"].includes(error?.cause?.code)) throw error;
+      response = await fetch(url, { signal: controller.signal });
+    }
     providerStatus = response.status;
     failureReason = [401, 403].includes(response.status) ? "access_denied" : response.status === 429 ? "rate_limited" : "provider_error";
     const data = await response.json().catch(() => null);
@@ -37,11 +45,12 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     if (error?.name === "AbortError" || controller.signal.aborted) failureReason = "provider_timeout";
-    console.warn(JSON.stringify({ service: "joitafa-market", providerStatus, failureReason, timestamp: new Date().toISOString() }));
+    if (safeCodes.has(error?.cause?.code)) networkCode = error.cause.code;
+    console.warn(JSON.stringify({ service: "joitafa-market", providerStatus, failureReason, networkCode, timestamp: new Date().toISOString() }));
     const message = failureReason === "access_denied" ? "Data.gov.in denied access. The configured mandi credential needs administrator review. Use the official portal meanwhile."
       : failureReason === "rate_limited" ? "Data.gov.in is limiting requests. Retry later or check the official market portal."
       : failureReason === "provider_timeout" ? "Data.gov.in took too long to respond. Retry or check the official market portal."
       : "Data.gov.in did not return usable mandi data. Retry or check the official portal; no sample prices are used.";
-    return res.status(502).json({ error: message, providerStatus, failureReason });
+    return res.status(502).json({ error: message, providerStatus, failureReason, ...(networkCode ? { networkCode } : {}) });
   } finally { clearTimeout(timer); }
 }
