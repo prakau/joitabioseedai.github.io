@@ -38,8 +38,8 @@ const reasons: Record<string, [string, string]> = {
     "यह मान्य JOITAFA रिकॉर्ड बैकअप नहीं है।",
   ],
   version: [
-    "Unsupported backup version. Use a version 3, 4 or 5 JOITAFA export.",
-    "यह बैकअप संस्करण समर्थित नहीं है। JOITAFA संस्करण 3, 4 या 5 का निर्यात चुनें।",
+    "Unsupported backup version. Use a version 3, 4, 5 or 6 JOITAFA export.",
+    "यह बैकअप संस्करण समर्थित नहीं है। JOITAFA संस्करण 3, 4, 5 या 6 का निर्यात चुनें।",
   ],
   case_links: [
     "Case links conflict with the crop or plot on this device. No records were changed. Compare the original backups before restoring.",

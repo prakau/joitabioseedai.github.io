@@ -21,6 +21,7 @@ import {
   Save,
   Settings as SettingsIcon,
   Store,
+  Sprout,
   TestTube2,
   Wifi,
   WifiOff,
@@ -52,6 +53,8 @@ import { recordKeys } from "./lib/record-backup";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { FarmTools } from "./components/FarmTools";
 import { RecentAnswers } from "./components/RecentAnswers";
+import { ActiveCrop } from "./components/ActiveCrop";
+import { ACTIVE_SEASON_KEY, SEASON_KEY, parseSeasons, type CropSeason } from "./lib/crop-seasons";
 
 const Advisory = lazy(() => import("./components/Advisory").then(m => ({ default: m.Advisory })));
 const Market = lazy(() => import("./components/Market").then(m => ({ default: m.Market })));
@@ -59,6 +62,7 @@ const FarmPlot = lazy(() => import("./components/FarmPlot").then(m => ({ default
 const FarmCalculators = lazy(() => import("./components/FarmCalculators").then(m => ({ default: m.FarmCalculators })));
 const FarmLedger = lazy(() => import("./components/FarmLedger").then(m => ({ default: m.FarmLedger })));
 const CropDiary = lazy(() => import("./components/CropDiary").then(m => ({ default: m.CropDiary })));
+const CropSeasons = lazy(() => import("./components/CropSeasons").then(m => ({ default: m.CropSeasons })));
 const SalePlanner = lazy(() => import("./components/SalePlanner").then(m => ({ default: m.SalePlanner })));
 const SoundMonitor = lazy(() => import("./components/SoundMonitor").then(m => ({ default: m.SoundMonitor })));
 const RecordRecovery = lazy(() => import("./components/RecordRecovery").then(m => ({ default: m.RecordRecovery })));
@@ -68,6 +72,7 @@ const Soil = lazy(() => import("./components/FieldRecords").then(m => ({ default
 
 const modules = [
   { id: "home", label: "Home", icon: Home },
+  { id: "crops", label: "My Crops", icon: Sprout },
   { id: "ask", label: "Ask", icon: MessageSquare },
   { id: "diagnose", label: "Diagnose", icon: Camera },
   { id: "diary", label: "Crop Diary", icon: ClipboardList },
@@ -99,6 +104,11 @@ export default function App() {
     farmName: "My farm",
     district: "",
   });
+  const [seasonRows] = useStored<CropSeason[]>(SEASON_KEY, []);
+  const [activeSeasonId, saveActiveSeason] = useStored(ACTIVE_SEASON_KEY, "");
+  let seasons: CropSeason[] = [];
+  try { seasons = parseSeasons(JSON.stringify(seasonRows)); } catch { /* Invalid records remain untouched for recovery. */ }
+  const activeSeason = seasons.find(row => row.id === activeSeasonId && row.status === "active");
   const [online, setOnline] = useState(navigator.onLine);
   const [preferences, savePreferences] = useStored("joita-fa-preferences", {
     language: "Hindi",
@@ -301,6 +311,7 @@ export default function App() {
                     year: "numeric",
                   })}
                 />
+                <ActiveCrop seasons={seasons} activeId={activeSeasonId} onSelect={saveActiveSeason} />
                 <DashboardStart language={preferredLanguage} voiceAvailable={online && Boolean(health.data?.hasVoiceInput ?? health.data?.hasGeminiKey)} />
                 <div className="metrics dashboard-metrics">
                   <div>
@@ -352,7 +363,8 @@ export default function App() {
             )}
             {(active === "ask" || active === "diagnose") && (
               <Advisory
-                key={`${active}:${new URLSearchParams(location.search).get("case") || ""}`}
+                key={`${active}:${new URLSearchParams(location.search).get("case") || ""}:${activeSeason?.id || ""}`}
+                season={activeSeason}
                 location={profile.district || place.label}
                 preferredLanguage={websiteQuestion?.language || (new URLSearchParams(location.search).get("language") === "Hindi" ? "Hindi" : preferredLanguage)}
                 onLanguage={setLanguage}
@@ -376,6 +388,7 @@ export default function App() {
             {active === "calculators" && <FarmCalculators />}
             {active === "ledger" && <FarmLedger />}
             {active === "diary" && <CropDiary />}
+            {active === "crops" && <CropSeasons />}
             {active === "sales" && <SalePlanner />}
             {active === "soil" && <Soil />}
             {active === "calendar" && <Calendar />}

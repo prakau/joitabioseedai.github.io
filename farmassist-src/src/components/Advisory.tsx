@@ -24,6 +24,8 @@ import { GuidedPhotoCheck } from "./GuidedPhotoCheck";
 import { VoiceQuestion } from "./VoiceQuestion";
 import { SaveCropCase } from "./SaveCropCase";
 import { DIARY_KEY, type Observation } from "../lib/field-diary";
+import { seasonProfile, type CropSeason } from "../lib/crop-seasons";
+import { useInterface } from "../lib/interface";
 import { offlineAdvice } from "../lib/offline-hindi";
 import { Button } from "./ui/button";
 import { Input, Textarea } from "./ui/input";
@@ -73,6 +75,7 @@ const prompts = [
   "How do I plan wheat irrigation at grain filling?",
 ];
 export function Advisory({
+  season,
   location,
   preferredLanguage,
   onLanguage,
@@ -87,6 +90,7 @@ export function Advisory({
   onAutoSubmitConsumed,
   onResult,
 }: {
+  season?: CropSeason;
   location: string;
   preferredLanguage: string;
   onLanguage: (language: string) => void;
@@ -101,13 +105,16 @@ export function Advisory({
   onAutoSubmitConsumed?: () => void;
   onResult: (result: ChatResult) => void;
 }) {
+  const { language: interfaceLanguage } = useInterface();
+  const defaultSeason = !caseId && !initialRecordId ? season : undefined;
+  const [useSeason, setUseSeason] = useState(Boolean(defaultSeason));
   const [history, saveHistory] = useStored<SavedAdvisory[]>("joita-fa-questions", []);
   const cropCase = caseId ? readStored<Observation[]>(DIARY_KEY, []).find(entry => entry.id === caseId && entry.caseInfo) : undefined;
   const caseNotes = caseId ? readStored<Observation[]>(DIARY_KEY, []).filter(entry => entry.id === caseId || entry.caseId === caseId).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3).map(entry => `${entry.date}: ${entry.symptoms.slice(0, 160)}; action: ${entry.action.slice(0, 80)}; sampled plants: ${entry.affected ?? "not recorded"}/${entry.checked ?? "not recorded"}`).join("\n").slice(0, 1000) : "";
   const [context, setContext] = useState<ChatContext>({
-    crop: cropCase?.crop || "",
-    location: cropCase?.caseInfo?.location || location,
-    stage: cropCase?.caseInfo?.stage || "not sure",
+    crop: cropCase?.crop || defaultSeason?.crop || "",
+    location: cropCase?.caseInfo?.location || (defaultSeason ? [defaultSeason.district, defaultSeason.state].filter(Boolean).join(", ") : "") || location,
+    stage: cropCase?.caseInfo?.stage || defaultSeason?.stage || "not sure",
     language: preferredLanguage,
     problemType: diagnose ? "disease" : "general",
   });
@@ -130,7 +137,7 @@ export function Advisory({
   const [imageBusy, setImageBusy] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [otherPhotos, setOtherPhotos] = useState<CropImage[]>([]);
-  const [investigation, setInvestigation] = useState<Investigation>({ plot: cropCase?.plot || "", duration: "not sure", spread: "not sure", recentAction: "" });
+  const [investigation, setInvestigation] = useState<Investigation>({ plot: cropCase?.plot || defaultSeason?.plot || "", duration: "not sure", spread: "not sure", recentAction: "" });
   const photos: CropImage[] = [...(photo ? [{ view: "whole_plant" as const, dataUrl: photo }] : []), ...otherPhotos];
   const [error, setError] = useState("");
   const [historyFilter, setHistoryFilter] = useState("");
@@ -186,6 +193,7 @@ export function Advisory({
     input?.scrollIntoView({ block: "center", behavior: "instant" });
   }
   function openSavedRecord(item: SavedAdvisory) {
+    setUseSeason(false);
     setQuestion(item.question);
     setPhoto("");
     setOtherPhotos([]);
@@ -195,7 +203,7 @@ export function Advisory({
     setFollowingUp(false);
     setActiveRecord(item);
     setThread([{ question: item.question, answer: item.answer }]);
-    if (item.context) setContext({ ...item.context, language: preferredLanguage });
+    setContext(item.context ? { ...item.context, language: preferredLanguage } : { crop: inferCrop(item.question), location, stage: "not sure", language: preferredLanguage, problemType: diagnose ? "disease" : "general" });
     setResult({
       ok: true,
       source: item.source || "offline_kb",
@@ -213,14 +221,15 @@ export function Advisory({
     setThread([]);
     setPhoto("");
     setOtherPhotos([]);
-    setInvestigation({ plot: "", duration: "not sure", spread: "not sure", recentAction: "" });
+    setUseSeason(Boolean(season));
+    setInvestigation({ plot: season?.plot || "", duration: "not sure", spread: "not sure", recentAction: "" });
     setContact("");
     setError("");
     setFollowingUp(false);
     setContext({
-      crop: "",
-      location,
-      stage: "not sure",
+      crop: season?.crop || "",
+      location: (season ? [season.district, season.state].filter(Boolean).join(", ") : "") || location,
+      stage: season?.stage || "not sure",
       language: preferredLanguage,
       problemType: diagnose ? "disease" : "general",
     });
@@ -256,6 +265,21 @@ export function Advisory({
         : "This question names a different crop. Start a new crop check to keep its records separate.");
       return;
     }
+    const sameCrop = (crop: string) => inferCrop(actualContext.crop, actualContext.crop).toLocaleLowerCase() === inferCrop(crop, crop).toLocaleLowerCase();
+    const previousCrop = activeRecord?.context?.crop || inferCrop(activeRecord?.question || "");
+    const fieldCrop = previousCrop || (useSeason ? season?.crop : "");
+    const changedCrop = Boolean(fieldCrop && !sameCrop(fieldCrop));
+    const matchesSeason = useSeason && season && sameCrop(season.crop) && context.location === ([season.district, season.state].filter(Boolean).join(", ") || location);
+    // A new crop must not inherit the selected field's stage, area or irrigation.
+    if (changedCrop) actualContext.stage = "not sure";
+    const { fieldProfile: savedProfile, ...plainInvestigation } = investigation;
+    const profile = matchesSeason ? seasonProfile(season) : !useSeason && !cropCase && activeRecord?.context && sameCrop(activeRecord.context.crop) && actualContext.location === activeRecord.context.location ? savedProfile : undefined;
+    const requestDetails: Investigation = {
+      ...(changedCrop ? { plot: "", duration: "not sure", spread: "not sure", recentAction: "" } : plainInvestigation),
+      ...(caseNotes ? { previousObservations: caseNotes } : {}),
+      ...(profile ? { fieldProfile: profile } : {}),
+    };
+    const promptThread = previousCrop && !sameCrop(previousCrop) ? [] : thread;
     setBusy(true);
     const controller = new AbortController();
     request.current = controller;
@@ -263,7 +287,7 @@ export function Advisory({
     setProgress("Connecting to live advisory...");
     setError("");
     setResult(null);
-    setContext({ ...context, crop: actualContext.crop });
+    setContext(actualContext);
     setRequestLanguage(actualContext.language);
     if (followUp) {
       setQuestion(followUp);
@@ -284,7 +308,7 @@ export function Advisory({
         message,
         actualContext,
         followUp ? "" : photo,
-        thread,
+        promptThread,
         (event) => {
           if (controller.signal.aborted) return;
           if (event.type === "delta") {
@@ -296,7 +320,7 @@ export function Advisory({
           }
         },
         controller.signal,
-        diagnose ? { images: followUp ? [] : photos, details: { ...investigation, ...(caseNotes ? { previousObservations: caseNotes } : {}) } } : undefined,
+        diagnose || profile ? { images: followUp ? [] : photos, details: requestDetails } : undefined,
       );
       if (
         !response.answer?.trim() ||
@@ -332,9 +356,7 @@ export function Advisory({
     setPartialAnswer("");
     onResult(response);
     setFollowingUp(false);
-    setThread((previous) =>
-      [...previous, { question: message, answer: response.answer }].slice(-3),
-    );
+    setThread([...promptThread, { question: message, answer: response.answer }].slice(-3));
     const record: SavedAdvisory = {
       id: uid(),
       question: message,
@@ -344,9 +366,11 @@ export function Advisory({
       context: actualContext,
       imageAnalyzed: response.imageAnalyzed,
       answerLanguage: response.language || actualContext.language,
-      ...(diagnose ? { investigation } : {}),
+      ...(diagnose || profile ? { investigation: requestDetails } : {}),
     };
     setActiveRecord(record);
+    setUseSeason(false);
+    setInvestigation(requestDetails);
     saveHistory(
       [record, ...readStored<SavedAdvisory[]>("joita-fa-questions", history)].slice(
         0,
@@ -421,6 +445,7 @@ export function Advisory({
       />
       <div className="advisory-layout">
         <div>
+          {useSeason && season && <p className="advisory-season-note">{interfaceLanguage === "hi" ? "चुना हुआ खेत" : "Selected field"}: <strong>{season.plot} · {season.crop}</strong>. {interfaceLanguage === "hi" ? "किसान द्वारा दर्ज विवरण; दूसरी फसल के सवाल में यह खेत विवरण नहीं भेजा जाएगा।" : "Farmer-reported details; another crop's question will not use this field profile."}</p>}
           {caseId && <Notice>{cropCase ? `Follow-up / दोबारा जांच: ${cropCase.crop} / ${cropCase.plot}` : "This case is not on this device. / यह मामला इस डिवाइस पर नहीं है।"}</Notice>}
           <form
             ref={form}
@@ -563,6 +588,7 @@ export function Advisory({
                     >
                       {[
                         "not sure",
+                        "planned",
                         "sowing",
                         "seedling",
                         "vegetative",

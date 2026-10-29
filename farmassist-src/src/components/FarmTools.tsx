@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { Activity, ArrowUpRight, Calculator, CalendarDays, Camera, ClipboardList, CloudSun, Leaf, Map, MessageSquare, Save, Scale, Search, Store, TestTube2, Wallet, X } from "lucide-react";
+import { Activity, ArrowUpRight, Calculator, CalendarDays, Camera, ClipboardList, CloudSun, Leaf, Map, MessageSquare, Save, Scale, Search, Sprout, Store, TestTube2, Wallet, X } from "lucide-react";
 import { useInterface } from "../lib/interface";
 
 const tools = [
+  { id: "crops", icon: Sprout, title: "Manage crop seasons", text: "Saved fields, sowing dates and follow-up checks.", terms: "my crops season fields farm profile sowing irrigation मेरी फसल खेत बुवाई सीज़न" },
   { id: "diary", icon: ClipboardList, title: "Track crop symptoms", text: "Field observations, rechecks, and expert reports.", terms: "diary records symptoms photo history डायरी रिकॉर्ड लक्षण" },
   { id: "sales", icon: Scale, title: "Compare buyer offers", text: "Sale value after transport, fees, and commission.", terms: "sale sell buyer price profit selling बिक्री भाव खरीदार" },
   { id: "diagnose", icon: Camera, title: "Check a crop photo", text: "Visible symptoms and the next field checks.", terms: "photo camera disease pest insect तस्वीर फोटो रोग कीट" },

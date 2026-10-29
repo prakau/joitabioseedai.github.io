@@ -22,6 +22,55 @@ import { defaultLayout } from "../src/lib/plot";
 import { analyzeSoil, emptySoil } from "../src/lib/soil";
 import { compareSales } from "../src/lib/sale-planner";
 import { caseObservation, validCaseData, fieldReport, type Observation } from "../src/lib/field-diary";
+import { SEASON_KEY, daysAfterSowing, duplicateSeason, parseSeasons, readSeasonPlans, seasonProfile, seasonTask, validSeason, type CropSeason } from "../src/lib/crop-seasons";
+
+const savedSeason: CropSeason = { id: "season-1", plot: "North field", crop: "Mustard", district: "Kurukshetra", state: "Haryana", sowing: "2026-10-15", stage: "vegetative", area: "1.5", areaUnit: "acre", irrigation: "drip", notes: "Private notes are not advisory context", status: "active", createdAt: "2026-10-29T10:00:00Z", updatedAt: "2026-10-29T10:00:00Z" };
+test("crop seasons validate actual dates, units, limits and optional unknowns without inferring stage", () => {
+  assert.equal(validSeason(savedSeason), true);
+  assert.equal(validSeason({ ...savedSeason, sowing: "", area: "" }), true);
+  for (const patch of [{ sowing: "2026-02-30" }, { plot: " " }, { area: "-1" }, { area: "0" }, { area: "1e5" }, { area: "1,000" }, { areaUnit: "bigha" }, { stage: "automatically healthy" }, { notes: "x".repeat(301) }, { updatedAt: "2025-10-29T10:00:00Z" }, { id: "bad/id" }, { district: "x".repeat(80), state: "y".repeat(80) }])
+    assert.equal(validSeason({ ...savedSeason, ...patch }), false);
+  assert.equal(daysAfterSowing(savedSeason, "2026-10-29"), 14);
+  assert.equal(daysAfterSowing(savedSeason, "2026-10-14"), -1);
+  assert.equal(daysAfterSowing({ ...savedSeason, sowing: "" }, "2026-10-29"), null);
+  assert.equal(daysAfterSowing({ ...savedSeason, sowing: "2024-02-28" }, "2024-03-01"), 2);
+  assert.equal(duplicateSeason({ ...savedSeason, id: "new", plot: "  NORTH FIELD  " }, [savedSeason]), true);
+  assert.equal(duplicateSeason({ ...savedSeason, id: "new", sowing: "2026-10-16" }, [savedSeason]), false);
+});
+test("season reader refuses damaged or duplicate data and profile excludes private notes", () => {
+  assert.deepEqual(parseSeasons(null), []);
+  assert.deepEqual(parseSeasons(JSON.stringify([savedSeason])), [savedSeason]);
+  for (const raw of ["{broken", "null", "{}", JSON.stringify([savedSeason, savedSeason]), JSON.stringify([{ ...savedSeason, area: "oops" }]), JSON.stringify(Array.from({ length: 31 }, (_, i) => ({ ...savedSeason, id: `s-${i}` })))]) assert.throws(() => parseSeasons(raw));
+  const profile = JSON.parse(seasonProfile(savedSeason));
+  assert.equal(profile.area, "1.5 acre"); assert.equal(profile.sowing, savedSeason.sowing);
+  assert.equal(profile.notes, undefined); assert.equal(profile.createdAt, undefined);
+  assert.equal(seasonProfile({ ...savedSeason, status: "completed" }), "");
+});
+test("season checks have stable per-date IDs, cannot precede sowing and preserve existing calendar records", () => {
+  const plan = seasonTask(savedSeason, "2026-10-30", true);
+  assert.match(plan.task, /North field.*जांच/);
+  assert.equal(plan.sowing, savedSeason.sowing);
+  assert.equal(seasonTask(savedSeason, "2026-10-30", false).id, plan.id);
+  assert.notEqual(seasonTask(savedSeason, "2026-10-31", false).id, plan.id);
+  assert.throws(() => seasonTask(savedSeason, "2026-10-14", false), /before sowing/);
+  assert.throws(() => seasonTask({ ...savedSeason, status: "completed" }, "2026-10-30", false), /season_invalid/);
+  assert.deepEqual(readSeasonPlans({ getItem: () => JSON.stringify([plan]) }), [plan]);
+  assert.throws(() => readSeasonPlans({ getItem: () => "{broken" }));
+  assert.throws(() => readSeasonPlans({ getItem: () => JSON.stringify([plan, plan]) }), /plan_records/);
+});
+test("version 6 backups round-trip seasons, merge safely and retain legacy exports", () => {
+  const file = { version: 6, app: "JOITAFA", exportedAt: savedSeason.updatedAt, records: { [SEASON_KEY]: [savedSeason] } };
+  const imported = parseBackup(JSON.stringify(file));
+  assert.equal(imported.version, 6); assert.deepEqual(imported.records[SEASON_KEY], [savedSeason]);
+  const captured = captureBackup({ getItem: key => key === SEASON_KEY ? JSON.stringify([savedSeason]) : null });
+  assert.equal(captured.version, 6);
+  assert.equal(mergeBackups(captured, imported).duplicates, 1);
+  assert.equal(mergeBackups(captured, parseBackup(JSON.stringify({ ...file, records: { [SEASON_KEY]: [{ ...savedSeason, notes: "Changed" }] } }))).conflicts, 1);
+  for (const version of [3, 4, 5]) assert.equal(parseBackup(JSON.stringify({ ...file, version, records: {} })).version, 4);
+  assert.throws(() => parseBackup(JSON.stringify({ ...file, records: { [SEASON_KEY]: [{ ...savedSeason, areaUnit: "unknown" }] } })), /records/);
+  assert.throws(() => parseBackup(JSON.stringify({ ...file, records: { [SEASON_KEY]: Array.from({ length: 31 }, (_, i) => ({ ...savedSeason, id: `s-${i}` })) } })), /limit/);
+  assert.throws(() => captureBackup({ getItem: key => key === SEASON_KEY ? "{broken" : null }), /current/);
+});
 
 const caseInput = {
   id: "case-root", draft: { crop: "Mustard", plot: "North", date: "2026-10-14", symptoms: "Yellow leaves", action: "Observed soil", checked: "10", affected: "2" },
@@ -226,7 +275,7 @@ test("all existing record collections round-trip without changing IDs or upgradi
       },
     ],
   };
-  assert.equal(Object.keys(rows).length, recordKeys.length);
+  assert.equal(Object.keys(rows).length, recordKeys.filter(key => key !== SEASON_KEY).length);
   const original = backup(rows);
   assert.deepEqual(parseBackup(JSON.stringify(original)), original);
   assert.deepEqual(

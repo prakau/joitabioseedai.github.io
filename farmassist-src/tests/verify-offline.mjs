@@ -19,9 +19,16 @@ try {
   assert(keys.some(key => key.endsWith(".js"))); assert(keys.some(key => key.endsWith(".css"))); assert(!keys.some(key => key.startsWith("/api/")));
   assert(keys.some(key => /FarmPlot-.*\.js$/.test(key))); assert(keys.some(key => /Advisory-.*\.js$/.test(key)));
   assert(keys.some(key => /Market-.*\.js$/.test(key)));
+  assert(keys.some(key => /CropSeasons-.*\.js$/.test(key)));
   await page.evaluate(() => localStorage.setItem("joita-fa-market-v3:state=Haryana", JSON.stringify({status:"live",source:"QA fixture",retrievedAt:"2026-09-16T08:00:00Z",records:[{commodity:"Onion",variety:"Local",state:"Haryana",district:"Hisar",market:"Offline fixture mandi",arrival_date:"16/09/2026",min_price:1500,modal_price:1800,max_price:2000}]})));
   await context.setOffline(true);
   await page.reload();
+  await page.evaluate(() => { location.hash = "#/crops"; });
+  await page.getByLabel("Field name", {exact:true}).fill("Offline season field");
+  await page.getByLabel("Crop name", {exact:true}).fill("Wheat");
+  await page.getByRole("button", {name:"Save crop season",exact:true}).click();
+  await page.reload();
+  assert.match(await page.locator(".season-row").innerText(), /Offline season field/);
   await page.evaluate(() => { location.hash = "#/market"; });
   await page.locator(".market-feed-cached").waitFor();
   assert.match(await page.locator(".market-mobile").innerText(), /Offline fixture mandi/);
@@ -88,6 +95,12 @@ try {
   await page.getByRole("button",{name:"Save comparison",exact:true}).click();
   await page.reload(); await page.getByRole("button",{name:/Wheat · 100 kg/}).click();
   assert.match(await page.locator("tbody tr").first().innerText(),/2,100/);
+  await page.evaluate(() => { location.hash = "#/crops"; });
+  await page.getByRole("button", {name:"Schedule field check",exact:true}).click();
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("joita-fa-plans-v3")).length), 2);
+  await page.getByRole("button", {name:"Use for new questions",exact:true}).click();
+  await page.getByRole("link", {name:"JOITAFA home",exact:true}).click();
+  assert.match(await page.locator(".active-crop").innerText(), /Offline season field/);
   const savedCaches = await page.evaluate(() => caches.keys()); assert(savedCaches.includes("unrelated-app-cache")); assert.deepEqual(errors, []);
   await page.screenshot({path:"test-results/offline-mobile.png",fullPage:true,animations:"disabled"});
   await context.close();
@@ -114,5 +127,5 @@ try {
   await retryPage.evaluate(() => { location.hash = "#/visualizer"; });
   await retryPage.locator("canvas").waitFor();
   await interrupted.close();
-  console.log(JSON.stringify({offlineReload:true, coldOffline3D:true, interruptedDownloadRecovery:true, offlineQuestion:true, offlineCalculators:true, offlineLedger:true, offlineDiary:true, offlineCropCaseAndRecheck:true, offlineSalePlanner:true, savedAnswerAfterReload:true, assetsCached:keys.length, apiNeverCached:true, unrelatedCachePreserved:true, browserErrors:errors}));
+  console.log(JSON.stringify({offlineReload:true, coldOffline3D:true, coldOfflineCropSeasons:true, offlineSeasonCalendarTask:true, interruptedDownloadRecovery:true, offlineQuestion:true, offlineCalculators:true, offlineLedger:true, offlineDiary:true, offlineCropCaseAndRecheck:true, offlineSalePlanner:true, savedAnswerAfterReload:true, assetsCached:keys.length, apiNeverCached:true, unrelatedCachePreserved:true, browserErrors:errors}));
 } finally { await browser.close(); }

@@ -42,7 +42,7 @@ export type ChatContext = {
   problemType: string;
 };
 export type CropImage = { view: "whole_plant" | "leaf_underside" | "field_view"; dataUrl: string };
-export type Investigation = { plot: string; duration: string; spread: string; recentAction: string; previousObservations?: string };
+export type Investigation = { plot: string; duration: string; spread: string; recentAction: string; previousObservations?: string; fieldProfile?: string };
 export type ChatResult = {
   ok: boolean;
   answer: string;

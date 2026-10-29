@@ -3,8 +3,10 @@ import { validateLayout, type Layout } from "./plot";
 import { compareSales, type Offer } from "./sale-planner";
 import { analyzeSoil, soilFields, type SoilValues } from "./soil";
 import { DIARY_KEY, validCaseData, type Observation } from "./field-diary";
+import { SEASON_KEY, validSeason } from "./crop-seasons";
 
 export const recordKeys = [
+  SEASON_KEY,
   "joita-fa-diary-v1",
   "joita-fa-sale-comparisons-v1",
   "joita-fa-ledger-v1",
@@ -20,13 +22,14 @@ export const recordKeys = [
 export type RecordKey = (typeof recordKeys)[number];
 type Row = Record<string, unknown> & { id: string };
 export type Backup = {
-  version: 4 | 5;
+  version: 4 | 5 | 6;
   app: "JOITAFA";
   exportedAt: string;
   records: Partial<Record<RecordKey, Row[]>>;
 };
 export const MAX_BACKUP_BYTES = 5 * 1024 * 1024;
 const recordLimits: Partial<Record<RecordKey, number>> = {
+  [SEASON_KEY]: 30,
   "joita-fa-questions": 50,
   "joita-fa-layouts": 30,
   "joita-fa-soils-v3": 50,
@@ -77,6 +80,8 @@ function safeTree(v: unknown, depth = 0): boolean {
 function validRow(key: RecordKey, r: Record<string, unknown>): boolean {
   if (!text(r.id, 200) || !r.id.trim()) return false;
   switch (key) {
+    case SEASON_KEY:
+      return validSeason(r);
     case "joita-fa-plans-v3":
       // Accept historical date relationships so they can be repaired, not silently lost.
       return (
@@ -132,7 +137,10 @@ function validRow(key: RecordKey, r: Record<string, unknown>): boolean {
             ]))) &&
         (r.imageAnalyzed === undefined ||
           typeof r.imageAnalyzed === "boolean") &&
-        (r.answerLanguage === undefined || text(r.answerLanguage, 50))
+        (r.answerLanguage === undefined || text(r.answerLanguage, 50)) &&
+        (r.investigation === undefined || (object(r.investigation) &&
+          fields(r.investigation, ["plot", "duration", "spread"], 80) && text(r.investigation.recentAction, 300) &&
+          Object.entries(r.investigation).every(([key, value]) => ["plot", "duration", "spread", "recentAction", "previousObservations", "fieldProfile"].includes(key) && text(value, key === "previousObservations" ? 1000 : key === "fieldProfile" ? 600 : key === "recentAction" ? 300 : 80))))
       );
     case "joita-fa-layouts":
       return (
@@ -215,8 +223,8 @@ export function parseBackup(raw: string): Backup {
   if (!object(v) || !safeTree(v) || !object(v.records) || !date(v.exportedAt))
     return fail("format");
   if (
-    ![3, 4, 5].includes(v.version as number) ||
-    ([4, 5].includes(v.version as number) && v.app !== "JOITAFA")
+    ![3, 4, 5, 6].includes(v.version as number) ||
+    ([4, 5, 6].includes(v.version as number) && v.app !== "JOITAFA")
   )
     fail("version");
   for (const [key, rows] of Object.entries(v.records)) {
@@ -239,10 +247,11 @@ export function parseBackup(raw: string): Backup {
       }
     }
     if (key === "joita-fa-diary-v1" && !validCaseLinks(rows as Row[])) fail("records");
+    if (key === SEASON_KEY && (rows as Row[]).length > 30) fail("limit");
   }
   const diary = v.records[DIARY_KEY] as Row[] | undefined;
   return {
-    version: diary?.some(row => row.caseId || row.caseInfo || row.advisory) ? 5 : 4,
+    version: (v.records[SEASON_KEY] as Row[] | undefined)?.length ? 6 : diary?.some(row => row.caseId || row.caseInfo || row.advisory) ? 5 : 4,
     app: "JOITAFA",
     exportedAt: v.exportedAt as string,
     records: v.records as Backup["records"],

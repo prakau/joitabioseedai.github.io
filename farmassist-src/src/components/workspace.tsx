@@ -69,6 +69,7 @@ export function CropSelect({
     <Field label="Crop">
       <Select value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">Choose crop</option>
+        {value && !cropGuides.some(crop => crop.crop === value) && <option value={value}>{value}</option>}
         {cropGuides.map((crop) => (
           <option key={crop.crop}>{crop.crop}</option>
         ))}

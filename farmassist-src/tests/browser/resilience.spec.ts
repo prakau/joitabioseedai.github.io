@@ -29,7 +29,7 @@ test("Hindi and English tool search finds useful destinations and recovers from 
   await page.getByRole("searchbox").fill("nothing-matches");
   await expect(page.locator(".tool-empty")).toBeVisible();
   await page.getByRole("button", { name: "खोज हटाएं", exact: true }).click();
-  await expect(page.locator(".tool-grid a")).toHaveCount(14);
+  await expect(page.locator(".tool-grid a")).toHaveCount(15);
 });
 
 test("a saved Hindi answer reopens directly without sending a new AI request", async ({ page }) => {
