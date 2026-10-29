@@ -37,7 +37,7 @@ try {
   assert.equal(stored.seasons.length, 1); assert.equal(stored.plans.length, 1);
   assert.match(stored.plans[0].task, /QA North field/);
   await page.getByRole("button", { name: "हिन्दी", exact: true }).click();
-  assert.equal(await page.getByRole("heading", { name: "मेरी फसलें", exact: true }).count(), 1);
+  await page.getByRole("heading", { name: "मेरी फसलें", exact: true }).waitFor({ state: "visible" });
   await page.screenshot({ path: `${evidence}/my-crops-hi.png`, fullPage: true });
   await page.getByRole("link", { name: "JOITAFA होम", exact: true }).click();
   assert.match(await page.locator(".active-crop").innerText(), /QA North field/);
